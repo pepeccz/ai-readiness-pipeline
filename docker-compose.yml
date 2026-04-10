@@ -10,7 +10,7 @@ services:
     volumes:
       - ./assets:/app/assets:ro
       - ./tools_catalog.md:/app/tools_catalog.md:ro
-      - ./output:/tmp/reports
+      - ./output:/app/output
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8100/api/health')"]
       interval: 30s

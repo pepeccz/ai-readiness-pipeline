@@ -28,8 +28,8 @@ COPY assets/ ./assets/
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist/
 
 # Non-root user + writable output dir
-RUN useradd -m -s /bin/bash app && chown -R app:app /app \
-    && mkdir -p /tmp/reports && chown app:app /tmp/reports
+RUN useradd -m -s /bin/bash app \
+    && mkdir -p /app/output && chown -R app:app /app
 USER app
 
 EXPOSE 8100

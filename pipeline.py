@@ -83,17 +83,22 @@ ASSETS_DIR = os.path.join(SCRIPT_DIR, "assets")
 GENERATOR = os.path.join(SCRIPT_DIR, "report_generator.py")
 ENRICHER = os.path.join(SCRIPT_DIR, "llm_enricher.py")
 from config import settings
-import google_client
 
-SHEET_ID = settings.sheet_id
-DRIVE_FOLDER = settings.drive_folder_id
-OUTPUT_EMAIL = settings.output_email
 ANTHROPIC_API_KEY = settings.anthropic_api_key.get_secret_value()
+
+# Legacy v1 config (only used by process_assessment, not v2)
+SHEET_ID = ""
+DRIVE_FOLDER = ""
+OUTPUT_EMAIL = ""
 
 
 def get_access_token() -> str:
-    """Obtiene un access token de Google via Service Account."""
-    return google_client.get_access_token()
+    """Legacy: obtiene token de Google. Solo usado por process_assessment v1."""
+    try:
+        import google_client
+        return google_client.get_access_token()
+    except ImportError:
+        raise RuntimeError("google_client not available — use process_assessment_v2")
 
 
 def upload_to_drive(

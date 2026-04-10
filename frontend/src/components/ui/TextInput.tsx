@@ -3,7 +3,7 @@ interface TextInputProps {
   value: string
   onChange: (value: string) => void
   placeholder?: string
-  type?: 'text' | 'email' | 'tel' | 'date'
+  type?: 'text' | 'email' | 'tel' | 'date' | 'password'
   disabled?: boolean
 }
 

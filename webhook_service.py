@@ -23,6 +23,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator
 from typing import Optional
 
+from fastapi import Request
 from config import settings
 
 app = FastAPI(
@@ -140,9 +141,22 @@ def _run_pipeline(task_id: str, form_data: dict) -> None:
 # --- API Endpoints ---
 
 
+def _verify_auth(request_or_header: str) -> None:
+    """Validate bearer token. Raises 403 if invalid."""
+    secret = settings.webhook_secret.get_secret_value()
+    if not secret:
+        return  # No secret = dev mode (open)
+    token = request_or_header.replace("Bearer ", "") if request_or_header.startswith("Bearer ") else request_or_header
+    if token != secret:
+        raise HTTPException(status_code=403, detail="Acceso no autorizado")
+
+
 @app.post("/api/assessment", status_code=202)
-async def submit_assessment(payload: AssessmentFormPayload):
-    """Receive assessment form and start pipeline processing."""
+async def submit_assessment(payload: AssessmentFormPayload, request: Request):
+    """Receive assessment form and start pipeline processing. Requires bearer token."""
+    auth = request.headers.get("Authorization", "")
+    _verify_auth(auth)
+
     task_id = str(uuid.uuid4())[:8]
 
     _tasks[task_id] = {

@@ -80,6 +80,7 @@ const initialState: FormState = {
   urgency: '',
   urgency_date: '',
   additional_notes: '',
+  access_token: '',
 }
 
 export function useFormState() {

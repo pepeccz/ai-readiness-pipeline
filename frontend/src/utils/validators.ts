@@ -51,6 +51,7 @@ function section9(state: FormState): ValidationErrors | null {
 
   if (!state.investment_budget) errors.investment_budget = 'Por favor, indica el presupuesto disponible'
   if (!state.urgency) errors.urgency = 'Por favor, indica el nivel de urgencia'
+  if (!state.access_token.trim()) errors.access_token = 'El código de acceso es necesario para generar el informe'
 
   return Object.keys(errors).length > 0 ? errors : null
 }

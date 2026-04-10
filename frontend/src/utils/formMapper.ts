@@ -96,5 +96,8 @@ export function mapFormToPayload(state: FormState): AssessmentFormPayload {
     ...(state.additional_notes.trim()
       ? { additional_notes: cleanString(state.additional_notes) }
       : {}),
+
+    // Auth token (used in header, not body)
+    _token: state.access_token || '',
   }
 }

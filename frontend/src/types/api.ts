@@ -78,4 +78,7 @@ export interface AssessmentFormPayload {
   urgency: string
   urgency_date?: string
   additional_notes?: string
+
+  // Auth (not sent in body, used for header)
+  _token?: string
 }

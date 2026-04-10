@@ -23,7 +23,10 @@ export function useSubmission() {
     try {
       const response = await fetch('/api/assessment', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${payload._token || ''}`,
+        },
         body: JSON.stringify(payload),
       })
 
@@ -91,7 +94,7 @@ export function useSubmission() {
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `ai-readiness-report-${taskId}.pdf`
+      link.download = `ai-readiness-report-${taskId}.docx`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)

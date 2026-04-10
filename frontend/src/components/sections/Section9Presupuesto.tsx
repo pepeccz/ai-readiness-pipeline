@@ -77,6 +77,25 @@ export function Section9Presupuesto({ state, onChange, errors = {} }: Props) {
           maxLength={1000}
         />
       </FormField>
+
+      <div className="mt-4 pt-4 border-t border-gray-200">
+        <FormField
+          label="Código de acceso"
+          required
+          error={errors.access_token}
+        >
+          <TextInput
+            id="access_token"
+            type="password"
+            value={state.access_token || ''}
+            onChange={v => onChange('access_token' as keyof FormState, v)}
+            placeholder="Introduce el código proporcionado por Zanovix"
+          />
+          <p className="mt-1 text-xs text-gray-400">
+            Este código es necesario para generar el informe. Si no lo tienes, contacta con hola@zanovix.com
+          </p>
+        </FormField>
+      </div>
     </div>
   )
 }

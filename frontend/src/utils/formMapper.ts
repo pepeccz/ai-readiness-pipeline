@@ -16,6 +16,7 @@ function cleanArray(arr: string[]): string[] {
 export function mapFormToPayload(state: FormState): AssessmentFormPayload {
   return {
     // Section 1
+    company_name: cleanString(state.company_name),
     sector: cleanString(state.sector),
     employee_range: cleanString(state.employee_range),
     revenue_range: cleanString(state.revenue_range),

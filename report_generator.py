@@ -241,13 +241,17 @@ def generate_report(rec: dict, output_path: str = None) -> str:
     if os.path.exists(LOGO_PATH):
         logo_p = doc.add_paragraph()
         logo_p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        logo_p.paragraph_format.space_after = Pt(32)
+        logo_p.paragraph_format.space_after = Pt(48)
         logo_p.add_run().add_picture(LOGO_PATH, width=Inches(1.8))
 
     badge = add_para(doc, 'AI READINESS ASSESSMENT', bold=True, size=11,
                      color=TEAL, space_after=8)
 
     title = add_para(doc, company, bold=True, size=30, color=DARK, space_after=12)
+
+    respondent = safe(rec.get('respondent_name_role'), '')
+    if respondent:
+        add_para(doc, f'Contacto: {respondent}', size=12, color=GREY, space_after=4)
 
     meta = add_para(doc, f'Assessment ID: {aid}     ·     Fecha: {today()}',
                     size=10, color=GREY, space_after=32)

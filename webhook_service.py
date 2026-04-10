@@ -47,6 +47,7 @@ app.add_middleware(
 
 class AssessmentFormPayload(BaseModel):
     # Section 1 — Empresa
+    company_name: str = ""
     sector: str
     employee_range: str
     contact_name: str
@@ -101,7 +102,7 @@ class AssessmentFormPayload(BaseModel):
     urgency: str
     additional_notes: str = ""
 
-    @field_validator("sector", "employee_range", "contact_name",
+    @field_validator("company_name", "sector", "employee_range", "contact_name",
                      "most_time_consuming_process", "investment_budget", "urgency")
     @classmethod
     def not_empty(cls, v: str) -> str:

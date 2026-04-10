@@ -1,5 +1,6 @@
 export interface FormState {
   // Section 1 — Empresa
+  company_name: string
   sector: string
   sector_other: string
   employee_range: string

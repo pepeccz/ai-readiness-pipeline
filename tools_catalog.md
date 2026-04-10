@@ -1,6 +1,6 @@
 # Catálogo de Herramientas IA para PYMEs
 last_reviewed: 2026-04-10
-version: 1.0
+version: 1.1
 
 ---
 
@@ -13,6 +13,8 @@ version: 1.0
 - **integration_complexity**: medium
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://www.intercom.com/legal/data-processing-agreement
 - **sector_fit**: general
 
 ### Tidio
@@ -22,6 +24,8 @@ version: 1.0
 - **integration_complexity**: low
 - **data_sensitivity**: medium
 - **requires_dpa**: yes
+- **dpa_available**: yes (on request)
+- **dpa_link**: https://www.tidio.com/terms/
 - **sector_fit**: Retail/Comercio, Servicios profesionales, general
 
 ### Freshdesk con Freddy AI
@@ -31,6 +35,8 @@ version: 1.0
 - **integration_complexity**: medium
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://www.freshworks.com/data-processing-addendum/
 - **sector_fit**: general
 
 ### Twilio Flex + OpenAI
@@ -40,6 +46,8 @@ version: 1.0
 - **integration_complexity**: high
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://www.twilio.com/en-us/legal/data-protection-addendum
 - **sector_fit**: Salud/Bienestar, Retail/Comercio, Servicios profesionales
 
 ### Trengo
@@ -49,6 +57,8 @@ version: 1.0
 - **integration_complexity**: low
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: included (EU provider)
+- **dpa_link**: https://trengo.com/gdpr
 - **sector_fit**: Retail/Comercio, Hostelería, Servicios profesionales
 
 ### Voiceflow
@@ -58,6 +68,8 @@ version: 1.0
 - **integration_complexity**: medium
 - **data_sensitivity**: medium
 - **requires_dpa**: yes
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://www.voiceflow.com/legal/dpa
 - **sector_fit**: Salud/Bienestar, Retail/Comercio, Hostelería
 
 ---
@@ -71,6 +83,8 @@ version: 1.0
 - **integration_complexity**: low
 - **data_sensitivity**: low
 - **requires_dpa**: no (si no se introducen datos personales de clientes)
+- **dpa_available**: yes (enterprise only)
+- **dpa_link**: https://openai.com/policies/data-processing-addendum/
 - **sector_fit**: general
 
 ### Jasper AI
@@ -80,6 +94,8 @@ version: 1.0
 - **integration_complexity**: low
 - **data_sensitivity**: low
 - **requires_dpa**: no
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://www.jasper.ai/legal/dpa
 - **sector_fit**: Retail/Comercio, Servicios profesionales, Tecnología
 
 ### Semrush con AI
@@ -89,6 +105,8 @@ version: 1.0
 - **integration_complexity**: low
 - **data_sensitivity**: low
 - **requires_dpa**: no
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://www.semrush.com/company/legal/dpa/
 - **sector_fit**: general
 
 ### Mailchimp con AI
@@ -98,6 +116,8 @@ version: 1.0
 - **integration_complexity**: low
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://mailchimp.com/legal/data-processing-addendum/
 - **sector_fit**: general
 
 ### Canva Magic Studio
@@ -107,6 +127,8 @@ version: 1.0
 - **integration_complexity**: low
 - **data_sensitivity**: low
 - **requires_dpa**: no
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://www.canva.com/policies/data-processing-addendum/
 - **sector_fit**: general
 
 ### Buffer con AI Assistant
@@ -116,6 +138,8 @@ version: 1.0
 - **integration_complexity**: low
 - **data_sensitivity**: low
 - **requires_dpa**: no
+- **dpa_available**: verify
+- **dpa_link**: https://buffer.com/legal
 - **sector_fit**: general
 
 ---
@@ -129,6 +153,8 @@ version: 1.0
 - **integration_complexity**: medium
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://legal.hubspot.com/dpa
 - **sector_fit**: general
 
 ### Pipedrive con AI
@@ -138,6 +164,8 @@ version: 1.0
 - **integration_complexity**: low
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: yes (on request)
+- **dpa_link**: https://www.pipedrive.com/en/privacy/dpa
 - **sector_fit**: Servicios profesionales, Tecnología, Retail/Comercio
 
 ### Apollo.io
@@ -147,6 +175,8 @@ version: 1.0
 - **integration_complexity**: medium
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://www.apollo.io/dpa
 - **sector_fit**: Servicios profesionales, Tecnología, general
 
 ### Gong
@@ -156,6 +186,8 @@ version: 1.0
 - **integration_complexity**: medium
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://www.gong.io/legal/data-processing-addendum
 - **sector_fit**: Tecnología, Servicios profesionales
 
 ### Salesforce Einstein
@@ -165,6 +197,8 @@ version: 1.0
 - **integration_complexity**: high
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://www.salesforce.com/content/dam/web/en_us/www/documents/legal/Agreements/data-processing-addendum.pdf
 - **sector_fit**: general
 
 ### Docsend con AI
@@ -174,6 +208,8 @@ version: 1.0
 - **integration_complexity**: low
 - **data_sensitivity**: medium
 - **requires_dpa**: yes
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://www.docsend.com/customer-dpa/
 - **sector_fit**: Servicios profesionales, Tecnología, Legal
 
 ---
@@ -187,6 +223,8 @@ version: 1.0
 - **integration_complexity**: low
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: yes (on request)
+- **dpa_link**: https://www.manatal.com/resources/gdpr
 - **sector_fit**: general
 
 ### Factorial HR con AI
@@ -196,6 +234,8 @@ version: 1.0
 - **integration_complexity**: low
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: included (EU provider)
+- **dpa_link**: https://factorialhr.com/privacy
 - **sector_fit**: general
 
 ### Personio
@@ -205,6 +245,8 @@ version: 1.0
 - **integration_complexity**: medium
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: included (EU provider)
+- **dpa_link**: https://support.personio.de/hc/en-us/articles/360000852949-Data-protection-information
 - **sector_fit**: general
 
 ### Textkernel
@@ -214,6 +256,8 @@ version: 1.0
 - **integration_complexity**: high
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: included (EU provider)
+- **dpa_link**: https://www.textkernel.com/terms-agreements/data-processing-agreement/
 - **sector_fit**: Servicios profesionales, Tecnología, general
 
 ### Leena AI
@@ -223,6 +267,8 @@ version: 1.0
 - **integration_complexity**: medium
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: yes (on request)
+- **dpa_link**: https://leena.ai/privacy-policy
 - **sector_fit**: Tecnología, Servicios profesionales, Industria/Manufactura
 
 ---
@@ -236,6 +282,8 @@ version: 1.0
 - **integration_complexity**: medium
 - **data_sensitivity**: depends on use case
 - **requires_dpa**: yes (cloud version)
+- **dpa_available**: included (EU provider)
+- **dpa_link**: https://n8n.io/legal/data-processing-agreement/
 - **sector_fit**: general
 
 ### Make (ex-Integromat)
@@ -245,6 +293,8 @@ version: 1.0
 - **integration_complexity**: medium
 - **data_sensitivity**: depends on use case
 - **requires_dpa**: yes
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://www.make.com/data-processing-agreement.pdf
 - **sector_fit**: general
 
 ### Docparser
@@ -254,6 +304,8 @@ version: 1.0
 - **integration_complexity**: low
 - **data_sensitivity**: medium
 - **requires_dpa**: yes
+- **dpa_available**: yes (on request)
+- **dpa_link**: https://docparser.com/gdpr-privacy-notice/
 - **sector_fit**: Industria/Manufactura, Servicios profesionales, Retail/Comercio
 
 ### Nanonets
@@ -263,6 +315,8 @@ version: 1.0
 - **integration_complexity**: medium
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://legal.nanonets.com/dpa
 - **sector_fit**: Servicios profesionales, Legal, Finanzas, general
 
 ### Zapier con AI
@@ -272,6 +326,8 @@ version: 1.0
 - **integration_complexity**: low
 - **data_sensitivity**: depends on use case
 - **requires_dpa**: yes
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://zapier.com/legal/data-processing-addendum
 - **sector_fit**: general
 
 ### Inventory Planner
@@ -281,6 +337,8 @@ version: 1.0
 - **integration_complexity**: medium
 - **data_sensitivity**: low
 - **requires_dpa**: no
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://www.sage.com/en-us/legal/terms-and-conditions/product-and-service-terms-and-conditions/data-processing-agreement/
 - **sector_fit**: Retail/Comercio, Industria/Manufactura
 
 ---
@@ -294,6 +352,8 @@ version: 1.0
 - **integration_complexity**: low
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: included (EU provider)
+- **dpa_link**: https://www.holded.com/privacy
 - **sector_fit**: general
 
 ### Rindus / Declarando
@@ -303,6 +363,8 @@ version: 1.0
 - **integration_complexity**: low
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: included (EU provider)
+- **dpa_link**: ""
 - **sector_fit**: general
 
 ### Yokoy
@@ -312,6 +374,8 @@ version: 1.0
 - **integration_complexity**: medium
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://yokoy.io/legal-security-compliance/privacy-policy/
 - **sector_fit**: Servicios profesionales, Tecnología, general
 
 ### Vic.ai
@@ -321,6 +385,8 @@ version: 1.0
 - **integration_complexity**: high
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: yes (on request)
+- **dpa_link**: https://www.vic.ai/privacy-policy
 - **sector_fit**: Industria/Manufactura, Retail/Comercio, Servicios profesionales
 
 ### Agicap
@@ -330,6 +396,8 @@ version: 1.0
 - **integration_complexity**: medium
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: included (EU provider)
+- **dpa_link**: https://agicap.com/en/terms-of-use/
 - **sector_fit**: general
 
 ---
@@ -343,6 +411,8 @@ version: 1.0
 - **integration_complexity**: low
 - **data_sensitivity**: medium
 - **requires_dpa**: yes (Business/Enterprise)
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://github.com/customer-terms/github-data-protection-agreement
 - **sector_fit**: Tecnología
 
 ### Cursor
@@ -352,6 +422,8 @@ version: 1.0
 - **integration_complexity**: low
 - **data_sensitivity**: medium
 - **requires_dpa**: yes
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://cursor.com/terms/dpa
 - **sector_fit**: Tecnología
 
 ### Sentry con AI
@@ -361,6 +433,8 @@ version: 1.0
 - **integration_complexity**: low
 - **data_sensitivity**: medium
 - **requires_dpa**: yes
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://sentry.io/legal/dpa/
 - **sector_fit**: Tecnología
 
 ### Mixpanel con AI
@@ -370,6 +444,8 @@ version: 1.0
 - **integration_complexity**: medium
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://mixpanel.com/legal/dpa/
 - **sector_fit**: Tecnología, Retail/Comercio
 
 ### Tabnine
@@ -379,6 +455,8 @@ version: 1.0
 - **integration_complexity**: low
 - **data_sensitivity**: medium
 - **requires_dpa**: yes
+- **dpa_available**: yes (on request)
+- **dpa_link**: https://trust.tabnine.com/
 - **sector_fit**: Tecnología, Legal, Salud/Bienestar
 
 ---
@@ -392,6 +470,8 @@ version: 1.0
 - **integration_complexity**: low
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://www.microsoft.com/licensing/docs/view/Microsoft-Products-and-Services-Data-Protection-Addendum-DPA
 - **sector_fit**: general
 
 ### Google Gemini for Workspace
@@ -401,6 +481,8 @@ version: 1.0
 - **integration_complexity**: low
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://workspace.google.com/terms/09242021/dpa_terms/
 - **sector_fit**: general
 
 ### Notion AI
@@ -410,6 +492,8 @@ version: 1.0
 - **integration_complexity**: low
 - **data_sensitivity**: medium
 - **requires_dpa**: yes
+- **dpa_available**: yes (on request)
+- **dpa_link**: https://www.notion.com/help/gdpr-at-notion
 - **sector_fit**: general
 
 ### OneTrust (módulo AI Governance)
@@ -419,6 +503,8 @@ version: 1.0
 - **integration_complexity**: high
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://explore.openli.com/privacy/onetrust/data-processing-agreements
 - **sector_fit**: Legal, Salud/Bienestar, Servicios profesionales, Tecnología
 
 ### Zapier Interfaces (AI Agents)
@@ -428,6 +514,8 @@ version: 1.0
 - **integration_complexity**: low
 - **data_sensitivity**: depends on use case
 - **requires_dpa**: yes
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://zapier.com/legal/data-processing-addendum
 - **sector_fit**: general
 
 ### Anthropic Claude (API / Claude.ai)
@@ -437,6 +525,8 @@ version: 1.0
 - **integration_complexity**: medium (API) / low (Claude.ai)
 - **data_sensitivity**: low
 - **requires_dpa**: no (si no se procesan datos personales de terceros)
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://privacy.claude.com/en/articles/7996862-how-do-i-view-and-sign-your-data-processing-addendum-dpa
 - **sector_fit**: general
 
 ### Legaltech: Ironclad AI
@@ -446,4 +536,6 @@ version: 1.0
 - **integration_complexity**: high
 - **data_sensitivity**: high
 - **requires_dpa**: yes
+- **dpa_available**: yes (standard)
+- **dpa_link**: https://legal.ironcladapp.com/
 - **sector_fit**: Legal, Servicios profesionales, Inmobiliaria

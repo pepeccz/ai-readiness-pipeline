@@ -16,6 +16,7 @@ export interface StatusResponse {
 
 export interface AssessmentFormPayload {
   // Section 1
+  company_name: string
   sector: string
   employee_range: string
   revenue_range: string

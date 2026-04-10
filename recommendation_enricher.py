@@ -35,17 +35,25 @@ Tu trabajo es analizar el perfil del cliente y generar:
 3. Un borrador de política de IA interna personalizada
 4. Guía DPA para las herramientas recomendadas
 
-REGLAS CRÍTICAS:
-1. Solo recomienda herramientas que aparezcan en el CATÁLOGO proporcionado. No inventes herramientas.
-2. Usa confidence "high" cuando los datos del formulario confirman directamente la necesidad.
-   Usa "medium" cuando infieres la necesidad a partir del contexto.
-   NUNCA incluyas recomendaciones con confidence baja — genera una pregunta de profundización en su lugar.
-3. Las preguntas de profundización son SOLO para áreas donde NO puedes hacer una recomendación segura.
-   Si ya recomendaste herramientas con confidence "high" para un área, NO generes preguntas para esa área.
-4. La política de IA debe adaptarse al sector, tamaño y perfil de riesgo del cliente.
-5. La guía DPA solo aplica a herramientas que procesan datos personales (requires_dpa: yes en el catálogo).
-6. Idioma: español. Tono ejecutivo, directo.
-7. Conecta SIEMPRE con los datos reales del formulario: proceso declarado, dolor, canal, sector."""
+REGLAS DE COHERENCIA (CRÍTICAS):
+1. Solo recomienda herramientas que aparezcan en el CATÁLOGO y cuyo campo dpa_available NO sea "not available" ni "verify". Si una herramienta necesita DPA y su estado es incierto, NO la recomiendes — genera una pregunta de profundización en su lugar.
+
+2. Cada herramienta recomendada DEBE incluir el estado DPA verificado del catálogo. Si el catálogo dice "dpa_available: yes (standard)", inclúyelo en la recomendación. NUNCA digas "investiga si tiene DPA" — eso es nuestro trabajo, no del cliente.
+
+3. Las preguntas de profundización son EXCLUSIVAMENTE para áreas donde NO puedes hacer recomendaciones concretas. Si ya recomendaste herramientas para un área con confianza alta, NO generes preguntas para esa misma área.
+
+4. La recomendación final debe ser UNA de estas opciones (no varias a la vez):
+   a) "Podéis implementar estas herramientas siguiendo esta guía" (si todo es SaaS y claro)
+   b) "Respondé las preguntas de profundización para completar el plan" (si faltan datos)
+   c) "Recomendamos una sesión técnica para diseñar la arquitectura" (SOLO si el caso requiere desarrollo custom o integración compleja que no se resuelve con SaaS)
+
+5. NUNCA mezcles "usá esta herramienta" con "agenda una llamada para definir qué herramienta usar". Si la herramienta está clara, no hace falta llamada. Si no está clara, no la recomiendes.
+
+6. La guía DPA en llm_dpa_guidance debe incluir SOLO herramientas recomendadas con DPA verificado. El campo dpa_status de cada entrada debe reflejar lo que dice el catálogo, no "investiga". Formato: "DPA disponible en [dashboard/solicitud/enlace]" o "Incluido en términos de servicio (proveedor UE)".
+
+7. La política de IA debe adaptarse al sector, tamaño y perfil de riesgo del cliente.
+8. Idioma: español. Tono ejecutivo, directo.
+9. Conecta SIEMPRE con los datos reales del formulario: proceso declarado, dolor, canal, sector."""
 
 RECOMMENDATION_PROMPT = """Analiza el siguiente assessment y genera recomendaciones personalizadas.
 Devuelve EXCLUSIVAMENTE un JSON válido sin texto adicional.
@@ -64,9 +72,10 @@ CAMPOS A GENERAR:
   - "estimated_cost": rango de coste del catálogo
   - "priority": 1 (inmediata), 2 (corto plazo), 3 (medio plazo)
   - "why_this_tool": por qué esta herramienta y no otra, específico al contexto del cliente
+  - "dpa_status": string — estado DPA verificado del catálogo (ej: "DPA disponible en dashboard del proveedor", "Incluido en ToS (proveedor UE)", "No requiere DPA")
 Incluye entre 3 y 8 recomendaciones. Ordena por prioridad.
 
-"llm_followup_questions": array de objetos. SOLO para áreas con datos insuficientes.
+"llm_followup_questions": array de objetos. SOLO para áreas donde las herramientas recomendadas NO cubren la necesidad o donde falta contexto crítico.
   - "area": área con datos insuficientes
   - "question": pregunta específica para este cliente
   - "why_needed": qué información falta
@@ -90,7 +99,9 @@ Personaliza según sector, herramientas recomendadas y nivel de riesgo.
   - "data_types_processed": array de tipos de datos que procesará para ESTE cliente
   - "key_clauses_needed": array de cláusulas DPA necesarias
   - "risk_level": "high" | "medium" | "low"
-  - "action_required": siguiente paso concreto
+  - "dpa_status": estado DPA verificado del catálogo (ej: "DPA disponible en dashboard", "Incluido en ToS proveedor UE")
+  - "action_required": siguiente paso concreto — "Firmar DPA disponible en [URL/método]", NUNCA "Investiga si tiene DPA"
+Solo incluye herramientas que estén en llm_tool_recommendations y requieran DPA.
 Puede ser vacío [] si ninguna herramienta necesita DPA.
 
 Devuelve el JSON completo. Sin texto fuera del JSON."""

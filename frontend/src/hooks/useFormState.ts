@@ -3,6 +3,7 @@ import type { FormState } from '../types/form'
 
 const initialState: FormState = {
   // Section 1
+  company_name: '',
   sector: '',
   sector_other: '',
   employee_range: '',

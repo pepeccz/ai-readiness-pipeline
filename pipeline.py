@@ -847,7 +847,7 @@ def map_form_to_rec(payload: dict) -> dict:
 
     # Identity
     rec["assessment_id"] = "AIR-" + str(uuid.uuid4())[:8].upper()
-    rec["company_name"] = payload.get("contact_name", "Empresa")
+    rec["company_name"] = payload.get("company_name", payload.get("contact_name", "Empresa"))
     rec["respondent_name_role"] = payload.get("contact_name", "")
     if payload.get("contact_role"):
         rec["respondent_name_role"] += f" — {payload['contact_role']}"

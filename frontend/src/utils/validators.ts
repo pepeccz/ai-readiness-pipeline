@@ -5,6 +5,7 @@ export type ValidationErrors = Record<string, string>
 function section1(state: FormState): ValidationErrors | null {
   const errors: ValidationErrors = {}
 
+  if (!state.company_name.trim()) errors.company_name = 'El nombre de la empresa es obligatorio'
   if (!state.sector) errors.sector = 'Por favor, selecciona tu sector de actividad'
   if (!state.employee_range) errors.employee_range = 'Por favor, indica el número de empleados'
   if (!state.contact_name.trim()) errors.contact_name = 'El nombre de contacto es obligatorio'

@@ -47,6 +47,15 @@ const REVENUE_OPTIONS = [
 export function Section1Empresa({ state, onChange, errors = {} }: Props) {
   return (
     <div className="flex flex-col gap-6">
+      <FormField label="Nombre de tu empresa o negocio" htmlFor="company_name" required error={errors.company_name}>
+        <TextInput
+          id="company_name"
+          value={state.company_name}
+          onChange={v => onChange('company_name', v)}
+          placeholder="Ej: Distribuciones García, S.L."
+        />
+      </FormField>
+
       <FormField label="Sector de actividad" htmlFor="sector" required error={errors.sector}>
         <SelectField
           id="sector"

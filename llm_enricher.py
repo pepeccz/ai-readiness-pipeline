@@ -40,14 +40,24 @@ CAMPOS A GENERAR (devuelve TODOS, en este orden):
 
 "llm_opportunities": 3-4 frases. Cuantifica el ROI: proceso_personas × proceso_horas (POR PERSONA) × 50 semanas × coste_hora (12-15€) × % automatizable (40-60%). Conecta con el dolor declarado (proceso_falla) y el objetivo (proceso_resultado_esperado).
 
-"llm_final_recommendation": 1-2 frases. Recomendación ejecutiva con tecnología concreta, inversión (MISMA cifra que en llm_economic_estimate) y plazo. Termina en acción, no en llamada.
+"llm_final_recommendation": 1-2 frases. Recomendación ejecutiva COHERENTE:
+- Menciona las herramientas concretas recomendadas (no genéricas)
+- Inversión (MISMA cifra que en llm_economic_estimate)
+- Plazo
+- NO menciones desarrollo custom si el informe recomienda SaaS
+- NO menciones "discovery" si las herramientas están claras
 
-"llm_final_narrative": 2-3 frases. Cierre humano. Por qué Zanovix es el socio adecuado.
-IMPORTANTE: NO inventes experiencia previa con el sector del cliente ni afirmes haber trabajado con empresas similares si no hay datos que lo confirmen. Habla de capacidades reales: implementación de asistentes WhatsApp, compliance RGPD/AI Act, automatización para PYMEs. Conecta con el perfil específico del cliente (canal, proceso, riesgo identificado).
+"llm_final_narrative": 2-3 frases. Cierre humano.
+IMPORTANTE: NO inventes experiencia previa. NO ofrezcas "chatbot personalizado" si el informe recomienda herramientas SaaS existentes. Habla de las capacidades que aplican al caso: configuración de herramientas, compliance RGPD/AI Act, formación de equipos. Si el caso es SaaS puro, el valor de Zanovix es guía de implementación + compliance, no desarrollo.
 
 "llm_tools_list": string. Lista de herramientas declaradas separadas por coma.
 
-"llm_next_step_proposal": 2-3 frases. Sesión de discovery de 90 min, qué se definiría (arquitectura técnica, plan compliance, FAQs), cómo contactar (hola@zanovix.com). Si who_decides != respondent_name_role, mencionar que es clave incluir a la persona decisora.
+"llm_next_step_proposal": 2-3 frases. El siguiente paso debe ser COHERENTE con el resto del informe:
+- Si las herramientas recomendadas resuelven el problema principal y son SaaS → el siguiente paso es "Seguir la guía de implementación de este informe. Si necesitáis soporte en la configuración, contactad hola@zanovix.com."
+- Si hay preguntas de profundización pendientes → "Responder las preguntas de la sección de profundización para completar el plan de acción."
+- Si el caso requiere desarrollo custom o integración técnica compleja → "Sesión técnica de 60 minutos para diseñar la arquitectura. Contacto: hola@zanovix.com."
+NO ofrezcas siempre "discovery call" como cajón de sastre. El CTA debe ser ESPECÍFICO al caso.
+Si who_decides != respondent_name_role, mencionar que es clave incluir a la persona decisora.
 
 === CAMPOS ESTRUCTURADOS ===
 

@@ -270,28 +270,37 @@ def generate_report(rec: dict, output_path: str = None) -> str:
     # ── 2. ÍNDICE ──────────────────────────────────────────────────────────────
     add_heading(doc, 'Contenido del informe', border=True)
     toc = [
-        '1. Base del diagnóstico',
-        '2. Resumen ejecutivo',
-        '3. Inventario de sistemas',
-        '4. Scoring detallado',
-        '5. Hallazgos: riesgos regulatorios',
-        '6. Oportunidades: matriz de priorización',
-        '7. Estimación económica',
-        '8. Roadmap de actuación (30/60/90 días)',
-        '9. Recomendación final',
-        '10. Dependencias y límites del análisis',
-        '11. Siguiente paso propuesto',
+        'Base del diagnóstico',
+        'Resumen ejecutivo',
+        'Inventario de sistemas',
+        'Scoring detallado',
+        'Hallazgos: riesgos regulatorios',
+        'Oportunidades: matriz de priorización',
+        'Estimación económica',
+        'Roadmap de actuación (30/60/90 días)',
+        'Recomendación final',
     ]
-    for item in toc:
-        add_para(doc, item, size=11, color=DARK, space_after=3)
+    # Secciones condicionales de recomendaciones
+    if rec.get('llm_tool_recommendations') and isinstance(rec.get('llm_tool_recommendations'), list) and len(rec['llm_tool_recommendations']) > 0:
+        toc.append('Stack tecnológico recomendado')
+    if rec.get('llm_dpa_guidance') and isinstance(rec.get('llm_dpa_guidance'), list) and len(rec['llm_dpa_guidance']) > 0:
+        toc.append('Guía DPA por herramienta')
+    if rec.get('llm_ai_policy_draft') and isinstance(rec.get('llm_ai_policy_draft'), dict) and len(rec['llm_ai_policy_draft']) > 0:
+        toc.append('Borrador de política de IA interna')
+    if rec.get('llm_followup_questions') and isinstance(rec.get('llm_followup_questions'), list) and len(rec['llm_followup_questions']) > 0:
+        toc.append('Preguntas de profundización (Fase 2)')
+    toc.extend([
+        'Dependencias y límites del análisis',
+        'Siguiente paso propuesto',
+    ])
+    for i, item in enumerate(toc, 1):
+        add_para(doc, f'{i}. {item}', size=11, color=DARK, space_after=3)
     doc.add_page_break()
 
     # ── 3. BASE DEL DIAGNÓSTICO ────────────────────────────────────────────────
     add_heading(doc, '1. Base del diagnóstico', border=True)
 
-    table = doc.add_table(rows=7, cols=2)
-    table.style = 'Table Grid'
-    data_base = [
+    data_base_all = [
         ('Empresa analizada',   company),
         ('Respondente',         respondent),
         ('Fecha del análisis',  today()),
@@ -300,6 +309,10 @@ def generate_report(rec: dict, output_path: str = None) -> str:
         ('Facturación aprox.',  revenue),
         ('Ámbito geográfico',   region),
     ]
+    # Filtrar filas con valor real (no "No especificado" ni vacío)
+    data_base = [(l, v) for l, v in data_base_all if v and v != '—' and v.lower() != 'no especificado']
+    table = doc.add_table(rows=len(data_base), cols=2)
+    table.style = 'Table Grid'
     for i, (label, value) in enumerate(data_base):
         row = table.rows[i]
         cell_l, cell_r = row.cells[0], row.cells[1]
@@ -634,7 +647,12 @@ def generate_report(rec: dict, output_path: str = None) -> str:
             row.cells[0].paragraphs[0].clear()
             add_run(row.cells[0].paragraphs[0], label, bold=True, size=10, color=DARK)
             row.cells[1].paragraphs[0].clear()
-            add_run(row.cells[1].paragraphs[0], str(value), size=10, color=DARK)
+            # Renderizar listas como líneas separadas, no como repr de Python
+            if isinstance(value, list):
+                display_value = '\n'.join(str(v) for v in value)
+            else:
+                display_value = str(value)
+            add_run(row.cells[1].paragraphs[0], display_value, size=10, color=DARK)
         set_col_widths(econ_table, [7, 9])
     else:
         econ_text = safe(rec.get('llm_economic_summary'), '')

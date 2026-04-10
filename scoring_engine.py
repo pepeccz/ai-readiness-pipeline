@@ -515,6 +515,17 @@ def enrich_with_scoring(rec: dict, llm_answers: dict = None,
         print(f'   [scoring] ⚠ AVISO: risk_score del sheet ({existing_risk}) '
               f'≠ suma de pts_* ({risk_pts_total}). Usando score del sheet.')
 
+    # Calcular maturity_score y risk_score si no vienen del sheet
+    if not _safe_int(rec.get('maturity_score', 0)):
+        rec['maturity_score'] = mat_pts_total
+        rec['maturity_level'] = get_maturity_level(mat_pts_total)
+        print(f'   [scoring] maturity_score calculado desde pts_*: {mat_pts_total}')
+
+    if not _safe_int(rec.get('risk_score', 0)):
+        rec['risk_score'] = risk_pts_total
+        rec['risk_level'] = get_risk_level(risk_pts_total)
+        print(f'   [scoring] risk_score calculado desde pts_*: {risk_pts_total}')
+
     # Calcular priority_score si no viene del sheet
     if not rec.get('priority_score'):
         p_score, p_level = compute_priority(rec)

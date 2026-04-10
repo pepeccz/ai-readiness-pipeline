@@ -10,7 +10,7 @@ import anthropic
 # --- Config ---
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 MODEL_PRIMARY = "claude-sonnet-4-5-20250514"
-MODEL_FALLBACK = "claude-3-haiku-20240307"
+MODEL_FALLBACK = "claude-haiku-4-5-20251001"
 
 # --- Client singleton ---
 _client: anthropic.Anthropic | None = None
@@ -33,7 +33,7 @@ def call_llm(
     fallback_model: str | None = MODEL_FALLBACK,
     temperature: float = 0.3,
     max_tokens: int = 8000,
-    max_tokens_fallback: int = 6000,
+    max_tokens_fallback: int = 4096,
 ) -> str:
     """
     Call Anthropic API with model fallback.

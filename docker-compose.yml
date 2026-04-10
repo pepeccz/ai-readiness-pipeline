@@ -10,6 +10,7 @@ services:
     volumes:
       - ./assets:/app/assets:ro
       - ./tools_catalog.md:/app/tools_catalog.md:ro
+      - ./sa-key.json:/app/sa-key.json:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import requests; r=requests.get('http://localhost:8100/health'); exit(0 if r.ok else 1)"]
       interval: 30s

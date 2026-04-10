@@ -24,12 +24,13 @@ _credentials: service_account.Credentials | None = None
 
 
 def get_credentials() -> service_account.Credentials:
-    """Return cached service account credentials, refreshing if needed."""
+    """Return cached delegated credentials (impersonating the configured user).
+    Service Accounts need delegation to access Drive/Gmail on behalf of a user."""
     global _credentials
     if _credentials is None:
         sa_info = settings.get_sa_info()
         _credentials = service_account.Credentials.from_service_account_info(
-            sa_info, scopes=SCOPES
+            sa_info, scopes=SCOPES, subject=settings.google_delegated_user
         )
     if _credentials.expired or not _credentials.token:
         _credentials.refresh(Request())

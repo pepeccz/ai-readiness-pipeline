@@ -398,21 +398,24 @@ def generate_report(rec: dict, output_path: str = None) -> str:
         if raw_next and not any(t in raw_next.lower() for t in crm_texts):
             next_display = raw_next
     if not next_display:
-        # Fallback: primera oración de llm_final_recommendation, máx 90 chars
-        llm_rec = safe(rec.get('llm_final_recommendation', ''))
-        if llm_rec:
-            # Quitar el prefijo "▶  " si existe
-            llm_rec = llm_rec.lstrip('▶ ').strip()
-            # Cortar en coma o punto, lo que llegue antes de 90 chars
-            for sep in [',', '.', ';']:
-                idx = llm_rec.find(sep)
+        # Fallback: extract short CTA from llm_next_step_proposal or llm_final_recommendation
+        for field in ['llm_next_step_proposal', 'llm_final_recommendation']:
+            text = safe(rec.get(field, ''))
+            if not text or text == '—':
+                continue
+            text = text.lstrip('▶ ').strip()
+            # First sentence, max 90 chars
+            for sep in ['.', ',', ';']:
+                idx = text.find(sep)
                 if 0 < idx <= 88:
-                    next_display = llm_rec[:idx].strip()
+                    next_display = text[:idx].strip()
                     break
             if not next_display:
-                next_display = llm_rec[:88].strip()
+                next_display = text[:88].strip()
+            if next_display:
+                break
     if not next_display:
-        next_display = 'Discovery técnico + propuesta de implementación'
+        next_display = 'Sesión técnica de implementación'
     add_run(p4b, next_display, bold=True, size=10, color=TEAL)
     set_col_widths(score_table, [4, 4, 4, 4])
 
@@ -623,23 +626,34 @@ def generate_report(rec: dict, output_path: str = None) -> str:
         # Normalizar claves técnicas a etiquetas legibles para el cliente
         KEY_LABELS = {
             'concepto': 'Proceso analizado',
+            'proceso_analizado': 'Proceso analizado',
             'calculo': 'Cálculo del coste actual',
             'calculo_detalle': 'Detalle del cálculo',
+            'calculo_del_coste_actual': 'Cálculo del coste actual',
             'detalle': 'Detalle',
             'ahorro_estimado': 'Ahorro anual estimado',
             'ahorro_proyectado': 'Ahorro proyectado',
+            'ahorro_anual': 'Ahorro anual estimado',
             'ahorro_anual_euros': 'Ahorro anual estimado',
             'ahorro_total_anual': 'Ahorro total anual',
             'ingresos_adicionales': 'Ingresos adicionales estimados',
             'inversion_estimada': 'Inversión estimada implementación',
+            'inversion_estimada_implementacion': 'Inversión estimada implementación',
             'inversion_implementacion': 'Inversión estimada implementación',
             'componentes_inversion': 'Desglose de la inversión',
+            'plazo_de_retorno_estimado': 'Plazo de retorno estimado',
             'roi_meses': 'Plazo de retorno estimado',
             'roi_12_meses': 'Retorno a 12 meses',
+            'payback': 'Plazo de retorno estimado',
             'payback_estimado': 'Plazo de retorno estimado',
+            'beneficios_adicionales': 'Beneficios adicionales',
             'resultado': 'Resultado',
+            'nota': 'Nota',
         }
-        econ_display = {KEY_LABELS.get(k, k): v for k, v in econ.items()}
+        # Auto-convert remaining snake_case keys not in the map
+        def _humanize_key(k):
+            return k.replace('_', ' ').capitalize()
+        econ_display = {KEY_LABELS.get(k, _humanize_key(k)): v for k, v in econ.items()}
 
         econ_table = doc.add_table(rows=len(econ_display), cols=2)
         econ_table.style = 'Table Grid'
@@ -755,7 +769,7 @@ def generate_report(rec: dict, output_path: str = None) -> str:
             bg = HEX['white'] if idx % 2 == 0 else HEX['alt']
             style_table_data_row(row, bg)
 
-        set_col_widths(t, [3.0, 2.5, 5.0, 2.0, 2.5, 2.5])
+        set_col_widths(t, [2.5, 2.0, 6.5, 1.8, 2.5, 2.2])
         add_divider(doc)
 
     # ── GUÍA DPA POR HERRAMIENTA ──────────────────────────────────────────
@@ -852,9 +866,8 @@ def generate_report(rec: dict, output_path: str = None) -> str:
 
         add_divider(doc)
 
-    doc.add_page_break()
-
     # ── 12. DEPENDENCIAS Y LÍMITES ─────────────────────────────────────────────
+    doc.add_page_break()
     add_heading(doc, '10. Dependencias y límites del análisis', border=True)
 
     dependencies = rec.get('llm_dependencies')

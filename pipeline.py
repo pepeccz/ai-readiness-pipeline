@@ -508,15 +508,17 @@ Natalia · Zanovix
         print("   ⚠ No se pudo enviar email de confirmación")
 
 
-NOTION_ASS_DB = settings.notion_assessments_db
-NOTION_CLI_DB = settings.notion_clients_db
+# Legacy Notion config (v1 only)
+NOTION_ASS_DB = getattr(settings, "notion_assessments_db", "")
+NOTION_CLI_DB = getattr(settings, "notion_clients_db", "")
 
 
 def verify_access_code(code: str) -> dict | None:
     """Verifica el código ZNV-XXXX contra la BD Assessments de Notion."""
     if not code or "ZNV-" not in code.upper():
         return None
-    notion_key = settings.notion_api_key.get_secret_value()
+    notion_key = getattr(settings, "notion_api_key", None)
+    notion_key = notion_key.get_secret_value() if notion_key else ""
     headers = {
         "Authorization": f"Bearer {notion_key}",
         "Notion-Version": "2022-06-28",
@@ -571,7 +573,8 @@ def mark_assessment_completed(
     risk_level: str = None,
 ):
     """Marca el assessment como completado en Notion y guarda los resultados."""
-    notion_key = settings.notion_api_key.get_secret_value()
+    notion_key = getattr(settings, "notion_api_key", None)
+    notion_key = notion_key.get_secret_value() if notion_key else ""
     headers = {
         "Authorization": f"Bearer {notion_key}",
         "Notion-Version": "2022-06-28",

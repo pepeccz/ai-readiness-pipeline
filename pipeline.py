@@ -930,6 +930,33 @@ def map_form_to_rec(payload: dict) -> dict:
     return rec
 
 
+def convert_to_pdf(docx_path: str) -> str | None:
+    """Convert .docx to .pdf using LibreOffice headless. Returns PDF path or None."""
+    try:
+        output_dir = os.path.dirname(docx_path)
+        result = subprocess.run(
+            [
+                "libreoffice", "--headless", "--convert-to", "pdf",
+                "--outdir", output_dir, docx_path,
+            ],
+            capture_output=True, text=True, timeout=60,
+        )
+        if result.returncode == 0:
+            pdf_path = docx_path.rsplit(".", 1)[0] + ".pdf"
+            if os.path.exists(pdf_path):
+                # Clean up the .docx
+                try:
+                    os.unlink(docx_path)
+                except OSError:
+                    pass
+                return pdf_path
+        print(f"   [pdf] LibreOffice error: {result.stderr[:200]}")
+        return None
+    except Exception as e:
+        print(f"   [pdf] Conversión falló: {e}")
+        return None
+
+
 def process_assessment_v2(form_data: dict) -> str:
     """
     Self-hosted pipeline v2: Form → LLM → Scoring → Report → docx path.
@@ -991,10 +1018,19 @@ def process_assessment_v2(form_data: dict) -> str:
     docx_path = generate_report(rec)
     print(f"   Informe generado: {docx_path}")
 
+    # 6. Convert to PDF
+    print("5. Convirtiendo a PDF...")
+    pdf_path = convert_to_pdf(docx_path)
+    if pdf_path:
+        print(f"   PDF generado: {pdf_path}")
+    else:
+        print("   ⚠ Conversión a PDF falló, entregando .docx")
+        pdf_path = docx_path
+
     total_ms = int((time.time() - start_time) * 1000)
     print(f"── Pipeline v2 completado en {total_ms}ms ──")
 
-    return docx_path
+    return pdf_path
 
 
 if __name__ == "__main__":

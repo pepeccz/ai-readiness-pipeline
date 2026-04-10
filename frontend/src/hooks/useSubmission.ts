@@ -94,7 +94,9 @@ export function useSubmission() {
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `ai-readiness-report-${taskId}.docx`
+      const contentType = response.headers.get('content-type') || ''
+      const ext = contentType.includes('pdf') ? 'pdf' : 'docx'
+      link.download = `ai-readiness-report-${taskId}.${ext}`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)

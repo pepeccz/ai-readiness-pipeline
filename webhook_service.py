@@ -197,24 +197,22 @@ async def get_status(task_id: str):
 
 
 @app.get("/api/download/{task_id}")
-async def download_report(task_id: str, background_tasks: BackgroundTasks):
-    """Download the generated .docx report."""
+async def download_report(task_id: str):
+    """Download the generated report (PDF or DOCX)."""
     task = _tasks.get(task_id)
     if not task or task["status"] != "completed":
         raise HTTPException(status_code=404, detail="Report not ready")
 
-    docx_path = task.get("docx_path")
-    if not docx_path or not os.path.exists(docx_path):
+    report_path = task.get("docx_path")
+    if not report_path or not os.path.exists(report_path):
         raise HTTPException(status_code=404, detail="Report file not found")
 
     company = task.get("company", "informe").replace(" ", "_")
-    filename = f"AIR-Informe-{company}.docx"
+    is_pdf = report_path.endswith(".pdf")
+    filename = f"AIR-Informe-{company}.{'pdf' if is_pdf else 'docx'}"
+    media_type = "application/pdf" if is_pdf else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
-    return FileResponse(
-        docx_path,
-        filename=filename,
-        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    )
+    return FileResponse(report_path, filename=filename, media_type=media_type)
 
 
 @app.get("/api/health")

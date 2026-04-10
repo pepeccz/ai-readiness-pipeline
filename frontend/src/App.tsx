@@ -24,19 +24,25 @@ function App() {
         {/* Hero intro */}
         <div className="text-center mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 leading-tight">
-            ¿Está tu empresa lista para la{' '}
-            <span className="text-teal-500">Inteligencia Artificial</span>?
+            Diagnóstico estratégico de{' '}
+            <span className="text-teal-500">Inteligencia Artificial</span>{' '}
+            para tu empresa
           </h1>
-          <p className="text-gray-500 text-base sm:text-lg max-w-xl mx-auto">
-            Completa este formulario en 10–15 minutos y recibirás un informe personalizado
-            con las oportunidades de IA más relevantes para tu negocio.
+          <p className="text-gray-500 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
+            Este cuestionario analiza en profundidad tu negocio para generar un informe
+            personalizado con recomendaciones concretas de herramientas, análisis de
+            cumplimiento normativo (RGPD / AI Act) y un plan de acción con ROI estimado.
+          </p>
+          <p className="text-gray-400 text-sm mt-3 max-w-xl mx-auto">
+            Cuanto más detalladas sean tus respuestas, más preciso y valioso será el informe.
+            Tómate el tiempo que necesites — cada respuesta cuenta.
           </p>
           <div className="flex items-center justify-center gap-6 mt-5 text-sm text-gray-400">
             <span className="flex items-center gap-1.5">
               <svg className="w-4 h-4 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              10–15 minutos
+              Informe profesional
             </span>
             <span className="flex items-center gap-1.5">
               <svg className="w-4 h-4 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -46,9 +52,9 @@ function App() {
             </span>
             <span className="flex items-center gap-1.5">
               <svg className="w-4 h-4 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-              Informe en PDF
+              Análisis con IA avanzada
             </span>
           </div>
         </div>

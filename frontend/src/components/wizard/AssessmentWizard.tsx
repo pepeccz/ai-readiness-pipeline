@@ -21,40 +21,40 @@ import type { FormState } from '../../types/form'
 
 const SECTION_TITLES: Record<number, { title: string; description: string }> = {
   1: {
-    title: 'Tu empresa',
-    description: 'Cuéntanos sobre tu negocio para personalizar el análisis.',
+    title: 'Sobre tu empresa',
+    description: 'Necesitamos entender tu negocio para adaptar las recomendaciones a tu realidad.',
   },
   2: {
-    title: 'Stack tecnológico',
-    description: '¿Qué herramientas y software utilizáis actualmente?',
+    title: 'Tu entorno tecnológico',
+    description: 'Qué herramientas usáis hoy — tanto de IA como de gestión. Esto determina qué integraciones son viables.',
   },
   3: {
-    title: 'Atención al cliente',
-    description: 'Cómo gestionáis la comunicación y soporte con vuestros clientes.',
+    title: 'Cómo gestionáis la atención al cliente',
+    description: 'Entender tu día a día con los clientes nos permite detectar dónde la automatización puede tener mayor impacto.',
   },
   4: {
-    title: 'Marketing y captación',
-    description: 'Cómo generáis contenido y atraéis nuevos clientes.',
+    title: 'Marketing y captación de clientes',
+    description: 'Cómo generáis contenido y atraéis clientes hoy. La IA puede transformar estos procesos — pero necesitamos saber de dónde partís.',
   },
   5: {
-    title: 'Operaciones',
-    description: 'Los procesos internos que consumen más tiempo y recursos.',
+    title: 'Tus procesos operativos',
+    description: 'Esta es la sección más importante del análisis. Describe con el mayor detalle posible los procesos que más tiempo y recursos consumen.',
   },
   6: {
-    title: 'Gestión y finanzas',
-    description: 'Cómo gestionáis la facturación y la administración.',
+    title: 'Gestión financiera y administrativa',
+    description: 'La automatización de tareas administrativas es una de las áreas con ROI más inmediato para PYMEs.',
   },
   7: {
-    title: 'Recursos Humanos',
-    description: 'Gestión del equipo y procesos de RRHH.',
+    title: 'Gestión de personas',
+    description: 'Si vuestro equipo está creciendo, hay herramientas que pueden ahorrar horas de gestión administrativa.',
   },
   8: {
-    title: 'Compliance y privacidad',
-    description: 'Cumplimiento normativo y uso responsable de la IA.',
+    title: 'Protección de datos y cumplimiento',
+    description: 'Evaluamos tu situación frente al RGPD y el AI Act para identificar riesgos y recomendarte las acciones prioritarias.',
   },
   9: {
-    title: 'Presupuesto y urgencia',
-    description: 'Disponibilidad de inversión y prioridades para implementar IA.',
+    title: 'Inversión y próximos pasos',
+    description: 'Con esta información cerramos el análisis y generamos tu informe personalizado.',
   },
 }
 

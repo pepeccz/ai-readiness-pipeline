@@ -2,6 +2,7 @@ import type { FormState } from '../../types/form'
 import { FormField } from '../ui/FormField'
 import { RadioGroup } from '../ui/RadioGroup'
 import { TextInput } from '../ui/TextInput'
+import { TextArea } from '../ui/TextArea'
 
 interface Props {
   state: FormState
@@ -116,6 +117,15 @@ export function Section8Compliance({ state, onChange, errors = {} }: Props) {
           value={state.has_ai_policy}
           onChange={v => onChange('has_ai_policy', v)}
           columns={3}
+        />
+      </FormField>
+
+      <FormField label="¿Algo más que quieras contarnos sobre esta área? (opcional)">
+        <TextArea
+          value={state.compliance_context}
+          onChange={v => onChange('compliance_context', v)}
+          placeholder="Cualquier detalle adicional que nos ayude a entender mejor tu situación..."
+          rows={3}
         />
       </FormField>
     </div>

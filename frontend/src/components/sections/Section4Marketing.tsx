@@ -3,6 +3,7 @@ import { FormField } from '../ui/FormField'
 import { MultiSelect } from '../ui/MultiSelect'
 import { RadioGroup } from '../ui/RadioGroup'
 import { TextInput } from '../ui/TextInput'
+import { TextArea } from '../ui/TextArea'
 
 interface Props {
   state: FormState
@@ -16,6 +17,7 @@ const CONTENT_GENERATION_OPTIONS = [
   { value: 'freelance', label: 'Freelance' },
   { value: 'duenio', label: 'El dueño/a' },
   { value: 'no_generamos', label: 'No generamos contenido' },
+  { value: 'otro', label: 'Otro' },
 ]
 
 const LEAD_ACQUISITION_OPTIONS = [
@@ -25,7 +27,7 @@ const LEAD_ACQUISITION_OPTIONS = [
   { value: 'publicidad', label: 'Publicidad (Google Ads, Meta...)' },
   { value: 'ferias_eventos', label: 'Ferias / Eventos' },
   { value: 'comerciales', label: 'Equipo comercial' },
-  { value: 'otros', label: 'Otros' },
+  { value: 'otro', label: 'Otro' },
 ]
 
 const YES_NO_OPTIONS = [
@@ -50,6 +52,8 @@ export function Section4Marketing({ state, onChange, errors = {} }: Props) {
           selected={state.content_generation}
           onChange={v => onChange('content_generation', v)}
           columns={2}
+          otherValue={state.content_generation_other}
+          onOtherChange={v => onChange('content_generation_other', v)}
         />
       </FormField>
 
@@ -59,6 +63,8 @@ export function Section4Marketing({ state, onChange, errors = {} }: Props) {
           selected={state.lead_acquisition}
           onChange={v => onChange('lead_acquisition', v)}
           columns={2}
+          otherValue={state.lead_acquisition_other}
+          onOtherChange={v => onChange('lead_acquisition_other', v)}
         />
       </FormField>
 
@@ -90,6 +96,15 @@ export function Section4Marketing({ state, onChange, errors = {} }: Props) {
           value={state.marketing_budget}
           onChange={v => onChange('marketing_budget', v)}
           columns={2}
+        />
+      </FormField>
+
+      <FormField label="¿Algo más que quieras contarnos sobre esta área? (opcional)">
+        <TextArea
+          value={state.marketing_context}
+          onChange={v => onChange('marketing_context', v)}
+          placeholder="Cualquier detalle adicional que nos ayude a entender mejor tu situación..."
+          rows={3}
         />
       </FormField>
     </div>

@@ -3,6 +3,7 @@ import { FormField } from '../ui/FormField'
 import { MultiSelect } from '../ui/MultiSelect'
 import { RadioGroup } from '../ui/RadioGroup'
 import { TextInput } from '../ui/TextInput'
+import { TextArea } from '../ui/TextArea'
 
 interface Props {
   state: FormState
@@ -28,8 +29,8 @@ const AI_TOOLS_OPTIONS = [
   { value: 'gemini', label: 'Google Gemini' },
   { value: 'midjourney', label: 'Midjourney' },
   { value: 'claude', label: 'Claude' },
-  { value: 'otra', label: 'Otra herramienta IA' },
   { value: 'ninguna', label: 'Ninguna' },
+  { value: 'otro', label: 'Otro' },
 ]
 
 const YES_NO_OPTIONS = [
@@ -46,6 +47,8 @@ export function Section2Stack({ state, onChange, errors = {} }: Props) {
           selected={state.software_used}
           onChange={v => onChange('software_used', v)}
           columns={2}
+          otherValue={state.software_other}
+          onOtherChange={v => onChange('software_other', v)}
         />
       </FormField>
 
@@ -55,6 +58,8 @@ export function Section2Stack({ state, onChange, errors = {} }: Props) {
           selected={state.ai_tools_used}
           onChange={v => onChange('ai_tools_used', v)}
           columns={2}
+          otherValue={state.ai_tools_other}
+          onOtherChange={v => onChange('ai_tools_other', v)}
         />
       </FormField>
 
@@ -99,6 +104,15 @@ export function Section2Stack({ state, onChange, errors = {} }: Props) {
           />
         </FormField>
       )}
+
+      <FormField label="Cuéntanos más sobre vuestra situación tecnológica actual (opcional)">
+        <TextArea
+          value={state.stack_context}
+          onChange={v => onChange('stack_context', v)}
+          placeholder="Por ejemplo: usamos Holded para facturación, Google Sheets para todo lo demás, no tenemos web propia..."
+          rows={3}
+        />
+      </FormField>
     </div>
   )
 }

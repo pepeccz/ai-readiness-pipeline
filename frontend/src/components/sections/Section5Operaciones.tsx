@@ -32,6 +32,7 @@ const DATA_ENTRY_OPTIONS = [
   { value: 'sistema_erp', label: 'Sistema / ERP' },
   { value: 'excel', label: 'Excel' },
   { value: 'verbal', label: 'Verbal / telefónico' },
+  { value: 'otro', label: 'Otro' },
 ]
 
 const PAIN_POINTS_OPTIONS = [
@@ -90,6 +91,8 @@ export function Section5Operaciones({ state, onChange, errors = {} }: Props) {
           selected={state.data_entry_channels}
           onChange={v => onChange('data_entry_channels', v)}
           columns={2}
+          otherValue={state.data_entry_other}
+          onOtherChange={v => onChange('data_entry_other', v)}
         />
       </FormField>
 
@@ -99,6 +102,17 @@ export function Section5Operaciones({ state, onChange, errors = {} }: Props) {
           selected={state.process_pain_points}
           onChange={v => onChange('process_pain_points', v)}
           columns={2}
+          otherValue={state.process_pain_other}
+          onOtherChange={v => onChange('process_pain_other', v)}
+        />
+      </FormField>
+
+      <FormField label="¿Algo más que quieras contarnos sobre esta área? (opcional)">
+        <TextArea
+          value={state.operations_context}
+          onChange={v => onChange('operations_context', v)}
+          placeholder="Cualquier detalle adicional que nos ayude a entender mejor tu situación..."
+          rows={3}
         />
       </FormField>
     </div>

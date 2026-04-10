@@ -57,6 +57,17 @@ export function Section1Empresa({ state, onChange, errors = {} }: Props) {
         />
       </FormField>
 
+      {state.sector === 'otro' && (
+        <FormField label="¿Cuál es tu sector?" htmlFor="sector_other">
+          <TextInput
+            id="sector_other"
+            value={state.sector_other}
+            onChange={v => onChange('sector_other', v)}
+            placeholder="Describe tu sector de actividad..."
+          />
+        </FormField>
+      )}
+
       <FormField label="Número de empleados" required error={errors.employee_range}>
         <RadioGroup
           name="employee_range"

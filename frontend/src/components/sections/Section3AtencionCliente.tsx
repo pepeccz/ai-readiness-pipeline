@@ -18,6 +18,7 @@ const CHANNEL_OPTIONS = [
   { value: 'web_chat', label: 'Web / Chat' },
   { value: 'redes_sociales', label: 'Redes sociales' },
   { value: 'presencial', label: 'Presencial' },
+  { value: 'otro', label: 'Otro' },
 ]
 
 const DAILY_QUERIES_OPTIONS = [
@@ -43,6 +44,8 @@ export function Section3AtencionCliente({ state, onChange, errors = {} }: Props)
           selected={state.contact_channels}
           onChange={v => onChange('contact_channels', v)}
           columns={2}
+          otherValue={state.contact_channels_other}
+          onOtherChange={v => onChange('contact_channels_other', v)}
         />
       </FormField>
 
@@ -83,6 +86,15 @@ export function Section3AtencionCliente({ state, onChange, errors = {} }: Props)
           value={state.avg_resolution_time}
           onChange={v => onChange('avg_resolution_time', v)}
           columns={2}
+        />
+      </FormField>
+
+      <FormField label="¿Algo más que quieras contarnos sobre esta área? (opcional)">
+        <TextArea
+          value={state.customer_service_context}
+          onChange={v => onChange('customer_service_context', v)}
+          placeholder="Cualquier detalle adicional que nos ayude a entender mejor tu situación..."
+          rows={3}
         />
       </FormField>
     </div>

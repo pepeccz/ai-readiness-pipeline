@@ -1,28 +1,34 @@
-FROM python:3.12-slim
+# Stage 1: Build React frontend
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm ci --ignore-scripts 2>/dev/null || npm install
+COPY frontend/ ./
+RUN npm run build
 
-# Install Node.js for deck generation (generate-deck.mjs)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    nodejs npm \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create non-root user
-RUN useradd -m -s /bin/bash app
+# Stage 2: Python API + static files
+FROM python:3.12-slim AS production
 WORKDIR /app
 
-# Install Python dependencies
+# Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application
-COPY . .
+# Backend source
+COPY *.py ./
+COPY *.md ./
+COPY assets/ ./assets/
 
-# Own by app user
-RUN chown -R app:app /app
+# Frontend build
+COPY --from=frontend-builder /app/frontend/dist ./frontend/dist/
+
+# Non-root user
+RUN useradd -m -s /bin/bash app && chown -R app:app /app
 USER app
 
 EXPOSE 8100
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-    CMD python -c "import requests; r=requests.get('http://localhost:8100/health'); exit(0 if r.ok else 1)"
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8100/api/health')"
 
 CMD ["uvicorn", "webhook_service:app", "--host", "0.0.0.0", "--port", "8100"]

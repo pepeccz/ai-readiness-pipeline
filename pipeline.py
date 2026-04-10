@@ -828,6 +828,175 @@ def process_assessment(json_str: str):
     return drive_url
 
 
+# ─── V2: Self-hosted pipeline (no Google/Notion dependencies) ─────────────────
+
+
+def map_form_to_rec(payload: dict) -> dict:
+    """Transform web form payload to internal rec format expected by scoring + LLM."""
+    import uuid
+
+    rec = {}
+
+    # Identity
+    rec["assessment_id"] = "AIR-" + str(uuid.uuid4())[:8].upper()
+    rec["company_name"] = payload.get("contact_name", "Empresa")
+    rec["respondent_name_role"] = payload.get("contact_name", "")
+    if payload.get("contact_role"):
+        rec["respondent_name_role"] += f" — {payload['contact_role']}"
+    rec["sector"] = payload.get("sector", "")
+    rec["employee_range"] = payload.get("employee_range", "")
+    rec["revenue_range"] = payload.get("revenue_range", "")
+    rec["who_decides"] = payload.get("tech_decision_maker", "")
+
+    # Tools and automation — scoring engine expects these as strings
+    ai_tools = payload.get("ai_tools_used", [])
+    rec["tools_used"] = ", ".join(ai_tools) if ai_tools else ""
+    rec["chatbot"] = "Sí" if payload.get("has_chatbot") else "No"
+    rec["chatbot_desc"] = payload.get("chatbot_desc", "")
+    rec["custom_ai"] = "No"
+    rec["custom_ai_desc"] = ""
+    rec["auto_system"] = "Sí" if payload.get("has_automations") else "No"
+
+    # Software stack
+    software = payload.get("software_used", [])
+    rec["sistemas_existentes"] = ", ".join(software) if software else ""
+
+    # Customer service
+    channels = payload.get("contact_channels", [])
+    rec["contact_channels"] = ", ".join(channels) if channels else ""
+    rec["daily_queries"] = payload.get("daily_queries", "")
+    rec["support_team_desc"] = payload.get("support_team_desc", "")
+    rec["top_repetitive_queries"] = payload.get("top_repetitive_queries", "")
+    rec["avg_resolution_time"] = payload.get("avg_resolution_time", "")
+
+    # Marketing and sales
+    content_gen = payload.get("content_generation", [])
+    rec["content_generation"] = ", ".join(content_gen) if content_gen else ""
+    lead_acq = payload.get("lead_acquisition", [])
+    rec["lead_acquisition"] = ", ".join(lead_acq) if lead_acq else ""
+    rec["has_lead_tracking"] = "Sí" if payload.get("has_lead_tracking") else "No"
+    rec["lead_tracking_desc"] = payload.get("lead_tracking_desc", "")
+    rec["monthly_marketing_budget"] = payload.get("monthly_marketing_budget", "")
+
+    # Operations — process to improve
+    rec["process_to_improve"] = payload.get("most_time_consuming_process", "")
+    rec["proceso_nombre"] = payload.get("most_time_consuming_process", "")
+    rec["proceso_personas"] = payload.get("process_people_count", "")
+    rec["proceso_horas"] = payload.get("process_hours_per_week", "")
+    data_channels = payload.get("data_entry_channels", [])
+    rec["proceso_dato_input"] = ", ".join(data_channels) if data_channels else ""
+    pain_points = payload.get("process_pain_points", [])
+    rec["proceso_falla"] = ", ".join(pain_points) if pain_points else ""
+    rec["proceso_resultado_esperado"] = ""
+
+    # Finance
+    rec["invoicing_method"] = payload.get("invoicing_method", "")
+    rec["admin_hours_per_week"] = payload.get("admin_hours_per_week", "")
+
+    # HR
+    rec["is_hiring"] = "Sí" if payload.get("is_hiring") else "No"
+    rec["hiring_desc"] = payload.get("hiring_desc", "")
+    rec["hr_management_method"] = payload.get("hr_management_method", "")
+    rec["hr_hours_per_week"] = payload.get("hr_hours_per_week", "")
+
+    # Compliance
+    rec["datos_personales_ia"] = "Sí" if payload.get("collects_personal_data") else "No"
+    rec["data_types"] = payload.get("personal_data_types", "")
+    rec["data_in_ai"] = payload.get("knows_ai_gdpr", "No sé")
+    rec["dpa"] = payload.get("has_dpa", "No sé qué es")
+    rec["dpa_with_whom"] = payload.get("dpa_with_whom", "")
+    rec["ai_act"] = "Sí, lo conozco" if payload.get("knows_ai_act") else "No lo conozco"
+    rec["politica_ia"] = "Sí, documentada" if payload.get("has_ai_policy") else "No tenemos"
+    rec["formacion_ia"] = ""
+    rec["eipd"] = "No"
+    rec["auto_decisions"] = "No"
+
+    # Budget and priority
+    rec["budget"] = payload.get("investment_budget", "")
+    rec["proceso_urgencia"] = payload.get("urgency", "")
+    rec["additional_context"] = payload.get("additional_notes", "")
+    rec["main_pain"] = payload.get("most_time_consuming_process", "")
+    rec["goals_12m"] = ""
+    rec["hours_lost"] = ""
+    rec["priority"] = "Alta" if "ahora" in payload.get("urgency", "").lower() else "Media"
+
+    # Legacy area fields — default to "" (Sprint 1: 0 pts for pts_area_usage)
+    for area in [
+        "area_atencion", "area_marketing", "area_ventas", "area_rrhh",
+        "area_operaciones", "area_finanzas", "area_producto",
+    ]:
+        rec[area] = ""
+
+    return rec
+
+
+def process_assessment_v2(form_data: dict) -> str:
+    """
+    Self-hosted pipeline v2: Form → LLM → Scoring → Report → docx path.
+    No Google, Notion, or email dependencies.
+    Returns the path to the generated .docx file.
+    """
+    start_time = time.time()
+
+    # 1. Map form data to internal rec format
+    rec = map_form_to_rec(form_data)
+    print(f"── Pipeline v2 iniciado: {rec['assessment_id']} | {rec['company_name']} ──")
+
+    # 2. LLM enrichment
+    print("1. Enriqueciendo con LLM...")
+    step_start = time.time()
+    from llm_enricher import enrich_assessment
+
+    rec = enrich_assessment(rec)
+    llm_count = len([k for k in rec if k.startswith("llm_") and rec[k]])
+    print(f"   Enricher OK → {llm_count} campos LLM generados")
+    log_step(
+        PipelineStep.ENRICH_LLM, "success",
+        {"fields_generated": llm_count},
+        int((time.time() - step_start) * 1000),
+    )
+
+    # 3. Recommendation enrichment
+    print("2. Enriqueciendo con recomendaciones...")
+    step_start = time.time()
+    try:
+        from recommendation_enricher import enrich_recommendations
+
+        rec = enrich_recommendations(rec)
+        reco_count = len(rec.get("llm_tool_recommendations", []))
+        questions_count = len(rec.get("llm_followup_questions", []))
+        print(f"   Recomendaciones OK → {reco_count} herramientas, {questions_count} preguntas")
+        log_step(
+            PipelineStep.ENRICH_RECOMMENDATIONS, "success",
+            {"tools_recommended": reco_count, "followup_questions": questions_count},
+            int((time.time() - step_start) * 1000),
+        )
+    except Exception as e:
+        print(f"   ⚠ Recomendaciones: error ({e}), continuando sin ellas")
+
+    # 4. Scoring — NO sheet reads, purely from form answers
+    print("3. Calculando scoring...")
+    from scoring_engine import enrich_with_scoring, fix_employee_range
+
+    rec["employee_range"] = fix_employee_range(rec.get("employee_range"))
+    llm_answers = rec.pop("llm_scoring_answers", None)
+    rec = enrich_with_scoring(rec, llm_answers, sheet_id=None)
+    rec["llm_scoring_answers"] = llm_answers
+    print("   Scoring OK")
+
+    # 5. Generate .docx report
+    print("4. Generando informe .docx...")
+    from report_generator import generate_report
+
+    docx_path = generate_report(rec)
+    print(f"   Informe generado: {docx_path}")
+
+    total_ms = int((time.time() - start_time) * 1000)
+    print(f"── Pipeline v2 completado en {total_ms}ms ──")
+
+    return docx_path
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Uso: python3 pipeline.py '{\"assessment_id\":...}'")

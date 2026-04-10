@@ -1,67 +1,133 @@
 """
-AI Readiness Pipeline — Webhook Service
-FastAPI app that receives assessment JSON from Google AppScript
-and runs the pipeline in background.
+AI Readiness Pipeline — Web Service
+FastAPI app serving the React assessment form and processing pipeline.
 
 Endpoints:
-  POST /assessment  — Submit assessment (returns 202 + task_id)
-  GET  /status/{id} — Check processing status
-  GET  /health      — Service health check
+  GET  /             → React SPA (static files)
+  POST /api/assessment    → Submit assessment form (returns 202 + task_id)
+  GET  /api/status/{id}  → Check processing status
+  GET  /api/download/{id} → Download generated .docx report
+  GET  /api/health       → Service health check
 """
 
+import os
 import json
-import time
 import uuid
 import threading
 from datetime import datetime
 
-from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, field_validator
+from typing import Optional
 
 from config import settings
 
 app = FastAPI(
-    title="AI Readiness Pipeline",
+    title="AI Readiness Platform",
     version="2.0",
     docs_url=None,
     redoc_url=None,
 )
 
+# --- CORS ---
+origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type"],
+)
+
+# --- Pydantic Models ---
+
+
+class AssessmentFormPayload(BaseModel):
+    # Section 1 — Empresa
+    sector: str
+    employee_range: str
+    contact_name: str
+    revenue_range: str = ""
+    contact_role: str = ""
+    tech_decision_maker: str = ""
+    # Section 2 — Stack
+    software_used: list[str] = []
+    ai_tools_used: list[str] = []
+    has_chatbot: bool = False
+    chatbot_desc: str = ""
+    has_automations: bool = False
+    automations_desc: str = ""
+    # Section 3 — Atención al cliente
+    contact_channels: list[str] = []
+    daily_queries: str = ""
+    support_team_desc: str = ""
+    top_repetitive_queries: str = ""
+    avg_resolution_time: str = ""
+    # Section 4 — Marketing y ventas
+    content_generation: list[str] = []
+    lead_acquisition: list[str] = []
+    has_lead_tracking: bool = False
+    lead_tracking_desc: str = ""
+    monthly_marketing_budget: str = ""
+    # Section 5 — Operaciones
+    most_time_consuming_process: str
+    process_people_count: str = ""
+    process_hours_per_week: str = ""
+    data_entry_channels: list[str] = []
+    process_pain_points: list[str] = []
+    # Section 6 — Finanzas
+    invoicing_method: str = ""
+    has_cash_flow_control: bool = False
+    cash_flow_desc: str = ""
+    admin_hours_per_week: str = ""
+    # Section 7 — RRHH
+    is_hiring: bool = False
+    hiring_desc: str = ""
+    hr_management_method: str = ""
+    hr_hours_per_week: str = ""
+    # Section 8 — Compliance
+    collects_personal_data: bool = False
+    personal_data_types: str = ""
+    knows_ai_gdpr: str = ""
+    has_dpa: str = ""
+    dpa_with_whom: str = ""
+    knows_ai_act: bool = False
+    has_ai_policy: bool = False
+    # Section 9 — Presupuesto
+    investment_budget: str
+    urgency: str
+    additional_notes: str = ""
+
+    @field_validator("sector", "employee_range", "contact_name",
+                     "most_time_consuming_process", "investment_budget", "urgency")
+    @classmethod
+    def not_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Este campo es obligatorio")
+        return v.strip()
+
+
 # --- In-memory task store ---
 _tasks: dict[str, dict] = {}
 
 
-def _verify_bearer(request: Request) -> None:
-    """Validate bearer token from Authorization header."""
-    secret = settings.webhook_secret.get_secret_value()
-    if not secret:
-        return  # No secret configured = open access (dev mode)
-
-    auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing bearer token")
-
-    token = auth[7:]
-    if token != secret:
-        raise HTTPException(status_code=403, detail="Invalid bearer token")
-
-
-def _run_pipeline(task_id: str, json_str: str) -> None:
-    """Run the pipeline in a background thread. Updates task store on completion."""
+def _run_pipeline(task_id: str, form_data: dict) -> None:
+    """Run the pipeline in a background thread."""
     _tasks[task_id]["status"] = "processing"
     _tasks[task_id]["started_at"] = datetime.now().isoformat()
 
     try:
-        # Import here to avoid circular imports at module level
         import sys
-        import os
         sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-        from pipeline import process_assessment
+        from pipeline import process_assessment_v2
 
-        result = process_assessment(json_str)
+        docx_path = process_assessment_v2(form_data)
 
         _tasks[task_id]["status"] = "completed"
-        _tasks[task_id]["result"] = result if isinstance(result, dict) else {"output": str(result)}
+        _tasks[task_id]["docx_path"] = docx_path
+        _tasks[task_id]["download_available"] = True
         _tasks[task_id]["completed_at"] = datetime.now().isoformat()
 
     except Exception as e:
@@ -71,76 +137,89 @@ def _run_pipeline(task_id: str, json_str: str) -> None:
         print(f"[webhook] Pipeline error for task {task_id}: {e}")
 
 
-@app.post("/assessment")
-async def submit_assessment(request: Request):
-    """
-    Receive assessment JSON and start pipeline processing.
-    Returns 202 Accepted immediately with a task_id for status polling.
-    """
-    _verify_bearer(request)
+# --- API Endpoints ---
 
-    try:
-        body = await request.json()
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="Invalid JSON body")
 
-    if not isinstance(body, dict):
-        raise HTTPException(status_code=400, detail="Body must be a JSON object")
-
-    # Validate minimum required fields
-    if not body.get("access_code") and not body.get("assessment_id"):
-        raise HTTPException(
-            status_code=400,
-            detail="Missing required field: access_code or assessment_id"
-        )
-
+@app.post("/api/assessment", status_code=202)
+async def submit_assessment(payload: AssessmentFormPayload):
+    """Receive assessment form and start pipeline processing."""
     task_id = str(uuid.uuid4())[:8]
-    json_str = json.dumps(body, ensure_ascii=False)
 
     _tasks[task_id] = {
         "status": "queued",
-        "company": body.get("company_name", "unknown"),
-        "access_code": body.get("access_code", ""),
+        "company": payload.contact_name,
         "received_at": datetime.now().isoformat(),
     }
 
-    # Run pipeline in background thread
     thread = threading.Thread(
         target=_run_pipeline,
-        args=(task_id, json_str),
+        args=(task_id, payload.model_dump()),
         daemon=True,
     )
     thread.start()
 
-    return JSONResponse(
-        status_code=202,
-        content={
-            "status": "accepted",
-            "task_id": task_id,
-            "message": f"Assessment queued for processing",
-        },
-    )
+    return {
+        "status": "accepted",
+        "task_id": task_id,
+        "message": "Assessment en cola de procesamiento",
+    }
 
 
-@app.get("/status/{task_id}")
+@app.get("/api/status/{task_id}")
 async def get_status(task_id: str):
-    """Check the status of a submitted assessment."""
+    """Check processing status."""
     task = _tasks.get(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    return task
+    # Don't expose internal fields
+    return {
+        "status": task["status"],
+        "received_at": task.get("received_at"),
+        "started_at": task.get("started_at"),
+        "completed_at": task.get("completed_at"),
+        "download_available": task.get("download_available", False),
+        "error": task.get("error"),
+    }
 
 
-@app.get("/health")
+@app.get("/api/download/{task_id}")
+async def download_report(task_id: str, background_tasks: BackgroundTasks):
+    """Download the generated .docx report."""
+    task = _tasks.get(task_id)
+    if not task or task["status"] != "completed":
+        raise HTTPException(status_code=404, detail="Report not ready")
+
+    docx_path = task.get("docx_path")
+    if not docx_path or not os.path.exists(docx_path):
+        raise HTTPException(status_code=404, detail="Report file not found")
+
+    company = task.get("company", "informe").replace(" ", "_")
+    filename = f"AIR-Informe-{company}.docx"
+
+    return FileResponse(
+        docx_path,
+        filename=filename,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
+
+
+@app.get("/api/health")
 async def health():
     """Service health check."""
     return {
         "status": "healthy",
         "service": "ai-readiness-pipeline",
+        "version": "2.0",
         "timestamp": datetime.now().isoformat(),
         "active_tasks": sum(1 for t in _tasks.values() if t["status"] == "processing"),
         "total_tasks": len(_tasks),
     }
+
+
+# --- Static files (React SPA) — mount LAST ---
+frontend_dist = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "dist")
+if os.path.exists(frontend_dist):
+    app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="static")
 
 
 if __name__ == "__main__":

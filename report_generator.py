@@ -897,7 +897,8 @@ def generate_report(rec: dict, output_path: str = None) -> str:
     # Save
     if not output_path:
         slug = re.sub(r'[^\w]', '_', company)[:30]
-        output_path = f'/tmp/AIReadiness_{slug}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.docx'
+        reports_dir = '/tmp/reports' if os.path.isdir('/tmp/reports') else '/tmp'
+        output_path = f'{reports_dir}/AIReadiness_{slug}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.docx'
 
     doc.save(output_path)
     return output_path

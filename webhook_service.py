@@ -95,8 +95,8 @@ class AssessmentFormPayload(BaseModel):
     knows_ai_gdpr: str = ""
     has_dpa: str = ""
     dpa_with_whom: str = ""
-    knows_ai_act: bool = False
-    has_ai_policy: bool = False
+    knows_ai_act: str = ""
+    has_ai_policy: str = ""
     # Section 9 — Presupuesto
     investment_budget: str
     urgency: str

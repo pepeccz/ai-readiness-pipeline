@@ -46,22 +46,22 @@ export function mapFormToPayload(state: FormState): AssessmentFormPayload {
     // Section 4
     content_generation: cleanArray(state.content_generation),
     lead_acquisition: cleanArray(state.lead_acquisition),
-    lead_tracking: toBool(state.lead_tracking),
+    has_lead_tracking: toBool(state.lead_tracking),
     ...(state.lead_tracking === 'si' && state.lead_tracking_desc.trim()
       ? { lead_tracking_desc: cleanString(state.lead_tracking_desc) }
       : {}),
-    marketing_budget: cleanString(state.marketing_budget),
+    monthly_marketing_budget: cleanString(state.marketing_budget),
 
     // Section 5
     most_time_consuming_process: cleanString(state.most_time_consuming_process),
     process_people_count: cleanString(state.process_people_count),
-    hours_per_week: cleanString(state.hours_per_week),
+    process_hours_per_week: cleanString(state.hours_per_week),
     data_entry_channels: cleanArray(state.data_entry_channels),
     process_pain_points: cleanArray(state.process_pain_points),
 
     // Section 6
     invoicing_method: cleanString(state.invoicing_method),
-    cash_flow_control: toBool(state.cash_flow_control),
+    has_cash_flow_control: toBool(state.cash_flow_control),
     ...(state.cash_flow_control === 'si' && state.cash_flow_desc.trim()
       ? { cash_flow_desc: cleanString(state.cash_flow_desc) }
       : {}),
@@ -72,13 +72,13 @@ export function mapFormToPayload(state: FormState): AssessmentFormPayload {
     ...(state.is_hiring === 'si' && state.hiring_desc.trim()
       ? { hiring_desc: cleanString(state.hiring_desc) }
       : {}),
-    hr_management: cleanString(state.hr_management),
+    hr_management_method: cleanString(state.hr_management),
     hr_hours_per_week: cleanString(state.hr_hours_per_week),
 
     // Section 8
     collects_personal_data: toBool(state.collects_personal_data),
     ...(state.collects_personal_data === 'si' && state.data_types.trim()
-      ? { data_types: cleanString(state.data_types) }
+      ? { personal_data_types: cleanString(state.data_types) }
       : {}),
     knows_ai_gdpr: cleanString(state.knows_ai_gdpr),
     has_dpa: cleanString(state.has_dpa),

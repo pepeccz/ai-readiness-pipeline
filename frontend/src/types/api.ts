@@ -42,32 +42,32 @@ export interface AssessmentFormPayload {
   // Section 4
   content_generation: string[]
   lead_acquisition: string[]
-  lead_tracking: boolean
+  has_lead_tracking: boolean
   lead_tracking_desc?: string
-  marketing_budget: string
+  monthly_marketing_budget: string
 
   // Section 5
   most_time_consuming_process: string
   process_people_count: string
-  hours_per_week: string
+  process_hours_per_week: string
   data_entry_channels: string[]
   process_pain_points: string[]
 
   // Section 6
   invoicing_method: string
-  cash_flow_control: boolean
+  has_cash_flow_control: boolean
   cash_flow_desc?: string
   admin_hours_per_week: string
 
   // Section 7
   is_hiring: boolean
   hiring_desc?: string
-  hr_management: string
+  hr_management_method: string
   hr_hours_per_week: string
 
   // Section 8
   collects_personal_data: boolean
-  data_types?: string
+  personal_data_types?: string
   knows_ai_gdpr: string
   has_dpa: string
   dpa_with_whom?: string

@@ -1,24 +1,29 @@
-import { useState, useRef } from 'react'
-import type { AssessmentFormPayload, StatusResponse } from '../types/api'
+import { useState } from 'react'
+import type { AssessmentFormPayload, SubmissionResponse } from '../types/api'
 
-export type SubmissionState = 'idle' | 'submitting' | 'polling' | 'ready' | 'downloading' | 'error'
+/**
+ * Submission hook — Phase C fire-and-forget flow.
+ *
+ * POST /api/assessment returns {assessment_id, status, message} immediately.
+ * The enrichment chain and PDF generation run in the background on the server.
+ * The consultant reviews the submission; the client receives the PDF by email
+ * when the report is approved and the signed download URL is delivered.
+ *
+ * No polling. No client-side download. The success screen shows the message
+ * from the server response.
+ */
+
+export type SubmissionState = 'idle' | 'submitting' | 'success' | 'error'
 
 export function useSubmission() {
   const [submissionState, setSubmissionState] = useState<SubmissionState>('idle')
   const [errorMessage, setErrorMessage] = useState<string>('')
-  const [taskId, setTaskId] = useState<string>('')
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  function stopPolling() {
-    if (pollingRef.current) {
-      clearInterval(pollingRef.current)
-      pollingRef.current = null
-    }
-  }
+  const [successMessage, setSuccessMessage] = useState<string>('')
 
   async function submit(payload: AssessmentFormPayload) {
     setSubmissionState('submitting')
     setErrorMessage('')
+    setSuccessMessage('')
 
     try {
       const response = await fetch('/api/assessment', {
@@ -31,96 +36,36 @@ export function useSubmission() {
       })
 
       if (!response.ok) {
-        throw new Error(`Error al enviar: ${response.statusText}`)
+        const errorBody = await response.json().catch(() => ({}))
+        throw new Error(
+          errorBody.detail
+            ? String(errorBody.detail)
+            : `Error al enviar: ${response.statusText}`
+        )
       }
 
-      const data = await response.json()
-      const id: string = data.task_id
-
-      if (!id) {
-        throw new Error('No se recibió un ID de tarea válido')
-      }
-
-      setTaskId(id)
-      setSubmissionState('polling')
-      startPolling(id)
+      const data: SubmissionResponse = await response.json()
+      setSuccessMessage(data.message || 'Recibido. Te enviaremos el reporte por email.')
+      setSubmissionState('success')
     } catch (err) {
       setSubmissionState('error')
-      setErrorMessage(err instanceof Error ? err.message : 'Error desconocido al enviar el formulario')
-    }
-  }
-
-  function startPolling(id: string) {
-    pollingRef.current = setInterval(async () => {
-      try {
-        const response = await fetch(`/api/status/${id}`)
-
-        if (!response.ok) {
-          throw new Error(`Error al consultar estado: ${response.statusText}`)
-        }
-
-        const status: StatusResponse = await response.json()
-
-        if (status.status === 'completed') {
-          stopPolling()
-          setSubmissionState('ready')
-        } else if (status.status === 'failed') {
-          stopPolling()
-          setSubmissionState('error')
-          setErrorMessage(status.error ?? 'El informe no pudo generarse. Por favor, inténtalo de nuevo.')
-        }
-        // For 'pending' and 'processing' we keep polling
-      } catch (err) {
-        stopPolling()
-        setSubmissionState('error')
-        setErrorMessage(err instanceof Error ? err.message : 'Error al verificar el estado del informe')
-      }
-    }, 3000)
-  }
-
-  async function downloadReport() {
-    if (!taskId) return
-
-    setSubmissionState('downloading')
-
-    try {
-      const response = await fetch(`/api/download/${taskId}`)
-
-      if (!response.ok) {
-        throw new Error(`Error al descargar: ${response.statusText}`)
-      }
-
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      const contentType = response.headers.get('content-type') || ''
-      const ext = contentType.includes('pdf') ? 'pdf' : 'docx'
-      link.download = `ai-readiness-report-${taskId}.${ext}`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
-      setSubmissionState('ready')
-    } catch (err) {
-      setSubmissionState('error')
-      setErrorMessage(err instanceof Error ? err.message : 'Error al descargar el informe')
+      setErrorMessage(
+        err instanceof Error ? err.message : 'Error desconocido al enviar el formulario'
+      )
     }
   }
 
   function reset() {
-    stopPolling()
     setSubmissionState('idle')
     setErrorMessage('')
-    setTaskId('')
+    setSuccessMessage('')
   }
 
   return {
     submissionState,
     errorMessage,
-    taskId,
+    successMessage,
     submit,
-    downloadReport,
     reset,
   }
 }

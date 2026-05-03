@@ -4,3 +4,21 @@ __pycache__/
 *.log
 /tmp/
 .atl/
+
+# Service account keys & credentials — NEVER commit
+sa-key.json
+*-credentials.json
+service-account*.json
+
+# SQLite database files (app/data/ is a Docker named volume in prod)
+*.db
+*.db-shm
+*.db-wal
+app/data/
+
+# Generated PDF reports (app/output/ is a Docker named volume in prod)
+output/
+
+# Python virtualenv (system uses Docker; venv is ad-hoc local dev only)
+.venv/
+venv/

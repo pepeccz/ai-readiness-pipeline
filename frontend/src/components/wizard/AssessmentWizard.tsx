@@ -86,7 +86,7 @@ function SectionContent({
 export function AssessmentWizard() {
   const { state, updateField } = useFormState()
   const visibleSections = useVisibleSections(state.employee_range)
-  const { submissionState, errorMessage, submit, downloadReport, reset } = useSubmission()
+  const { submissionState, errorMessage, successMessage, submit, reset } = useSubmission()
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [errors, setErrors] = useState<ValidationErrors>({})
   const [animating, setAnimating] = useState(false)
@@ -94,7 +94,7 @@ export function AssessmentWizard() {
   const currentSection = visibleSections[currentStepIndex]
   const isFirst = currentStepIndex === 0
   const isLast = currentStepIndex === visibleSections.length - 1
-  const isProcessing = ['submitting', 'polling', 'ready', 'downloading', 'error'].includes(submissionState)
+  const isProcessing = ['submitting', 'success', 'error'].includes(submissionState)
 
   const sectionMeta = SECTION_TITLES[currentSection]
 
@@ -146,7 +146,7 @@ export function AssessmentWizard() {
         <SubmissionStatus
           state={submissionState}
           error={errorMessage}
-          onDownload={downloadReport}
+          successMessage={successMessage}
           onRetry={reset}
         />
       </div>

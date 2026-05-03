@@ -1,17 +1,12 @@
-export type TaskStatus = 'pending' | 'processing' | 'completed' | 'failed'
-
+/**
+ * Response from POST /api/assessment (Phase C — fire-and-forget flow).
+ * The assessment is processed in the background; the report is delivered
+ * by email when the consultant approves it. No polling needed.
+ */
 export interface SubmissionResponse {
-  task_id: string
-  status: TaskStatus
-  message?: string
-}
-
-export interface StatusResponse {
-  task_id: string
-  status: TaskStatus
-  progress?: number
-  message?: string
-  error?: string
+  assessment_id: string
+  status: 'pending_review'
+  message: string
 }
 
 export interface AssessmentFormPayload {

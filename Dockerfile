@@ -23,13 +23,19 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY *.py ./
 COPY *.md ./
 COPY assets/ ./assets/
+COPY app/ ./app/
+COPY alembic/ ./alembic/
+COPY alembic.ini ./
+COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # Frontend build
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist/
 
-# Non-root user + writable output dir
+# Non-root user + writable output dir + writable DB dir
 RUN useradd -m -s /bin/bash app \
-    && mkdir -p /app/output && chown -R app:app /app
+    && mkdir -p /app/output /app/app/data \
+    && chmod +x /usr/local/bin/entrypoint.sh \
+    && chown -R app:app /app
 USER app
 
 EXPOSE 8100
@@ -37,4 +43,5 @@ EXPOSE 8100
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8100/api/health')"
 
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["uvicorn", "webhook_service:app", "--host", "0.0.0.0", "--port", "8100"]

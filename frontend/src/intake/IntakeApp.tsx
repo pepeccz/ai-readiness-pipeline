@@ -14,6 +14,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useIntakeSchema } from './api/intake'
 import { useIntakeSession } from './hooks/useIntakeSession'
+import { LifecycleBadge } from '../admin/components/LifecycleBadge'
 import { AreaSelector } from './AreaSelector'
 import { BlockRenderer } from './BlockRenderer'
 import { BlockNav } from './components/BlockNav'
@@ -81,7 +82,10 @@ export function IntakeApp({ leadId }: IntakeAppProps) {
         >
           ← Volver al lead
         </button>
-        <span className="text-xs text-neutral-500">Sesión 1 — Intake CORE</span>
+        <span className="flex items-center gap-2 text-xs text-neutral-500">
+          Sesión 1 — Intake CORE
+          {session?.state && <LifecycleBadge state={session.state} />}
+        </span>
       </header>
       <div className="flex gap-6">
       {/* Sidebar */}

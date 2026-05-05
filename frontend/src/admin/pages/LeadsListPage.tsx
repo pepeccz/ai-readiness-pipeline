@@ -17,6 +17,7 @@ import { listLeads } from '../api/leads'
 import type { LeadFilters, LeadSummary } from '../api/leads'
 import { LeadFiltersPanel } from '../components/LeadFilters/index'
 import { BucketBadge } from '../components/LeadDetail/BucketBadge'
+import { LifecycleBadge } from '../components/LifecycleBadge'
 
 const DEFAULT_FILTERS: LeadFilters = {
   page: 1,
@@ -130,6 +131,9 @@ export function LeadsListPage() {
                             Estado
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Sesión 1
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Fecha
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -213,6 +217,13 @@ function LeadRow({
       <td className="px-4 py-3 text-sm font-mono text-gray-700">{lead.triage_score}</td>
       <td className="px-4 py-3">
         <StatusBadge status={lead.status} />
+      </td>
+      <td className="px-4 py-3">
+        {lead.intake_state ? (
+          <LifecycleBadge state={lead.intake_state} />
+        ) : (
+          <span className="text-xs text-gray-400">—</span>
+        )}
       </td>
       <td className="px-4 py-3 text-xs text-gray-500">{date}</td>
       <td className="px-4 py-3">

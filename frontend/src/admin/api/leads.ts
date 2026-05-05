@@ -45,6 +45,8 @@ export interface LeadSummary {
   status: LeadStatus
   created_at: string
   assigned_consultant_id: string | null
+  /** Intake session lifecycle state — present only for accepted leads */
+  intake_state?: string
 }
 
 export interface ConsentRecord {

@@ -17,6 +17,8 @@ import { useQuery } from '@tanstack/react-query'
 import { getLead } from '../api/leads'
 import { BucketBadge } from '../components/LeadDetail/BucketBadge'
 import { LeadActionPanel } from '../components/LeadDetail/LeadActionPanel'
+import { LifecycleBadge } from '../components/LifecycleBadge'
+import { useIntakeState } from '../../intake/api/intake'
 
 const STATUS_LABELS: Record<string, string> = {
   pending_review: 'Pendiente revisión',
@@ -35,6 +37,8 @@ export function LeadDetailPage() {
     queryFn: () => getLead(id!),
     enabled: !!id,
   })
+
+  const { data: intakeState } = useIntakeState(id ?? '')
 
   if (isLoading) {
     return (
@@ -89,6 +93,7 @@ export function LeadDetailPage() {
             </div>
             <div className="flex items-center gap-2">
               <BucketBadge bucket={lead.triage_bucket} />
+              {intakeState?.state && <LifecycleBadge state={intakeState.state} />}
               <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
                 lead.status === 'accepted' ? 'bg-green-100 text-green-700' :
                 lead.status === 'rejected' ? 'bg-red-100 text-red-700' :

@@ -16,7 +16,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import type { BlockSchema } from './types/schema'
 import { FieldRenderer } from './FieldRenderer'
-import { useSchemaForm } from './hooks/useSchemaForm'
+import { useSchemaForm, getAnsweredQuestions } from './hooks/useSchemaForm'
 import { useBlockSubmit } from './api/intake'
 
 interface BlockRendererProps {
@@ -111,9 +111,8 @@ function BlockForm({
   }, [form.isDirty, form.values, storageKey])
 
   const visibleQuestions = form.getVisibleQuestions()
-  const answeredCount = visibleQuestions.filter(
-    (q) => form.values[q.id] !== undefined && form.values[q.id] !== '',
-  ).length
+  // REQ-1: use shared helper so composite questions count correctly
+  const answeredCount = getAnsweredQuestions({ ...schema, questions: visibleQuestions }, form.values).length
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

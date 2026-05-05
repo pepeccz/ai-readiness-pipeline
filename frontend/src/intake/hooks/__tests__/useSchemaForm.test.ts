@@ -1,9 +1,10 @@
 /**
  * T3.5 — useSchemaForm handles matrix type in validate() and buildPayload() (REQ-9)
+ * + getAnsweredQuestions helper tests (REQ-1)
  */
 import { describe, it, expect } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { useSchemaForm } from '../useSchemaForm'
+import { useSchemaForm, getAnsweredQuestions } from '../useSchemaForm'
 import type { BlockSchema } from '../../types/schema'
 
 // Matrix question schema — mirrors the YAML rows×columns structure (ADR-6)
@@ -106,5 +107,115 @@ describe('useSchemaForm — matrix question type (REQ-9)', () => {
         result.current.buildPayload()
       })
     }).not.toThrow()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// REQ-1: getAnsweredQuestions helper — TA.1
+// Tests written RED before implementation (Strict TDD)
+// ---------------------------------------------------------------------------
+
+const simpleBlock: BlockSchema = {
+  id: 'b1',
+  layer: 'core',
+  order: 1,
+  estimated_minutes: 5,
+  title: 'Test',
+  questions: [
+    { id: 'q1', type: 'text', label: 'Q1' },
+    { id: 'q2', type: 'text', label: 'Q2' },
+  ],
+}
+
+const compositeBlock: BlockSchema = {
+  id: 'b2',
+  layer: 'core',
+  order: 2,
+  estimated_minutes: 5,
+  title: 'Composite Test',
+  questions: [
+    {
+      id: 'comp1',
+      type: 'composite',
+      label: 'Composite',
+      sub_fields: [
+        { id: 'comp1_a', type: 'text', label: 'A' },
+        { id: 'comp1_b', type: 'text', label: 'B' },
+        { id: 'comp1_c', type: 'text', label: 'C' },
+      ],
+    },
+  ],
+}
+
+const mixedBlock: BlockSchema = {
+  id: 'b3',
+  layer: 'core',
+  order: 3,
+  estimated_minutes: 5,
+  title: 'Mixed',
+  questions: [
+    { id: 's1', type: 'text', label: 'Simple 1' },
+    { id: 's2', type: 'text', label: 'Simple 2' },
+    {
+      id: 'comp2',
+      type: 'composite',
+      label: 'Composite 2',
+      sub_fields: [
+        { id: 'comp2_a', type: 'text', label: 'A' },
+        { id: 'comp2_b', type: 'text', label: 'B' },
+      ],
+    },
+  ],
+}
+
+describe('getAnsweredQuestions (REQ-1)', () => {
+  describe('simple questions', () => {
+    it('returns 0 answered when no values', () => {
+      expect(getAnsweredQuestions(simpleBlock, {}).length).toBe(0)
+    })
+
+    it('returns 1 answered when one simple question has value', () => {
+      expect(getAnsweredQuestions(simpleBlock, { q1: 'hello' }).length).toBe(1)
+    })
+
+    it('returns 2 answered when both simple questions have values', () => {
+      expect(getAnsweredQuestions(simpleBlock, { q1: 'hello', q2: 'world' }).length).toBe(2)
+    })
+  })
+
+  describe('composite — "any" semantic (no required sub-fields declared)', () => {
+    it('counts composite as 0 when no sub-fields filled', () => {
+      expect(getAnsweredQuestions(compositeBlock, {}).length).toBe(0)
+    })
+
+    it('counts composite as 1 when ANY one sub-field is filled', () => {
+      expect(getAnsweredQuestions(compositeBlock, { comp1_b: 'value' }).length).toBe(1)
+    })
+
+    it('counts composite as 1 when all sub-fields are filled', () => {
+      expect(
+        getAnsweredQuestions(compositeBlock, { comp1_a: 'a', comp1_b: 'b', comp1_c: 'c' }).length,
+      ).toBe(1)
+    })
+  })
+
+  describe('mixed block: 2 simple + 1 composite', () => {
+    it('schema has 3 top-level questions (totalCount = 3)', () => {
+      expect(mixedBlock.questions.length).toBe(3)
+    })
+
+    it('answered is 0 when nothing filled', () => {
+      expect(getAnsweredQuestions(mixedBlock, {}).length).toBe(0)
+    })
+
+    it('answered is 2 when 2 simple filled, composite empty', () => {
+      expect(getAnsweredQuestions(mixedBlock, { s1: 'x', s2: 'y' }).length).toBe(2)
+    })
+
+    it('answered is 3 when 2 simple + composite has any sub-field filled', () => {
+      expect(
+        getAnsweredQuestions(mixedBlock, { s1: 'x', s2: 'y', comp2_a: 'z' }).length,
+      ).toBe(3)
+    })
   })
 })

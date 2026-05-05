@@ -106,6 +106,47 @@ function validateQuestion(q: Question, value: unknown): string | null {
 }
 
 // ---------------------------------------------------------------------------
+// getAnsweredQuestions — REQ-1
+// ---------------------------------------------------------------------------
+//
+// Counts how many top-level questions are "answered" in the given values map.
+// Rules (Decision 1 — hybrid composite semantic):
+//   - Simple question: answered if value is non-empty (not undefined/null/''/[]).
+//   - Composite question with NO required sub-fields: answered if ANY visible
+//     sub-field has a non-empty value ("any" semantic).
+//   - Composite question WITH required sub-fields: answered if ALL required
+//     visible sub-fields have non-empty values ("all-required" semantic).
+//
+// NOTE: `_other_text` sibling keys are flat values at root level — they are
+// NOT included in this count (they are companions to a question, not questions).
+//
+// Returns the subset of questions that are considered answered so that callers
+// can use both `.length` (answeredCount) and the question list itself.
+//
+export function getAnsweredQuestions(schema: BlockSchema, values: FormValues): Question[] {
+  return schema.questions.filter((q) => isQuestionAnswered(q, values))
+}
+
+function hasValue(v: unknown): boolean {
+  if (v === undefined || v === null || v === '') return false
+  if (Array.isArray(v)) return v.length > 0
+  return true
+}
+
+function isQuestionAnswered(q: Question, values: FormValues): boolean {
+  if (q.type === 'composite') {
+    const requiredSubs = q.sub_fields.filter((s) => s.required)
+    if (requiredSubs.length > 0) {
+      // All-required semantic: every required visible sub-field must have a value
+      return requiredSubs.every((s) => isVisible(s, values) && hasValue(values[s.id]))
+    }
+    // Any semantic: at least one visible sub-field has a value
+    return q.sub_fields.some((s) => isVisible(s, values) && hasValue(values[s.id]))
+  }
+  return hasValue(values[q.id])
+}
+
+// ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
 
@@ -172,7 +213,14 @@ export function useSchemaForm(schema: BlockSchema | null): UseSchemaFormResult {
     setIsDirty(false)
   }, [])
 
-  // Build submit payload: only include visible fields
+  // Build submit payload: only include visible fields.
+  //
+  // _other_text keys (e.g. "q4_3_other_text") are stored as flat root-level keys
+  // in `values` by FieldRenderer. They are NOT question ids themselves, so they
+  // are NOT processed in the per-question loop. Instead, we copy all _other_text
+  // keys that are present in values directly into the payload AFTER the loop.
+  // This ensures sibling companion values survive the payload build without being
+  // nested inside composite sub-payloads. (Decision 2, REQ-2 / REQ-3)
   const buildPayload = useCallback((): FormValues => {
     const visible = questions.filter((q) => isVisible(q, values))
     const payload: FormValues = {}
@@ -192,6 +240,12 @@ export function useSchemaForm(schema: BlockSchema | null): UseSchemaFormResult {
         }
       } else if (values[q.id] !== undefined) {
         payload[q.id] = values[q.id]
+      }
+    }
+    // Include _other_text companion keys at root level (flat, not inside composite)
+    for (const [key, val] of Object.entries(values)) {
+      if (key.endsWith('_other_text') && val !== undefined && val !== '') {
+        payload[key] = val
       }
     }
     return payload

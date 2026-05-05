@@ -388,6 +388,9 @@ class IntakeStateResponse(BaseModel):
     secondary_area: str | None = None
     areas_involved: list[str] = Field(default_factory=list)
     blocks_completed: list[str] = Field(default_factory=list)
+    session1_synthesis: dict | None = None
+    session1_synthesis_status: str = "not_started"
+    deep_branches_count: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -562,8 +565,16 @@ async def get_intake_state(
     db: AsyncSession = Depends(get_db),
 ) -> IntakeStateResponse:
     """Return current IntakeSession state for a lead."""
+    from app.services.synthesis_status import compute_synthesis_status  # noqa: PLC0415
+
     await _get_accepted_lead(db, lead_id)
     session = await _get_or_create_session(db, lead_id)
+
+    # Count deep branches for this session
+    deep_count_stmt = select(DeepBranch).where(DeepBranch.intake_session_id == session.id)
+    deep_count_result = await db.execute(deep_count_stmt)
+    deep_branches_count = len(deep_count_result.scalars().all())
+
     await db.commit()
 
     return IntakeStateResponse(
@@ -573,6 +584,9 @@ async def get_intake_state(
         secondary_area=session.secondary_area,
         areas_involved=session.areas_involved or [],
         blocks_completed=session.blocks_completed or [],
+        session1_synthesis=session.session1_synthesis,
+        session1_synthesis_status=compute_synthesis_status(session),
+        deep_branches_count=deep_branches_count,
     )
 
 
@@ -1040,6 +1054,89 @@ async def suggestion_action(
 
 
 # ===========================================================================
+# FINAL CLOSE ENDPOINT — POST /intake/{lead_id}/close (REQ-4, D5)
+# ===========================================================================
+
+
+class FinalCloseRequest(BaseModel):
+    force: bool = False
+
+
+@router.post("/intake/{lead_id}/close")
+async def close_intake(
+    lead_id: str,
+    body: FinalCloseRequest = FinalCloseRequest(),
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> IntakeStateResponse:
+    """
+    Transition IntakeSession to closed state.
+
+    Rules (D5):
+    - state == deep_received → set closed, 200
+    - state == deep_pending AND zero branches AND force=true → set closed, 200
+    - state == closed → 200 (idempotent)
+    - else → 422 with detail
+    """
+    from app.services.synthesis_status import compute_synthesis_status  # noqa: PLC0415
+
+    await _get_accepted_lead(db, lead_id)
+
+    session_stmt = select(IntakeSession).where(IntakeSession.lead_id == lead_id)
+    session_result = await db.execute(session_stmt)
+    session = session_result.scalar_one_or_none()
+    if session is None:
+        raise HTTPException(status_code=404, detail="No intake session found.")
+
+    # Count deep branches
+    deep_stmt = select(DeepBranch).where(DeepBranch.intake_session_id == session.id)
+    deep_result = await db.execute(deep_stmt)
+    branches = deep_result.scalars().all()
+    deep_branches_count = len(branches)
+
+    current_state = session.state
+
+    if current_state == "closed":
+        # Idempotent
+        pass
+    elif current_state == "deep_received":
+        session.state = "closed"
+        await db.commit()
+    elif current_state == "deep_pending" and deep_branches_count == 0 and body.force:
+        session.state = "closed"
+        await db.commit()
+    else:
+        can_force = current_state == "deep_pending" and deep_branches_count == 0
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "invalid_state",
+                "current_state": current_state,
+                "reason": (
+                    f"Cannot close from state '{current_state}'. "
+                    "Requires state=deep_received, or state=deep_pending with 0 branches and force=true."
+                ),
+                "can_force": can_force,
+            },
+        )
+
+    logger.info("intake_closed", lead_id=lead_id, state=session.state)
+
+    # Re-count branches after potential commit (count is unchanged)
+    return IntakeStateResponse(
+        lead_id=lead_id,
+        state=session.state,
+        primary_area=session.primary_area if session.primary_area != "not_set" else None,
+        secondary_area=session.secondary_area,
+        areas_involved=session.areas_involved or [],
+        blocks_completed=session.blocks_completed or [],
+        session1_synthesis=session.session1_synthesis,
+        session1_synthesis_status=compute_synthesis_status(session),
+        deep_branches_count=deep_branches_count,
+    )
+
+
+# ===========================================================================
 # SESSION 1 CLOSE — B7
 # ===========================================================================
 
@@ -1118,8 +1215,13 @@ async def close_session1(
         db.add(branch)
         created_count += 1
 
-    # Update session state
-    session.state = "deep_pending"
+    # D4: if no branches detected, short-circuit to deep_received (vacuous all-received).
+    # The all_received predicate in client_routes.py only fires on branch submission,
+    # so without this a zero-branch session would be stuck in deep_pending forever.
+    if created_count == 0:
+        session.state = "deep_received"
+    else:
+        session.state = "deep_pending"
     await db.commit()
 
     logger.info(
@@ -1135,11 +1237,17 @@ async def close_session1(
     async def _run_synthesis():
         from app.db.session import async_session_factory  # noqa: PLC0415
         from app.models.lead import Lead as LeadModel  # noqa: PLC0415
+        from datetime import datetime, timezone  # noqa: PLC0415
         async with async_session_factory() as syn_db:
             lead_stmt = select(LeadModel).where(LeadModel.id == lead_id)
             lead_result = await syn_db.execute(lead_stmt)
             lead = lead_result.scalar_one_or_none()
             triage_payload = lead.triage_payload if lead else {}
+
+            # Load the session in this new DB context
+            sess_stmt = select(IntakeSession).where(IntakeSession.id == session_id)
+            sess_result = await syn_db.execute(sess_stmt)
+            syn_session = sess_result.scalar_one_or_none()
 
             svc = SessionClosingService()
             try:
@@ -1148,11 +1256,30 @@ async def close_session1(
                     block_payloads=block_payloads,
                     block_syntheses=block_syntheses,
                 )
+                # Persist synthesis result — map keys to D1 schema
+                if syn_session:
+                    syn_session.session1_synthesis = {
+                        "summary": synthesis.get("global_synthesis", ""),
+                        "key_insights": synthesis.get("preliminary_hypotheses", []),
+                        "recommendations": [],
+                        "hypothesis": synthesis.get("preliminary_hypotheses", [""])[0] if synthesis.get("preliminary_hypotheses") else "",
+                        "generated_at": datetime.now(tz=timezone.utc).isoformat(),
+                        "model": "claude-sonnet-4-6",
+                    }
+                    await syn_db.commit()
                 logger.info("session1_synthesis_completed", session_id=session_id)
-                # Could persist synthesis to IntakeSession if model had that field
-                # For now logged + available for future
             except Exception as exc:
                 logger.error("session1_synthesis_failed", session_id=session_id, error=str(exc))
+                if syn_session:
+                    syn_session.session1_synthesis = {
+                        "error": str(exc),
+                        "generated_at": datetime.now(tz=timezone.utc).isoformat(),
+                        "model": "claude-sonnet-4-6",
+                    }
+                    try:
+                        await syn_db.commit()
+                    except Exception:
+                        pass
 
     background_tasks.add_task(_run_synthesis)
 
@@ -1167,7 +1294,7 @@ async def close_session1(
 
     return SessionCloseResponse(
         lead_id=lead_id,
-        state="deep_pending",
+        state=session.state,
         deep_branches_created=created_count,
         synthesis_job_started=True,
     )

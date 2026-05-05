@@ -53,6 +53,11 @@ class IntakeSession(Base):
         DateTime(timezone=True), nullable=True
     )
 
+    # LLM-generated synthesis produced at session 1 close (write-once, opaque JSON blob)
+    session1_synthesis: Mapped[dict | None] = mapped_column(
+        JSON, nullable=True, default=None
+    )
+
     # Report content generated after session 2 (HTML or PDF path string)
     report_content: Mapped[str | None] = mapped_column(
         String(10000), nullable=True

@@ -48,7 +48,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 import structlog
-from sqlalchemy import Boolean, DateTime, Float, Index, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import JSON
 
@@ -173,6 +173,17 @@ class Assessment(Base):
     # Every PATCH sets field_sources[field_name] = 'human' for patched fields.
     # LLM re-run skips fields where field_sources.get(field) == 'human'.
     field_sources: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+
+    # ── v2 questionnaire links (T2.7) ────────────────────────────────────────
+    # nullable FK to leads.id — set when assessment originates from v2 TRIAGE.
+    # SET NULL on lead delete to avoid orphan-blocking.
+    lead_id: Mapped[str | None] = mapped_column(
+        ForeignKey("leads.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    # nullable String — no FK yet (Client table is future evolution).
+    client_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
 
     __table_args__ = (
         Index("idx_assessments_status", "status"),

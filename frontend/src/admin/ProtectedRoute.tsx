@@ -1,8 +1,17 @@
-import { Navigate, Outlet } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 
+/**
+ * REQ-14 / ADR-11: Redirects unauthenticated users to /login with a
+ * ?returnTo=<encoded current path> query parameter so LoginPage can
+ * bounce them back after a successful authentication.
+ *
+ * The redirect target is always /login (not /admin/login) to keep it
+ * consistent with the route topology.
+ */
 export function ProtectedRoute() {
   const { user, loading } = useAuth()
+  const location = useLocation()
 
   if (loading) {
     return (
@@ -16,7 +25,8 @@ export function ProtectedRoute() {
   }
 
   if (!user) {
-    return <Navigate to="/admin/login" replace />
+    const returnTo = encodeURIComponent(location.pathname + location.search)
+    return <Navigate to={`/login?returnTo=${returnTo}`} replace />
   }
 
   return <Outlet />

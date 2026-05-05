@@ -39,48 +39,50 @@ export const router = createBrowserRouter([
     element: <Navigate to="/triage" replace />,
   },
   {
-    // Public TRIAGE form (session 0)
+    // Public TRIAGE wizard — NO QueryClient, NO AuthProvider (ADR-10 / REQ-13)
     path: '/triage',
     element: <TRIAGEWizard />,
   },
+
+  /**
+   * ADR-10 / REQ-13: Single AdminLayout parent for ALL authenticated routes.
+   * This means /admin/*, /intake/:leadId/*, and /login share ONE QueryClientProvider
+   * and ONE AuthProvider instance — so TanStack Query cache invalidations from
+   * the admin tree are immediately visible to the intake tree and vice-versa.
+   *
+   * Public triage wizard (/triage) is intentionally outside this tree.
+   */
   {
-    // Consultant intake (session 1) — needs same providers as /admin/* tree
-    // (QueryClient + AuthProvider). Wrap in AdminLayout + ProtectedRoute.
-    path: '/intake',
     element: <AdminLayout />,
     children: [
+      // Auth pages (public within the authenticated layout — no ProtectedRoute guard)
+      { path: '/login', element: <LoginPage /> },
+      { path: '/admin/login', element: <LoginPage /> },
+      { path: '/admin/forgot-password', element: <ForgotPasswordPage /> },
+      { path: '/admin/reset-password', element: <ResetPasswordPage /> },
+
+      // Protected admin routes
       {
         element: <ProtectedRoute />,
         children: [
-          { path: ':leadId', element: <IntakePage /> },
+          { path: '/admin/leads', element: <LeadsListPage /> },
+          { path: '/admin/leads/:id', element: <LeadDetailPage /> },
+
+          // Intake (consultant session 1) — same auth context as /admin
+          { path: '/intake/:leadId', element: <IntakePage /> },
         ],
       },
     ],
   },
+
   {
-    // Public client DEEP form (session 2) — accessed via signed URL
+    // Public client DEEP form (session 2) — accessed via signed URL, no auth
     path: '/client/deep/:token',
     element: <DeepFormRoute />,
   },
   {
-    // Public client report viewer — accessed via signed URL
+    // Public client report viewer — accessed via signed URL, no auth
     path: '/client/report/:token',
     element: <ReportViewerRoute />,
-  },
-  {
-    path: '/admin',
-    element: <AdminLayout />,
-    children: [
-      { path: 'login', element: <LoginPage /> },
-      { path: 'forgot-password', element: <ForgotPasswordPage /> },
-      { path: 'reset-password', element: <ResetPasswordPage /> },
-      {
-        element: <ProtectedRoute />,
-        children: [
-          { path: 'leads', element: <LeadsListPage /> },
-          { path: 'leads/:id', element: <LeadDetailPage /> },
-        ],
-      },
-    ],
   },
 ])

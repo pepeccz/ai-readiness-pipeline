@@ -1,0 +1,286 @@
+id: triage
+layer: triage
+title: "Diagnóstico inicial de madurez IA"
+
+# ---------------------------------------------------------------------------
+# TRIAGE v1.1 — 8 preguntas + 2 consentimientos
+# Orden: identidad → sector → tamaño → madurez IA → urgencia → objetivos → rol → compromiso → consents
+# Max score: 136 pts
+# ---------------------------------------------------------------------------
+
+questions:
+
+  # Q1 — Identidad (texto compuesto, sin score directo)
+  - id: triage.q.identity
+    layer: triage
+    type: composite
+    required: true
+    label: "¿Quién eres y a qué empresa representás?"
+    sub_fields:
+      - id: triage.q.identity.full_name
+        layer: triage
+        type: text
+        required: true
+        label: "Nombre completo"
+        placeholder: "Tu nombre y apellido"
+
+      - id: triage.q.identity.email
+        layer: triage
+        type: text
+        required: true
+        label: "Email de contacto"
+        placeholder: "tu@empresa.com"
+        validations:
+          - type: pattern
+            value: "^[^@]+@[^@]+\\.[^@]+$"
+            message: "Ingresá un email válido"
+
+      - id: triage.q.identity.company_name
+        layer: triage
+        type: text
+        required: true
+        label: "Nombre de la empresa"
+        placeholder: "Acme S.L."
+
+      - id: triage.q.identity.phone
+        layer: triage
+        type: text
+        required: false
+        label: "Teléfono (opcional)"
+        helper_text: "Para contacto directo. (L-V 9-18h CET)"
+        placeholder: "+34 600 000 000"
+
+  # Q2 (mostrada como Q3 al usuario) — Sector
+  - id: triage.q.sector
+    layer: triage
+    type: single_choice
+    required: true
+    label: "¿En qué sector opera tu empresa?"
+    options:
+      - value: finanzas
+        label: "Finanzas / Banca / Seguros"
+        score: 18
+        deep_branches: [deep_compliance]
+      - value: salud
+        label: "Salud / Sanidad / Farmacia"
+        score: 18
+        deep_branches: [deep_compliance]
+      - value: legal
+        label: "Legal / Consultoría jurídica"
+        score: 15
+        deep_branches: [deep_compliance]
+      - value: tecnologia
+        label: "Tecnología / SaaS / Software"
+        score: 18
+        deep_branches: [deep_saas]
+      - value: industria
+        label: "Industria / Manufactura / Logística"
+        score: 15
+        deep_branches: [deep_industrial]
+      - value: retail
+        label: "Retail / E-commerce / Distribución"
+        score: 12
+      - value: educacion
+        label: "Educación / Formación"
+        score: 10
+      - value: otro
+        label: "Otro sector"
+        score: 8
+
+  # Q3 (mostrada como Q2 al usuario) — Tamaño empresa
+  - id: triage.q.company_size
+    layer: triage
+    type: single_choice
+    required: true
+    label: "¿Cuántas personas trabajan en la empresa?"
+    options:
+      - value: "1_5"
+        label: "1–5 personas"
+        score: 4
+      - value: "6_25"
+        label: "6–25 personas"
+        score: 12
+      - value: "26_100"
+        label: "26–100 personas"
+        score: 20
+        deep_branches: [deep_saas]
+      - value: "101_500"
+        label: "101–500 personas"
+        score: 20
+        deep_branches: [deep_enterprise]
+      - value: "500_plus"
+        label: "Más de 500 personas"
+        score: 20
+        deep_branches: [deep_enterprise]
+
+  # Q4 — Madurez IA actual (nueva en v1.1)
+  - id: triage.q.ai_maturity
+    layer: triage
+    type: single_choice
+    required: true
+    label: "¿Cómo describirías el uso actual de IA en tu empresa?"
+    helper_text: "Esta respuesta ayuda a calibrar el diagnóstico sin afectar significativamente la puntuación."
+    options:
+      - value: sin_ia
+        label: "Sin IA — no usamos ninguna herramienta de IA"
+        score: 3
+      - value: exploracion
+        label: "Exploración — estamos investigando posibilidades"
+        score: 5
+      - value: pilotos
+        label: "Pilotos — tenemos algún proyecto en prueba"
+        score: 7
+      - value: produccion_sin_gobierno
+        label: "En producción sin gobierno — usamos IA pero sin procesos formales"
+        score: 6
+      - value: produccion_gobernada
+        label: "En producción con gobierno — IA integrada con procesos y métricas"
+        score: 8
+
+  # Q5 — Urgencia
+  - id: triage.q.urgency
+    layer: triage
+    type: single_choice
+    required: true
+    label: "¿Cuál es el nivel de urgencia para implementar IA en tu empresa?"
+    options:
+      - value: critica
+        label: "Crítica — la competencia ya lo está haciendo y perdemos terreno"
+        score: 28
+      - value: alta
+        label: "Alta — es prioritario para los próximos 3–6 meses"
+        score: 22
+      - value: media
+        label: "Media — lo queremos en el próximo año"
+        score: 14
+      - value: baja
+        label: "Baja — explorando sin urgencia concreta"
+        score: 6
+
+  # Q6 — Objetivos IA (multiselección, máx 2)
+  - id: triage.q.ai_goals
+    layer: triage
+    type: multi_choice
+    required: true
+    label: "¿Cuáles son tus principales objetivos con la IA? (máximo 2)"
+    max_selections: 2
+    options:
+      - value: reducir_costes
+        label: "Reducir costes operativos"
+        score: 6
+      - value: mejorar_clientes
+        label: "Mejorar la experiencia del cliente"
+        score: 6
+      - value: aumentar_ventas
+        label: "Aumentar ventas / generación de leads"
+        score: 6
+      - value: automatizar_procesos
+        label: "Automatizar procesos repetitivos"
+        score: 6
+      - value: tomar_decisiones
+        label: "Mejorar la toma de decisiones con datos"
+        score: 6
+      - value: cumplimiento_regulatorio
+        label: "Cumplimiento regulatorio / compliance"
+        score: 6
+        deep_branches: [deep_compliance]
+
+  # Q7 — Rol del respondente
+  - id: triage.q.respondent_role
+    layer: triage
+    type: single_choice
+    required: true
+    label: "¿Cuál es tu rol en la empresa?"
+    options:
+      - value: ceo_fundador
+        label: "CEO / Fundador / Propietario"
+        score: 12
+      - value: director_area
+        label: "Director/a de área (Operaciones, Marketing, RRHH, etc.)"
+        score: 10
+      - value: responsable_it
+        label: "Responsable IT / CTO / Director Tecnológico"
+        score: 10
+      - value: consultor_externo
+        label: "Consultor/a externo/a representando a un cliente"
+        score: 8
+      - value: otro_rol
+        label: "Otro rol"
+        score: 6
+
+  # Q8 — Compromiso
+  - id: triage.q.commitment
+    layer: triage
+    type: single_choice
+    required: true
+    label: "¿Qué nivel de compromiso estás dispuesto/a a asumir si el diagnóstico es positivo?"
+    options:
+      - value: agendar
+        label: "Agendar una sesión de trabajo en los próximos 30 días"
+        score: 18
+      - value: propuesta_formal
+        label: "Recibir una propuesta formal para evaluar con el equipo"
+        score: 14
+      - value: informacion
+        label: "Recibir más información antes de decidir"
+        score: 8
+      - value: evaluacion_interna
+        label: "En evaluación interna sin compromiso inmediato"
+        score: 4
+
+  # Consent 1 — Privacidad (obligatorio)
+  - id: triage.q.consent_privacy
+    layer: triage
+    type: consent
+    required: true
+    label: "Acepto la política de privacidad de Zanovix"
+    policy_version: "v1.0-2026-05"
+    policy_file: "consents/privacy-v1.0-2026-05.md"
+
+  # Consent 2 — Marketing (opcional)
+  - id: triage.q.consent_marketing
+    layer: triage
+    type: consent
+    required: false
+    label: "Acepto recibir comunicaciones comerciales de Zanovix (opcional)"
+    policy_version: "v1.0-2026-05"
+    policy_file: "consents/marketing-v1.0-2026-05.md"
+
+scoring:
+  buckets:
+    - name: auto_accept
+      min: 85
+      max: 136
+    - name: review
+      min: 55
+      max: 84
+    - name: cold_warm
+      min: 45
+      max: 54
+    - name: cold_cool
+      min: 30
+      max: 44
+    - name: reject_soft
+      min: 0
+      max: 29
+
+override_rules:
+  - id: regulated_urgent_force_accept
+    description: "Sector regulado + urgencia alta/crítica + score >= 55 → forzar auto_accept"
+    condition:
+      sector_in: [salud, legal, finanzas]
+      urgency_in: [alta, critica]
+      min_score: 55
+    action: force_bucket
+    target_bucket: auto_accept
+    applies_only_upgrade: true
+
+  - id: external_advocate_review
+    description: "Consultor externo + compromiso=agendar → forzar review + flag external_advocate"
+    condition:
+      respondent_role: consultor_externo
+      commitment: agendar
+    action: force_bucket
+    target_bucket: review
+    set_flag: external_advocate
+    requires_extra_question: "¿Para qué empresa cliente final realizás esta consulta?"

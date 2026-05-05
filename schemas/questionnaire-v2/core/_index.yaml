@@ -1,0 +1,21 @@
+# CORE schema index — placeholder (full content in Batch 5)
+# Blocks 1-7 are stubs with empty questions lists.
+# schema_loader resolves this file via $ref from _root.yaml.
+
+blocks_order:
+  - block-1-strategic
+  - block-2-process-critical-full
+  - block-3-data
+  - block-4-talent
+  - block-5-infrastructure
+  - block-6-compliance
+  - block-7-governance
+
+block_2_variants:
+  full: block-2-process-critical-full.yaml
+  reduced: block-2-process-critical-reduced.yaml
+  cross_area: block-2-process-critical-cross-area.yaml
+
+area_overlays: {}
+
+blocks: []

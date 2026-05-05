@@ -1,0 +1,16 @@
+schema_version: "1.0"
+locale: es_ES
+
+# Entry point for the full questionnaire schema.
+# References triage and core schemas via relative paths.
+# All $ref paths are relative to this file's directory.
+
+triage:
+  $ref: "./triage.yaml"
+
+core:
+  $ref: "./core/_index.yaml"
+
+deep: {}
+
+override_rules: []

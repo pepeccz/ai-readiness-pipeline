@@ -69,6 +69,17 @@ async def lifespan(app: FastAPI):  # noqa: ARG001
     from app import startup as startup_hooks  # noqa: PLC0415
 
     # ── Startup ──────────────────────────────────────────────────────────────
+    # Load questionnaire v2 schema (fail-fast on invalid YAML)
+    from app.services.questionnaire import schema_loader  # noqa: PLC0415
+    import structlog as _structlog  # noqa: PLC0415
+    _sl_logger = _structlog.get_logger("schema_loader_startup")
+    try:
+        schema_loader.load_all()
+        _sl_logger.info("schema_v2_loaded", version=schema_loader.get_schema_version())
+    except Exception as _exc:
+        _sl_logger.error("schema_v2_load_failed", error=str(_exc))
+        raise
+
     await startup_hooks.prune_login_attempts()
     await startup_hooks.resume_orphaned_assessments()
 
@@ -128,10 +139,17 @@ app.add_middleware(RequestIdMiddleware)
 @app.get("/api/health")
 async def health():
     """Service health check."""
+    from app.services.questionnaire import schema_loader as _sl  # noqa: PLC0415
+    try:
+        schema_version = _sl.get_schema_version()
+    except RuntimeError:
+        schema_version = None
+
     return {
         "status": "healthy",
         "service": "ai-readiness-pipeline",
         "version": "2.0",
+        "schema_version": schema_version,
         "timestamp": datetime.now(tz=timezone.utc).isoformat(),
     }
 

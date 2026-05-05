@@ -26,3 +26,23 @@ async def test_health_endpoint(client: AsyncClient) -> None:
     assert resp.status_code == 200
     data = resp.json()
     assert "status" in data
+
+
+async def test_health_returns_schema_version(client: AsyncClient) -> None:
+    """
+    T1.12 acceptance: GET /api/health returns schema_version field.
+
+    Pre-loads the schema (mimicking lifespan), then checks health response.
+    """
+    from app.services.questionnaire import schema_loader
+
+    # Ensure schema is loaded (lifespan equivalent for test context)
+    schema_loader._reset_cache()
+    schema_loader.load_all()
+
+    resp = await client.get("/api/health")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "schema_version" in data
+    assert data["schema_version"] == "1.0"

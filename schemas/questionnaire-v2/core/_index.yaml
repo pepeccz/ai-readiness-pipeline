@@ -1,7 +1,3 @@
-# CORE schema index — placeholder (full content in Batch 5)
-# Blocks 1-7 are stubs with empty questions lists.
-# schema_loader resolves this file via $ref from _root.yaml.
-
 blocks_order:
   - block-1-strategic
   - block-2-process-critical-full
@@ -12,10 +8,101 @@ blocks_order:
   - block-7-governance
 
 block_2_variants:
-  full: block-2-process-critical-full.yaml
-  reduced: block-2-process-critical-reduced.yaml
-  cross_area: block-2-process-critical-cross-area.yaml
+  full: block-2-process-critical-full
+  reduced: block-2-process-critical-reduced
+  cross_area: block-2-process-critical-cross-area
 
-area_overlays: {}
+area_overlays:
+  attention: {}
+  marketing: {}
+  sales: {}
+  operations: {}
+  finance: {}
+  hr: {}
+  product: {}
 
-blocks: []
+area_selector:
+  questions:
+    - id: primary_area
+      type: single_choice
+      required: true
+      layer: core
+      label: "¿Cuál es el área principal donde duele más en tu empresa?"
+      helper_text: "Elegí el área donde querés ver el mayor impacto de IA primero."
+      options:
+        - value: attention
+          label: "Atención al cliente"
+        - value: marketing
+          label: "Marketing"
+        - value: sales
+          label: "Ventas"
+        - value: operations
+          label: "Operaciones"
+        - value: finance
+          label: "Finanzas"
+        - value: hr
+          label: "Recursos Humanos"
+        - value: product
+          label: "Producto / Desarrollo"
+        - value: cross_area_communication
+          label: "Comunicación entre áreas (problema transversal)"
+        - value: other
+          label: "Otra área"
+    - id: secondary_area
+      type: single_choice
+      required: false
+      layer: core
+      label: "¿Hay un segundo área donde también querés explorar?"
+      helper_text: "Opcional — presentaremos un análisis reducido del proceso secundario."
+      show_if:
+        field: primary_area
+        op: not_in
+        value: [cross_area_communication]
+      options:
+        - value: attention
+          label: "Atención al cliente"
+        - value: marketing
+          label: "Marketing"
+        - value: sales
+          label: "Ventas"
+        - value: operations
+          label: "Operaciones"
+        - value: finance
+          label: "Finanzas"
+        - value: hr
+          label: "Recursos Humanos"
+        - value: product
+          label: "Producto / Desarrollo"
+        - value: other
+          label: "Otra área"
+    - id: areas_involved
+      type: multi_choice
+      required: true
+      layer: core
+      label: "¿Qué áreas están involucradas en el problema transversal?"
+      helper_text: "Seleccioná entre 2 y 4 áreas."
+      min_selections: 2
+      max_selections: 4
+      show_if:
+        field: primary_area
+        op: eq
+        value: cross_area_communication
+      options:
+        - value: attention
+          label: "Atención al cliente"
+        - value: marketing
+          label: "Marketing"
+        - value: sales
+          label: "Ventas"
+        - value: operations
+          label: "Operaciones"
+        - value: finance
+          label: "Finanzas"
+        - value: hr
+          label: "Recursos Humanos"
+        - value: product
+          label: "Producto / Desarrollo"
+        - value: tech_it
+          label: "Tecnología / IT"
+        - value: leadership
+          label: "Dirección"

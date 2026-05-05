@@ -40,6 +40,7 @@ from sqlalchemy.orm import selectinload
 
 from app.auth.middleware import require_admin
 from app.db.session import get_db
+from app.models.intake_session import IntakeSession
 from app.models.lead import Lead
 from app.models.user import User
 from app.schemas.admin_leads import (
@@ -249,9 +250,23 @@ async def patch_lead(
         # assigned_consultant_id FK to users.id (UUID CHAR(32) column) — must store UUID
         lead.assigned_consultant_id = UUID(body.consultant_id) if body.consultant_id else None  # type: ignore[assignment]
 
+        # Create IntakeSession for the accepted lead
+        intake_session = IntakeSession(
+            lead_id=lead.id,
+            primary_area="not_set",
+            secondary_area=None,
+            areas_involved=[],
+            state="not_started",
+            blocks_completed=[],
+        )
+        db.add(intake_session)
+
         background_tasks.add_task(send_lead_accepted_email, lead)
         side_effects.append(
             SideEffect(type="email_sent", description="Acceptance email queued for delivery")
+        )
+        side_effects.append(
+            SideEffect(type="intake_session_created", description="IntakeSession created for consultant workflow")
         )
         logger.info("lead_accepted", lead_id=lead_id, consultant_id=body.consultant_id)
 

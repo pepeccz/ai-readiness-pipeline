@@ -1,8 +1,197 @@
-# PLACEHOLDER — block-5-infrastructure
-# Full content will be added in Batch 5
 id: block-5-infrastructure
 layer: core
-order: 0
-estimated_minutes: 20
-title: "block-5-infrastructure (placeholder)"
-questions: []
+order: 5
+estimated_minutes: 10
+title: "Bloque 5 — Infraestructura & Stack"
+
+questions:
+  - id: q5_1_infra
+    type: composite
+    required: true
+    label: "¿Dónde corre la infraestructura tecnológica de la empresa?"
+    hint_didactic: "Cloud vs on-prem es decisión de compliance + control + coste, no solo técnica."
+    sub_fields:
+      - id: q5_1_model
+        type: single_choice
+        required: true
+        label: "Modelo de infraestructura"
+        options:
+          - value: "100_cloud"
+            label: "100% Cloud"
+          - value: "mayoria_cloud"
+            label: "Mayoría Cloud con algo on-prem"
+          - value: "hibrido"
+            label: "Híbrido equilibrado"
+          - value: "mayoria_on_prem"
+            label: "Mayoría on-premise con algo cloud"
+          - value: "100_on_prem"
+            label: "100% On-premise"
+            deep_branches: ["ia_self_hosted"]
+          - value: "no_se"
+            label: "No sé"
+      - id: q5_1_clouds
+        type: multi_choice
+        required: false
+        label: "¿Qué proveedor(es) cloud usan?"
+        show_if:
+          field: q5_1_model
+          op: neq
+          value: "100_on_prem"
+        options:
+          - value: "aws"
+            label: "AWS"
+          - value: "gcp"
+            label: "Google Cloud"
+          - value: "azure"
+            label: "Microsoft Azure"
+          - value: "oracle"
+            label: "Oracle Cloud"
+          - value: "ibm"
+            label: "IBM Cloud"
+          - value: "ovh_hetzner"
+            label: "OVH / Hetzner / VPS europeo"
+          - value: "otro"
+            label: "Otro"
+
+  - id: q5_2_vendors
+    type: composite
+    required: true
+    label: "¿Cuáles son los vendors tecnológicos clave?"
+    hint_didactic: "Identificar dependencias críticas. Concentración en un vendor = riesgo acumulado silencioso."
+    sub_fields:
+      - id: q5_2_vendor_1
+        type: composite
+        required: false
+        label: "Vendor 1 (más crítico)"
+        sub_fields:
+          - id: q5_2_v1_name
+            type: text
+            required: false
+            label: "Nombre del vendor"
+            validations:
+              - type: max_length
+                value: 80
+          - id: q5_2_v1_category
+            type: single_choice
+            required: false
+            label: "Categoría"
+            options:
+              - value: "erp"
+                label: "ERP"
+              - value: "crm"
+                label: "CRM"
+              - value: "comm"
+                label: "Comunicaciones"
+              - value: "cloud"
+                label: "Cloud / Infra"
+              - value: "ia"
+                label: "IA / ML"
+              - value: "bi"
+                label: "BI / Analytics"
+              - value: "otro"
+                label: "Otro"
+          - id: q5_2_v1_criticality
+            type: single_choice
+            required: false
+            label: "Criticidad"
+            options:
+              - value: "critico"
+                label: "Crítico — si falla, para el negocio"
+              - value: "importante"
+                label: "Importante — impacto significativo"
+              - value: "reemplazable"
+                label: "Reemplazable en semanas"
+
+  - id: q5_3_deploy
+    type: composite
+    required: true
+    label: "¿Cuál es la capacidad de deploy de nuevas herramientas?"
+    hint_didactic: "Tiempo de cambio = constraint del piloto. Diseñar a cadencia real, no a la deseada."
+    sub_fields:
+      - id: q5_3_frequency
+        type: single_choice
+        required: true
+        label: "Frecuencia de deploy actual"
+        options:
+          - value: "continuo"
+            label: "Continuo / CI-CD"
+          - value: "mensual"
+            label: "Mensual"
+          - value: "trimestral"
+            label: "Trimestral"
+          - value: "esporadico"
+            label: "Esporádico"
+          - value: "nunca"
+            label: "Sin proceso de deploy definido"
+      - id: q5_3_time_new_tool
+        type: single_choice
+        required: true
+        label: "Tiempo para integrar una herramienta nueva"
+        options:
+          - value: "dias"
+            label: "Días"
+          - value: "semanas"
+            label: "Semanas"
+          - value: "meses"
+            label: "Meses"
+          - value: "trimestres"
+            label: "Trimestres o más"
+            deep_branches: ["modelo_delivery_saas"]
+
+  - id: q5_4_lockin
+    type: composite
+    required: true
+    label: "¿Cuál es el nivel de vendor lock-in percibido?"
+    hint_didactic: "Lock-in se acumula silencioso. IA mal elegida = lock-in más caro por 5 años."
+    sub_fields:
+      - id: q5_4_level
+        type: single_choice
+        required: true
+        label: "Nivel de lock-in"
+        options:
+          - value: "bajo"
+            label: "Bajo — podemos cambiar en semanas"
+          - value: "medio"
+            label: "Medio — cambio posible pero costoso"
+          - value: "alto"
+            label: "Alto — cambiar requeriría proyecto mayor"
+            deep_branches: ["arquitectura_agnostica"]
+          - value: "no_evaluado"
+            label: "No lo hemos evaluado"
+      - id: q5_4_example
+        type: text
+        required: false
+        label: "Ejemplo del mayor lock-in actual"
+        validations:
+          - type: max_length
+            value: 150
+
+closing_analysis:
+  trigger_event: block_completed
+  llm_model: haiku
+  output_schema:
+    synthesis: "string"
+    deployment_archetype: "cloud_native|hybrid_manageable|on_prem_constrained|unmanaged"
+    vendor_concentration:
+      level: "low|medium|high"
+      primary_vendor: "string"
+    deployment_velocity_compatible_with_pilot: "bool"
+    recommended_architecture_constraints: "list"
+  filters: ["confidence", "dedup", "length"]
+
+deep_triggers:
+  - condition:
+      field: q5_1_model
+      op: eq
+      value: "100_on_prem"
+    activates_branch: "ia_self_hosted"
+  - condition:
+      field: q5_3_time_new_tool
+      op: eq
+      value: "trimestres"
+    activates_branch: "modelo_delivery_saas"
+  - condition:
+      field: q5_4_level
+      op: eq
+      value: "alto"
+    activates_branch: "arquitectura_agnostica"

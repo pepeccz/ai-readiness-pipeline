@@ -1,8 +1,233 @@
-# PLACEHOLDER — block-2-process-critical-full
-# Full content will be added in Batch 5
 id: block-2-process-critical-full
 layer: core
-order: 0
+order: 2
 estimated_minutes: 20
-title: "block-2-process-critical-full (placeholder)"
-questions: []
+title: "Bloque 2 — Proceso Crítico (completo)"
+area_instance: full
+
+questions:
+  - id: q2_1_process
+    type: composite
+    required: true
+    label: "Describí el proceso que querés mejorar con IA"
+    helper_text: "Proceso = secuencia repetible de pasos con un input y un output. Ejemplo: 'Atender consulta de cliente → respuesta en plataforma'."
+    hint_didactic: "Proceso ≠ función. La frecuencia y el volumen determinan si IA es candidato viable."
+    sub_fields:
+      - id: q2_1_name
+        type: text
+        required: true
+        label: "Nombre del proceso"
+        validations:
+          - type: max_length
+            value: 150
+      - id: q2_1_frequency
+        type: single_choice
+        required: true
+        label: "Frecuencia"
+        options:
+          - value: "continuo"
+            label: "Continuo (24/7)"
+          - value: "diario"
+            label: "Diario"
+          - value: "semanal"
+            label: "Semanal"
+          - value: "mensual"
+            label: "Mensual"
+          - value: "esporadico"
+            label: "Esporádico / Por demanda"
+      - id: q2_1_volume
+        type: text
+        required: false
+        label: "Volumen estimado (ej: 200 consultas/día)"
+        validations:
+          - type: max_length
+            value: 80
+
+  - id: q2_2_variability
+    type: single_choice
+    required: true
+    label: "¿Cómo es la variabilidad del proceso?"
+    helper_text: "¿Las entradas son siempre similares, o cambian mucho?"
+    hint_didactic: "Proceso estable → reglas deterministas. Proceso errático → IA. Intermedio → híbrido. Esta distinción es clave anti-hype."
+    options:
+      - value: "estable"
+        label: "Estable — entradas muy similares siempre"
+      - value: "estacional"
+        label: "Estacional — picos predecibles"
+      - value: "variable"
+        label: "Variable — cambia bastante"
+      - value: "erratico"
+        label: "Errático — muy impredecible"
+        deep_branches: ["alternativas_no_ia"]
+
+  - id: q2_3_metrics
+    type: composite
+    required: true
+    label: "¿Qué métricas actuales tenés del proceso?"
+    hint_didactic: "Sin baseline no hay ROI defendible. Si no mide, el primer entregable puede ser definir la métrica."
+    sub_fields:
+      - id: q2_3_current_metric
+        type: text
+        required: false
+        label: "Métrica actual (ej: tiempo promedio 4 horas, tasa de error 12%)"
+        validations:
+          - type: max_length
+            value: 150
+      - id: q2_3_documented
+        type: single_choice
+        required: true
+        label: "¿La métrica está documentada?"
+        options:
+          - value: "documentado"
+            label: "Sí, documentada y monitoreada"
+          - value: "parcial"
+            label: "Parcialmente documentada"
+          - value: "no_mide"
+            label: "No se mide actualmente"
+            deep_branches: ["definicion_baseline"]
+      - id: q2_3_target
+        type: text
+        required: false
+        label: "Objetivo de mejora deseado (opcional)"
+        validations:
+          - type: max_length
+            value: 100
+
+  - id: q2_4_failure_cost
+    type: composite
+    required: true
+    label: "¿Cuál es el coste de que el proceso falle o se realice mal?"
+    hint_didactic: "El coste de fallo define la arquitectura de control humano necesaria. AI Act art.22 aplica cuando el fallo tiene efecto significativo sobre personas."
+    sub_fields:
+      - id: q2_4_level
+        type: single_choice
+        required: true
+        label: "Nivel de criticidad"
+        options:
+          - value: "bajo"
+            label: "Bajo — molestia menor, fácilmente reversible"
+          - value: "medio"
+            label: "Medio — impacto económico o reputacional limitado"
+          - value: "alto"
+            label: "Alto — pérdida económica significativa o daño reputacional"
+          - value: "critico"
+            label: "Crítico — riesgo legal, seguridad, o afecta derechos de personas"
+            deep_branches: ["ai_act_supervision"]
+      - id: q2_4_example
+        type: text
+        required: false
+        label: "Ejemplo concreto (opcional)"
+        validations:
+          - type: max_length
+            value: 200
+
+  - id: q2_5_dependencies
+    type: composite
+    required: true
+    label: "¿De quién y qué depende el proceso hoy?"
+    hint_didactic: "Bus factor = riesgo organizacional. Solución: documentar y automatizar antes de IA-ficar."
+    sub_fields:
+      - id: q2_5_key_person
+        type: single_choice
+        required: true
+        label: "Dependencia de personas clave"
+        options:
+          - value: "una_dos_personas"
+            label: "Depende de 1-2 personas específicas (bus factor alto)"
+          - value: "parcial"
+            label: "Documentado parcialmente, otros pueden cubrirlo"
+          - value: "distribuido"
+            label: "Distribuido, cualquier persona del equipo puede ejecutarlo"
+      - id: q2_5_external
+        type: multi_choice
+        required: false
+        label: "Dependencias externas"
+        options:
+          - value: "proveedor"
+            label: "Proveedor externo"
+          - value: "cliente"
+            label: "Input del cliente"
+          - value: "sistema"
+            label: "Sistema o plataforma externa"
+          - value: "regulacion"
+            label: "Regulación o normativa"
+          - value: "ninguna"
+            label: "Sin dependencias externas"
+
+  - id: q2_h1_overtime
+    type: single_choice
+    required: false
+    label: "¿Se trabaja fuera de horario para completar este proceso?"
+    helper_text: "Heurística de detección de proceso saturado."
+    options:
+      - value: "si"
+        label: "Sí, habitualmente"
+      - value: "a_veces"
+        label: "A veces, en picos"
+      - value: "no"
+        label: "No"
+
+  - id: q2_h2_single_person
+    type: single_choice
+    required: false
+    label: "¿Este proceso lo hace básicamente una sola persona?"
+    options:
+      - value: "si"
+        label: "Sí"
+      - value: "no"
+        label: "No, lo hacen varios"
+
+  - id: q2_h3_saturation
+    type: single_choice
+    required: false
+    label: "¿Hay momentos en que el volumen supera claramente la capacidad del equipo?"
+    options:
+      - value: "si_frecuente"
+        label: "Sí, frecuentemente"
+      - value: "si_ocasional"
+        label: "Sí, ocasionalmente"
+      - value: "no"
+        label: "No"
+
+  - id: q2_h4_repeated_complaints
+    type: single_choice
+    required: false
+    label: "¿Hay quejas o errores repetidos relacionados con este proceso?"
+    options:
+      - value: "si_sistematico"
+        label: "Sí, sistemáticos"
+      - value: "si_ocasional"
+        label: "Sí, ocasionales"
+      - value: "no"
+        label: "No"
+
+closing_analysis:
+  trigger_event: block_completed
+  llm_model: sonnet
+  output_schema:
+    synthesis: "string"
+    candidacy:
+      ia_fit_score: "float 0-1"
+      recommended_approach: "automation_simple|automation_advanced|rules_engine|ai_with_guardrails|ai_full|not_recommended"
+      reasoning: "string"
+    contradictions: "list"
+    follow_ups: "list"
+    preliminary_hypothesis: "string"
+  filters: ["confidence", "dedup", "scope", "similarity", "length"]
+
+deep_triggers:
+  - condition:
+      field: q2_4_level
+      op: eq
+      value: "critico"
+    activates_branch: "ai_act_supervision"
+  - condition:
+      field: q2_2_variability
+      op: eq
+      value: "erratico"
+    activates_branch: "alternativas_no_ia"
+  - condition:
+      field: q2_3_documented
+      op: eq
+      value: "no_mide"
+    activates_branch: "definicion_baseline"

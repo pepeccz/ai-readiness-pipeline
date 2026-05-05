@@ -15,18 +15,31 @@ from __future__ import annotations
 
 import structlog
 from datetime import datetime, timezone
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from typing import Literal
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
+from pydantic import BaseModel, Field, model_validator
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.middleware import require_admin
 from app.auth.rate_limit import check_rate_limit, record_attempt
 from app.db.session import get_db
 from app.email.sender import send_email
+from app.models.block_analysis import BlockAnalysis
 from app.models.consent import Consent
+from app.models.intake_session import IntakeSession
 from app.models.lead import Lead
+from app.models.user import User
+from app.schemas.common import ApiException
 from app.schemas.triage import TriagePayload, TriageResponse
 from app.services.email.triage_emails import (
     triage_consultant_notification,
     triage_email_for_bucket,
+)
+from app.services.intake.session_service import (
+    VALID_PRIMARY_AREAS,
+    build_session_payload,
+    mark_block_completed,
 )
 from app.services.questionnaire import schema_loader
 from app.services.scoring.lead_scorer import LeadScorer
@@ -280,3 +293,349 @@ def _bucket_message(bucket: str) -> str:
         "reject_soft": "Gracias por tu interés. Te enviaremos contenido formativo.",
     }
     return messages.get(bucket, "Solicitud recibida.")
+
+
+# ===========================================================================
+# INTAKE CONSULTOR — endpoints autenticados (B5)
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# Pydantic schemas for intake
+# ---------------------------------------------------------------------------
+
+VALID_AREA_VALUES = list(VALID_PRIMARY_AREAS)
+
+
+class AreaSelectionRequest(BaseModel):
+    primary_area: str
+    secondary_area: str | None = None
+    areas_involved: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_area(self) -> "AreaSelectionRequest":
+        if self.primary_area not in VALID_PRIMARY_AREAS:
+            raise ValueError(
+                f"primary_area must be one of: {sorted(VALID_PRIMARY_AREAS)}"
+            )
+        if self.primary_area == "cross_area_communication":
+            if not self.areas_involved or len(self.areas_involved) < 2:
+                raise ValueError(
+                    "areas_involved requires at least 2 areas when primary_area is cross_area_communication"
+                )
+        return self
+
+
+class AreaSelectionResponse(BaseModel):
+    lead_id: str
+    primary_area: str
+    secondary_area: str | None = None
+    areas_involved: list[str] = Field(default_factory=list)
+    state: str
+
+
+class BlockSubmitRequest(BaseModel):
+    payload: dict
+
+
+class BlockSubmitResponse(BaseModel):
+    block_analysis_id: str
+    status: str = "submitted"
+
+
+class BlockPayloadResponse(BaseModel):
+    block_id: str
+    payload: dict
+    status: str
+
+
+class IntakeStateResponse(BaseModel):
+    lead_id: str
+    state: str
+    primary_area: str | None = None
+    secondary_area: str | None = None
+    areas_involved: list[str] = Field(default_factory=list)
+    blocks_completed: list[str] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+async def _get_accepted_lead(db: AsyncSession, lead_id: str) -> Lead:
+    """Load Lead, raise 404 if not found, 403 if not accepted."""
+    stmt = select(Lead).where(Lead.id == lead_id)
+    result = await db.execute(stmt)
+    lead = result.scalar_one_or_none()
+    if lead is None:
+        raise ApiException(status_code=404, code="lead_not_found", detail=f"Lead {lead_id} not found.")
+    if lead.status != "accepted":
+        raise ApiException(
+            status_code=403,
+            code="lead_not_accepted",
+            detail=f"Lead {lead_id} is not accepted (status={lead.status}).",
+        )
+    return lead
+
+
+async def _get_or_create_session(db: AsyncSession, lead_id: str) -> IntakeSession:
+    """Return existing IntakeSession or create a new not_started one."""
+    stmt = select(IntakeSession).where(IntakeSession.lead_id == lead_id)
+    result = await db.execute(stmt)
+    session = result.scalar_one_or_none()
+    if session is None:
+        session = IntakeSession(
+            lead_id=lead_id,
+            primary_area="not_set",
+            secondary_area=None,
+            areas_involved=[],
+            state="not_started",
+            blocks_completed=[],
+        )
+        db.add(session)
+        await db.flush()
+    return session
+
+
+# ---------------------------------------------------------------------------
+# GET /api/intake/{lead_id}/schema
+# ---------------------------------------------------------------------------
+
+@router.get("/intake/{lead_id}/schema")
+async def get_intake_schema(
+    lead_id: str,
+    area: str | None = Query(default=None),
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Return CORE schema personalised by area.
+
+    If area param is provided, block-2 is instantiated for that area.
+    Otherwise, returns full schema with area selector.
+    """
+    await _get_accepted_lead(db, lead_id)
+
+    try:
+        try:
+            schema_loader.get_schema_version()
+        except RuntimeError:
+            schema_loader.load_all()
+
+        root = schema_loader.get_root_schema()
+    except Exception as exc:
+        logger.error("schema_unavailable", error=str(exc))
+        raise HTTPException(status_code=503, detail="Schema not loaded")
+
+    core = root.get("core", {})
+    blocks_order = core.get("blocks_order", [])
+    area_selector = core.get("area_selector", {})
+
+    if area:
+        # Build personalised response with blocks list
+        variant = core.get("block_2_variants", {})
+        b2_id = variant.get("full", "block-2-process-critical-full")
+
+        # Instantiate blocks
+        blocks_data = root.get("blocks", [])
+        if not blocks_data:
+            # Load blocks directly from schema files
+            blocks_data = _load_core_blocks(blocks_order)
+
+        return {
+            "blocks_order": blocks_order,
+            "area_selector": area_selector,
+            "area": area,
+            "blocks": blocks_data,
+        }
+
+    return {
+        "blocks_order": blocks_order,
+        "area_selector": area_selector,
+    }
+
+
+def _load_core_blocks(blocks_order: list[str]) -> list[dict]:
+    """Load and return core block schemas."""
+    import yaml
+    from pathlib import Path
+    schema_dir = Path(__file__).parents[2] / "schemas" / "questionnaire-v2" / "core"
+    blocks = []
+    for block_id in blocks_order:
+        block_file = schema_dir / f"{block_id}.yaml"
+        if block_file.exists():
+            with block_file.open(encoding="utf-8") as f:
+                data = yaml.safe_load(f)
+                blocks.append(data)
+    return blocks
+
+
+# ---------------------------------------------------------------------------
+# POST /api/intake/{lead_id}/area-selection
+# ---------------------------------------------------------------------------
+
+@router.post("/intake/{lead_id}/area-selection")
+async def post_area_selection(
+    lead_id: str,
+    body: AreaSelectionRequest,
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> AreaSelectionResponse:
+    """
+    Register primary_area + secondary_area + areas_involved for an intake session.
+
+    Creates IntakeSession if it doesn't exist.
+    Cross-area sessions: secondary_area is silently cleared.
+    """
+    await _get_accepted_lead(db, lead_id)
+    session = await _get_or_create_session(db, lead_id)
+
+    is_cross = body.primary_area == "cross_area_communication"
+
+    session.primary_area = body.primary_area
+    session.secondary_area = None if is_cross else body.secondary_area
+    session.areas_involved = body.areas_involved if is_cross else []
+    if session.state == "not_started":
+        session.state = "in_progress"
+
+    await db.commit()
+
+    logger.info(
+        "intake_area_selected",
+        lead_id=lead_id,
+        primary_area=body.primary_area,
+        cross_area=is_cross,
+    )
+
+    return AreaSelectionResponse(
+        lead_id=lead_id,
+        primary_area=session.primary_area,
+        secondary_area=session.secondary_area,
+        areas_involved=session.areas_involved,
+        state=session.state,
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /api/intake/{lead_id}/state
+# ---------------------------------------------------------------------------
+
+@router.get("/intake/{lead_id}/state")
+async def get_intake_state(
+    lead_id: str,
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> IntakeStateResponse:
+    """Return current IntakeSession state for a lead."""
+    await _get_accepted_lead(db, lead_id)
+    session = await _get_or_create_session(db, lead_id)
+    await db.commit()
+
+    return IntakeStateResponse(
+        lead_id=lead_id,
+        state=session.state,
+        primary_area=session.primary_area if session.primary_area != "not_set" else None,
+        secondary_area=session.secondary_area,
+        areas_involved=session.areas_involved or [],
+        blocks_completed=session.blocks_completed or [],
+    )
+
+
+# ---------------------------------------------------------------------------
+# POST /api/intake/{lead_id}/blocks/{block_id}/submit
+# ---------------------------------------------------------------------------
+
+@router.post("/intake/{lead_id}/blocks/{block_id}/submit", status_code=202)
+async def submit_block(
+    lead_id: str,
+    block_id: str,
+    body: BlockSubmitRequest,
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> BlockSubmitResponse:
+    """
+    Validate + persist block payload.
+
+    Idempotent: re-submitting same block_id replaces previous BlockAnalysis.
+    Status: submitted (no LLM in B5 — placeholder for B6).
+    """
+    await _get_accepted_lead(db, lead_id)
+    session = await _get_or_create_session(db, lead_id)
+
+    # Delete existing BlockAnalysis for this session+block (idempotency)
+    existing_stmt = select(BlockAnalysis).where(
+        BlockAnalysis.intake_session_id == session.id,
+        BlockAnalysis.block_id == block_id,
+    )
+    existing_result = await db.execute(existing_stmt)
+    existing = existing_result.scalar_one_or_none()
+    if existing is not None:
+        await db.delete(existing)
+        await db.flush()
+
+    # Create new BlockAnalysis (status=submitted, no LLM yet)
+    block_analysis = BlockAnalysis(
+        intake_session_id=session.id,
+        block_id=block_id,
+        payload=body.payload,
+        status="submitted",
+        llm_output=None,
+        llm_model_used=None,
+    )
+    db.add(block_analysis)
+
+    # Mark block as completed in session
+    session.blocks_completed = mark_block_completed(
+        session.blocks_completed or [], block_id
+    )
+
+    await db.commit()
+
+    logger.info(
+        "block_submitted",
+        lead_id=lead_id,
+        block_id=block_id,
+        block_analysis_id=block_analysis.id,
+    )
+
+    return BlockSubmitResponse(
+        block_analysis_id=block_analysis.id,
+        status="submitted",
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /api/intake/{lead_id}/blocks/{block_id}/payload
+# ---------------------------------------------------------------------------
+
+@router.get("/intake/{lead_id}/blocks/{block_id}/payload")
+async def get_block_payload(
+    lead_id: str,
+    block_id: str,
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> BlockPayloadResponse:
+    """Return stored payload for a submitted block (auto-save retrieval)."""
+    await _get_accepted_lead(db, lead_id)
+
+    # Find session
+    session_stmt = select(IntakeSession).where(IntakeSession.lead_id == lead_id)
+    session_result = await db.execute(session_stmt)
+    session = session_result.scalar_one_or_none()
+    if session is None:
+        raise ApiException(status_code=404, code="session_not_found", detail="No intake session found.")
+
+    # Find block analysis
+    ba_stmt = select(BlockAnalysis).where(
+        BlockAnalysis.intake_session_id == session.id,
+        BlockAnalysis.block_id == block_id,
+    )
+    ba_result = await db.execute(ba_stmt)
+    block_analysis = ba_result.scalar_one_or_none()
+    if block_analysis is None:
+        raise ApiException(status_code=404, code="block_not_found", detail=f"No payload for block {block_id}.")
+
+    return BlockPayloadResponse(
+        block_id=block_id,
+        payload=block_analysis.payload,
+        status=block_analysis.status,
+    )

@@ -1,8 +1,77 @@
-# PLACEHOLDER — block-2-process-critical-reduced
-# Full content will be added in Batch 5
 id: block-2-process-critical-reduced
 layer: core
-order: 0
-estimated_minutes: 20
-title: "block-2-process-critical-reduced (placeholder)"
-questions: []
+order: 2
+estimated_minutes: 7
+title: "Bloque 2 — Proceso Secundario (reducido)"
+area_instance: reduced
+
+questions:
+  - id: q2r_1_process
+    type: composite
+    required: true
+    label: "Describí el segundo proceso que querés abordar"
+    sub_fields:
+      - id: q2r_1_name
+        type: text
+        required: true
+        label: "Nombre del proceso"
+        validations:
+          - type: max_length
+            value: 150
+      - id: q2r_1_frequency
+        type: single_choice
+        required: true
+        label: "Frecuencia"
+        options:
+          - value: "continuo"
+            label: "Continuo (24/7)"
+          - value: "diario"
+            label: "Diario"
+          - value: "semanal"
+            label: "Semanal"
+          - value: "mensual"
+            label: "Mensual"
+          - value: "esporadico"
+            label: "Esporádico / Por demanda"
+
+  - id: q2r_2_variability
+    type: single_choice
+    required: true
+    label: "¿Cómo es la variabilidad del proceso?"
+    options:
+      - value: "estable"
+        label: "Estable — entradas muy similares siempre"
+      - value: "estacional"
+        label: "Estacional — picos predecibles"
+      - value: "variable"
+        label: "Variable — cambia bastante"
+      - value: "erratico"
+        label: "Errático — muy impredecible"
+
+  - id: q2r_4_failure_cost
+    type: single_choice
+    required: true
+    label: "¿Cuál es el coste de que este proceso falle?"
+    options:
+      - value: "bajo"
+        label: "Bajo — molestia menor, reversible"
+      - value: "medio"
+        label: "Medio — impacto económico limitado"
+      - value: "alto"
+        label: "Alto — pérdida significativa o daño reputacional"
+      - value: "critico"
+        label: "Crítico — riesgo legal o afecta derechos"
+
+closing_analysis:
+  trigger_event: block_completed
+  llm_model: haiku
+  output_schema:
+    synthesis: "string"
+    secondary_candidacy:
+      ia_fit_score: "float 0-1"
+      recommended_approach: "string"
+      note: "Señales preliminares — requiere profundización en sesión adicional"
+    follow_ups: "list"
+  filters: ["confidence", "dedup", "length"]
+
+deep_triggers: []

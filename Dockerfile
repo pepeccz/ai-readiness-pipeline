@@ -24,6 +24,7 @@ COPY *.py ./
 COPY *.md ./
 COPY assets/ ./assets/
 COPY app/ ./app/
+COPY schemas/ ./schemas/
 COPY alembic/ ./alembic/
 COPY alembic.ini ./
 COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh

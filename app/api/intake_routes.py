@@ -29,7 +29,9 @@ from app.models.block_analysis import BlockAnalysis
 from app.models.consent import Consent
 from app.models.intake_session import IntakeSession
 from app.models.lead import Lead
+from app.models.suggestion import Suggestion
 from app.models.user import User
+from app.services.ai_analysis.block_analyzer import BlockAnalyzer
 from app.schemas.common import ApiException
 from app.schemas.triage import TriagePayload, TriageResponse
 from app.services.email.triage_emails import (
@@ -549,6 +551,7 @@ async def submit_block(
     lead_id: str,
     block_id: str,
     body: BlockSubmitRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ) -> BlockSubmitResponse:
@@ -556,7 +559,7 @@ async def submit_block(
     Validate + persist block payload.
 
     Idempotent: re-submitting same block_id replaces previous BlockAnalysis.
-    Status: submitted (no LLM in B5 — placeholder for B6).
+    Auto-dispatches LLM analysis as BackgroundTask (T6.13).
     """
     await _get_accepted_lead(db, lead_id)
     session = await _get_or_create_session(db, lead_id)
@@ -572,12 +575,12 @@ async def submit_block(
         await db.delete(existing)
         await db.flush()
 
-    # Create new BlockAnalysis (status=submitted, no LLM yet)
+    # Create new BlockAnalysis (status=pending_analysis, LLM will fill it)
     block_analysis = BlockAnalysis(
         intake_session_id=session.id,
         block_id=block_id,
         payload=body.payload,
-        status="submitted",
+        status="pending_analysis",
         llm_output=None,
         llm_model_used=None,
     )
@@ -590,6 +593,17 @@ async def submit_block(
 
     await db.commit()
 
+    # Auto-dispatch LLM analysis (T6.13)
+    ba_id = block_analysis.id
+
+    async def _run_analysis():
+        from app.db.session import async_session_factory  # noqa: PLC0415
+        async with async_session_factory() as analysis_db:
+            analyzer = BlockAnalyzer(db=analysis_db)
+            await analyzer.analyze(block_analysis_id=ba_id, block_id=block_id)
+
+    background_tasks.add_task(_run_analysis)
+
     logger.info(
         "block_submitted",
         lead_id=lead_id,
@@ -599,7 +613,7 @@ async def submit_block(
 
     return BlockSubmitResponse(
         block_analysis_id=block_analysis.id,
-        status="submitted",
+        status="pending_analysis",
     )
 
 
@@ -638,4 +652,224 @@ async def get_block_payload(
         block_id=block_id,
         payload=block_analysis.payload,
         status=block_analysis.status,
+    )
+
+
+# ===========================================================================
+# ANALYSIS ENDPOINTS — B6
+# ===========================================================================
+
+class AnalyzeRequest(BaseModel):
+    block_id: str
+
+
+class AnalyzeResponse(BaseModel):
+    block_analysis_id: str
+    status: str
+
+
+class AnalysisResponse(BaseModel):
+    block_analysis_id: str
+    status: str
+    llm_output: dict | None = None
+    suggestions: list[dict] = Field(default_factory=list)
+    generated_at: str | None = None
+
+
+class SuggestionActionRequest(BaseModel):
+    action: Literal["done", "discarded", "irrelevant"]
+
+
+class SuggestionResponse(BaseModel):
+    id: str
+    type: str
+    text: str
+    rationale: str | None = None
+    confidence: float
+    priority: str
+    consultant_action: str
+
+
+# ---------------------------------------------------------------------------
+# POST /api/intake/{lead_id}/analyze  — manual re-trigger
+# ---------------------------------------------------------------------------
+
+@router.post("/intake/{lead_id}/analyze", status_code=202)
+async def trigger_analyze(
+    lead_id: str,
+    body: AnalyzeRequest,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> AnalyzeResponse:
+    """
+    Manually (re-)trigger LLM analysis for a specific block.
+
+    Finds or creates a BlockAnalysis for the block, sets status=pending_analysis,
+    and dispatches a BackgroundTask to run the LLM analysis.
+    """
+    await _get_accepted_lead(db, lead_id)
+
+    session_stmt = select(IntakeSession).where(IntakeSession.lead_id == lead_id)
+    session_result = await db.execute(session_stmt)
+    session = session_result.scalar_one_or_none()
+    if session is None:
+        raise HTTPException(status_code=404, detail="No intake session found for this lead.")
+
+    # Find existing BlockAnalysis
+    ba_stmt = select(BlockAnalysis).where(
+        BlockAnalysis.intake_session_id == session.id,
+        BlockAnalysis.block_id == body.block_id,
+    )
+    ba_result = await db.execute(ba_stmt)
+    ba = ba_result.scalar_one_or_none()
+
+    if ba is None:
+        raise HTTPException(status_code=404, detail=f"No block analysis found for block_id={body.block_id}.")
+
+    # Reset status to pending_analysis
+    ba.status = "pending_analysis"
+    ba.llm_output = None
+    ba.error_message = None
+    await db.commit()
+
+    # Dispatch BackgroundTask
+    ba_id = ba.id
+    block_id = body.block_id
+
+    async def _run_analysis():
+        from app.db.session import async_session_factory  # noqa: PLC0415
+        async with async_session_factory() as analysis_db:
+            analyzer = BlockAnalyzer(db=analysis_db)
+            await analyzer.analyze(block_analysis_id=ba_id, block_id=block_id)
+
+    background_tasks.add_task(_run_analysis)
+
+    logger.info("block_analysis_triggered", lead_id=lead_id, block_id=block_id, block_analysis_id=ba_id)
+
+    return AnalyzeResponse(block_analysis_id=ba_id, status="pending_analysis")
+
+
+# ---------------------------------------------------------------------------
+# GET /api/intake/{lead_id}/blocks/{block_id}/analysis  — polling
+# ---------------------------------------------------------------------------
+
+@router.get("/intake/{lead_id}/blocks/{block_id}/analysis")
+async def get_block_analysis(
+    lead_id: str,
+    block_id: str,
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> AnalysisResponse:
+    """
+    Return current analysis status + output for a block.
+
+    Used for polling from frontend (refetchInterval 2s while pending_analysis).
+    """
+    await _get_accepted_lead(db, lead_id)
+
+    session_stmt = select(IntakeSession).where(IntakeSession.lead_id == lead_id)
+    session_result = await db.execute(session_stmt)
+    session = session_result.scalar_one_or_none()
+    if session is None:
+        raise HTTPException(status_code=404, detail="No intake session found for this lead.")
+
+    ba_stmt = select(BlockAnalysis).where(
+        BlockAnalysis.intake_session_id == session.id,
+        BlockAnalysis.block_id == block_id,
+    )
+    ba_result = await db.execute(ba_stmt)
+    ba = ba_result.scalar_one_or_none()
+    if ba is None:
+        raise HTTPException(status_code=404, detail=f"No analysis found for block_id={block_id}.")
+
+    # Load suggestions if ready
+    suggestions_data: list[dict] = []
+    if ba.status == "ready":
+        sug_stmt = select(Suggestion).where(Suggestion.block_analysis_id == ba.id)
+        sug_result = await db.execute(sug_stmt)
+        suggestions = sug_result.scalars().all()
+        suggestions_data = [
+            {
+                "id": s.id,
+                "type": s.type,
+                "text": s.text,
+                "rationale": s.rationale,
+                "confidence": s.confidence,
+                "priority": s.priority,
+                "consultant_action": s.consultant_action,
+            }
+            for s in suggestions
+        ]
+
+    return AnalysisResponse(
+        block_analysis_id=ba.id,
+        status=ba.status,
+        llm_output=ba.llm_output,
+        suggestions=suggestions_data,
+        generated_at=ba.generated_at.isoformat() if ba.generated_at else None,
+    )
+
+
+# ---------------------------------------------------------------------------
+# POST /api/intake/{lead_id}/suggestions/{suggestion_id}/action
+# ---------------------------------------------------------------------------
+
+@router.post("/intake/{lead_id}/suggestions/{suggestion_id}/action")
+async def suggestion_action(
+    lead_id: str,
+    suggestion_id: str,
+    body: SuggestionActionRequest,
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> SuggestionResponse:
+    """
+    Update consultant_action on a Suggestion.
+
+    Validates the suggestion belongs to this lead's session.
+    """
+    await _get_accepted_lead(db, lead_id)
+
+    session_stmt = select(IntakeSession).where(IntakeSession.lead_id == lead_id)
+    session_result = await db.execute(session_stmt)
+    session = session_result.scalar_one_or_none()
+    if session is None:
+        raise HTTPException(status_code=404, detail="No intake session found for this lead.")
+
+    # Fetch suggestion via join to verify ownership
+    sug_stmt = (
+        select(Suggestion)
+        .join(BlockAnalysis, Suggestion.block_analysis_id == BlockAnalysis.id)
+        .where(
+            Suggestion.id == suggestion_id,
+            BlockAnalysis.intake_session_id == session.id,
+        )
+    )
+    sug_result = await db.execute(sug_stmt)
+    suggestion = sug_result.scalar_one_or_none()
+
+    if suggestion is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Suggestion {suggestion_id} not found for this lead.",
+        )
+
+    suggestion.consultant_action = body.action
+    await db.commit()
+
+    logger.info(
+        "suggestion_action_recorded",
+        lead_id=lead_id,
+        suggestion_id=suggestion_id,
+        action=body.action,
+    )
+
+    return SuggestionResponse(
+        id=suggestion.id,
+        type=suggestion.type,
+        text=suggestion.text,
+        rationale=suggestion.rationale,
+        confidence=suggestion.confidence,
+        priority=suggestion.priority,
+        consultant_action=suggestion.consultant_action,
     )

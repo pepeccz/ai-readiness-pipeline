@@ -1,0 +1,187 @@
+"""
+tests/integration/test_block_analyzer.py — T6.5
+
+Integration tests for app/services/ai_analysis/block_analyzer.py:
+  - Mock Anthropic SDK returns valid JSON → persists BlockAnalysis(status=ready) + Suggestion[]
+  - LLM failure → status=failed
+  - Correct model selected per block from BLOCK_LLM_MODEL map
+"""
+
+from __future__ import annotations
+
+import json
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from sqlalchemy import select
+
+from app.models.block_analysis import BlockAnalysis
+from app.models.intake_session import IntakeSession
+from app.models.lead import Lead
+from app.models.suggestion import Suggestion
+from app.services.ai_analysis.block_analyzer import BlockAnalyzer
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+VALID_LLM_RESPONSE = json.dumps({
+    "synthesis": "La empresa tiene experiencia inicial con IA pero sin estructura de gobierno.",
+    "contradictions": [
+        {"text": "Mencionan urgencia alta pero no hay sponsor definido", "severity": "high"}
+    ],
+    "follow_ups": [
+        {
+            "text": "¿Quién tiene autoridad presupuestaria para aprobar el piloto de IA?",
+            "rationale": "No hay sponsor claro identificado en las respuestas",
+            "priority": "high",
+            "confidence": 0.85,
+        },
+        {
+            "text": "¿En qué plazo se espera ver resultados concretos del proyecto de IA?",
+            "rationale": "El apetito de riesgo es difuso sin timeline definido",
+            "priority": "med",
+            "confidence": 0.78,
+        },
+    ],
+    "preliminary_hypothesis": "La empresa está lista para un piloto acotado si se define sponsor.",
+    "block_specific_outputs": {},
+})
+
+
+async def _make_lead_and_session(db) -> tuple[Lead, IntakeSession, BlockAnalysis]:
+    """Create Lead → IntakeSession → BlockAnalysis(status=submitted) for tests."""
+    lead = Lead(
+        full_name="Test User",
+        email="test@test.com",
+        company_name="TestCorp",
+        sector="tecnologia",
+        company_size="26_100",
+        respondent_role="ceo_fundador",
+        ai_maturity="exploracion",
+        ai_goals=["eficiencia"],
+        urgency="alta",
+        commitment="agendar",
+        triage_payload={},
+        triage_score=80,
+        triage_bucket="auto_accept",
+        status="accepted",
+    )
+    db.add(lead)
+    await db.flush()
+
+    session = IntakeSession(
+        lead_id=lead.id,
+        primary_area="ventas",
+        state="in_progress",
+        blocks_completed=[],
+    )
+    db.add(session)
+    await db.flush()
+
+    block_analysis = BlockAnalysis(
+        intake_session_id=session.id,
+        block_id="block-1-strategic",
+        payload={"q1": "Mejorar eficiencia operativa", "q2": "Director TI"},
+        status="pending_analysis",
+    )
+    db.add(block_analysis)
+    await db.flush()
+    await db.commit()
+
+    return lead, session, block_analysis
+
+
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+
+class TestBlockAnalyzerSuccess:
+    """T6.5 — mock SDK returns valid JSON → status=ready + suggestions persisted."""
+
+    async def test_analyze_sets_status_ready(self, test_db):
+        lead, session, ba = await _make_lead_and_session(test_db)
+
+        mock_message = MagicMock()
+        mock_message.content = [MagicMock(text=VALID_LLM_RESPONSE)]
+
+        with patch("app.services.ai_analysis.block_analyzer.anthropic") as mock_anthropic:
+            mock_client = MagicMock()
+            mock_anthropic.AsyncAnthropic.return_value = mock_client
+            mock_client.messages.create = AsyncMock(return_value=mock_message)
+
+            analyzer = BlockAnalyzer(db=test_db)
+            await analyzer.analyze(
+                block_analysis_id=ba.id,
+                block_id="block-1-strategic",
+            )
+
+        await test_db.refresh(ba)
+        assert ba.status == "ready"
+
+    async def test_analyze_persists_suggestions(self, test_db):
+        lead, session, ba = await _make_lead_and_session(test_db)
+
+        mock_message = MagicMock()
+        mock_message.content = [MagicMock(text=VALID_LLM_RESPONSE)]
+
+        with patch("app.services.ai_analysis.block_analyzer.anthropic") as mock_anthropic:
+            mock_client = MagicMock()
+            mock_anthropic.AsyncAnthropic.return_value = mock_client
+            mock_client.messages.create = AsyncMock(return_value=mock_message)
+
+            analyzer = BlockAnalyzer(db=test_db)
+            await analyzer.analyze(
+                block_analysis_id=ba.id,
+                block_id="block-1-strategic",
+            )
+
+        stmt = select(Suggestion).where(Suggestion.block_analysis_id == ba.id)
+        result = await test_db.execute(stmt)
+        suggestions = result.scalars().all()
+        assert len(suggestions) >= 1
+        assert len(suggestions) <= 3  # max 3 per spec
+
+
+class TestBlockAnalyzerFailure:
+    """T6.5 — LLM failure → status=failed."""
+
+    async def test_llm_exception_sets_status_failed(self, test_db):
+        lead, session, ba = await _make_lead_and_session(test_db)
+
+        with patch("app.services.ai_analysis.block_analyzer.anthropic") as mock_anthropic:
+            mock_client = MagicMock()
+            mock_anthropic.AsyncAnthropic.return_value = mock_client
+            mock_client.messages.create = AsyncMock(
+                side_effect=Exception("LLM API error")
+            )
+
+            analyzer = BlockAnalyzer(db=test_db)
+            await analyzer.analyze(
+                block_analysis_id=ba.id,
+                block_id="block-1-strategic",
+            )
+
+        await test_db.refresh(ba)
+        assert ba.status == "failed"
+        assert ba.error_message is not None
+
+
+class TestBlockAnalyzerModelSelection:
+    """T6.5 — correct model selected per BLOCK_LLM_MODEL map."""
+
+    async def test_strategic_block_uses_sonnet(self, test_db):
+        from app.services.ai_analysis.block_analyzer import BLOCK_LLM_MODEL
+        model = BLOCK_LLM_MODEL.get("block-1-strategic", "")
+        assert "sonnet" in model.lower()
+
+    async def test_data_block_uses_haiku(self, test_db):
+        from app.services.ai_analysis.block_analyzer import BLOCK_LLM_MODEL
+        model = BLOCK_LLM_MODEL.get("block-3-data", "")
+        assert "haiku" in model.lower()
+
+    async def test_compliance_block_uses_sonnet(self, test_db):
+        from app.services.ai_analysis.block_analyzer import BLOCK_LLM_MODEL
+        model = BLOCK_LLM_MODEL.get("block-6-compliance", "")
+        assert "sonnet" in model.lower()

@@ -116,7 +116,7 @@ class TestBlockSubmit:
         assert resp.status_code == 202, resp.text
         data = resp.json()
         assert "block_analysis_id" in data
-        assert data["status"] == "submitted"
+        assert data["status"] in ("submitted", "pending_analysis")
 
     async def test_block_submit_stores_payload(self, client: AsyncClient, test_db: AsyncSession):
         user, sid = await _create_admin_session(test_db, "sub.bs2@t.com", "bs-sub-22222222")

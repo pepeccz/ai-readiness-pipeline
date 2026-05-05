@@ -40,6 +40,29 @@ export interface BlockPayloadResponse {
   status: string
 }
 
+export interface Suggestion {
+  id: string
+  type: string
+  text: string
+  rationale: string | null
+  confidence: number
+  priority: string
+  consultant_action: string
+}
+
+export interface BlockAnalysis {
+  block_analysis_id: string
+  status: string
+  llm_output: {
+    synthesis: string
+    contradictions: Array<{ text: string; severity: string }>
+    follow_ups: Array<{ text: string; rationale: string; priority: string; confidence: number }>
+    preliminary_hypothesis: string | null
+  } | null
+  suggestions: Suggestion[]
+  generated_at: string | null
+}
+
 // ---------------------------------------------------------------------------
 // Query keys
 // ---------------------------------------------------------------------------
@@ -49,6 +72,8 @@ export const intakeKeys = {
   state: (leadId: string) => ['intake', leadId, 'state'] as const,
   blockPayload: (leadId: string, blockId: string) =>
     ['intake', leadId, 'blocks', blockId, 'payload'] as const,
+  blockAnalysis: (leadId: string, blockId: string) =>
+    ['intake', leadId, 'blocks', blockId, 'analysis'] as const,
 }
 
 // ---------------------------------------------------------------------------
@@ -93,6 +118,33 @@ export function useAreaSelection(leadId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: intakeKeys.state(leadId) })
       queryClient.invalidateQueries({ queryKey: ['intake', leadId, 'schema'] })
+    },
+  })
+}
+
+export function useBlockAnalysis(leadId: string, blockId: string) {
+  return useQuery({
+    queryKey: intakeKeys.blockAnalysis(leadId, blockId),
+    queryFn: () => fetchJson<BlockAnalysis>(`/intake/${leadId}/blocks/${blockId}/analysis`),
+    enabled: Boolean(leadId) && Boolean(blockId),
+    refetchInterval: (query) => {
+      const data = query.state.data
+      return data?.status === 'pending_analysis' ? 2000 : false
+    },
+  })
+}
+
+export function useSuggestionAction(leadId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ suggestionId, action }: { suggestionId: string; action: string }) =>
+      fetchJson<Suggestion>(`/intake/${leadId}/suggestions/${suggestionId}/action`, {
+        method: 'POST',
+        body: JSON.stringify({ action }),
+      }),
+    onSuccess: (_data, { suggestionId }) => {
+      // Invalidate all analysis queries for this lead
+      queryClient.invalidateQueries({ queryKey: ['intake', leadId] })
     },
   })
 }

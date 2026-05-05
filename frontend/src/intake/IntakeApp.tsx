@@ -5,7 +5,7 @@
  *   1. Load session state (useIntakeSession)
  *   2. If no area selected → show AreaSelector
  *   3. Show BlockNav + BlockRenderer for current block
- *   4. AnalysisPlaceholder after submit (LLM analysis in B6)
+ *   4. AnalysisPanel after submit (polls LLM analysis, shows suggestions + action buttons)
  *
  * Props: leadId — the accepted lead's ID
  */
@@ -16,7 +16,7 @@ import { useIntakeSession } from './hooks/useIntakeSession'
 import { AreaSelector } from './AreaSelector'
 import { BlockRenderer } from './BlockRenderer'
 import { BlockNav } from './components/BlockNav'
-import { AnalysisPlaceholder } from './components/AnalysisPlaceholder'
+import { AnalysisPanel } from './AnalysisPanel'
 import { useBlockPayload } from './api/intake'
 
 interface IntakeAppProps {
@@ -93,9 +93,9 @@ export function IntakeApp({ leadId }: IntakeAppProps) {
               }}
             />
             {lastSubmittedBlock === activeBlockId && (
-              <AnalysisPlaceholder
+              <AnalysisPanel
+                leadId={leadId}
                 blockId={activeBlockId}
-                status="submitted"
               />
             )}
           </>

@@ -189,6 +189,56 @@ class TestBlockDraftGet:
         assert data["payload"]["q1_2_sponsor"] == "director_cto"
 
 
+class TestBlockDraftPayloadValidation:
+    async def test_put_draft_unknown_key_returns_422(
+        self, client: AsyncClient, test_db: AsyncSession
+    ):
+        """PUT draft with a key not in the block schema → 422 with offending key listed."""
+        user, sid = await _create_admin_session(test_db, "draft.val1@t.com", "dft-sid-val11111")
+        lead_id = await _create_accepted_lead(client, sid, user.id, "draft.leadval1@t.com")
+
+        resp = await client.put(
+            f"/api/intake/{lead_id}/blocks/{BLOCK_ID}/draft",
+            json={"payload": {"unknown_garbage_key": "some_value"}},
+            cookies={"admin_sid": sid},
+        )
+        assert resp.status_code == 422, resp.text
+        detail = resp.json().get("detail", "")
+        assert "unknown_garbage_key" in str(detail)
+
+    async def test_put_draft_unknown_block_id_returns_404(
+        self, client: AsyncClient, test_db: AsyncSession
+    ):
+        """PUT draft with a block_id that doesn't exist in schema → 404."""
+        user, sid = await _create_admin_session(test_db, "draft.val2@t.com", "dft-sid-val22222")
+        lead_id = await _create_accepted_lead(client, sid, user.id, "draft.leadval2@t.com")
+
+        resp = await client.put(
+            f"/api/intake/{lead_id}/blocks/block-999-nonexistent/draft",
+            json={"payload": {"q1_2_sponsor": "ceo_total"}},
+            cookies={"admin_sid": sid},
+        )
+        assert resp.status_code == 404, resp.text
+
+    async def test_put_draft_other_text_suffix_accepted(
+        self, client: AsyncClient, test_db: AsyncSession
+    ):
+        """PUT draft with a valid _other_text sibling key → 200 (not rejected)."""
+        user, sid = await _create_admin_session(test_db, "draft.val3@t.com", "dft-sid-val33333")
+        lead_id = await _create_accepted_lead(client, sid, user.id, "draft.leadval3@t.com")
+
+        # q1_3b_failure_cause has options — none are in the "other" set, so
+        # we use q1_2_sponsor which also has options (none are "otro/other" either),
+        # but the _other_text suffix rule allows it for ANY question.
+        # Use a payload where we include a base key + its _other_text companion.
+        resp = await client.put(
+            f"/api/intake/{lead_id}/blocks/{BLOCK_ID}/draft",
+            json={"payload": {"q1_2_sponsor": "ceo_total", "q1_2_sponsor_other_text": "custom note"}},
+            cookies={"admin_sid": sid},
+        )
+        assert resp.status_code == 200, resp.text
+
+
 class TestBlockDraftDeleteOnSubmit:
     async def test_post_submit_deletes_draft_for_that_block(
         self, client: AsyncClient, test_db: AsyncSession

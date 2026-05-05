@@ -724,6 +724,47 @@ async def get_block_payload(
 # PUT /api/intake/{lead_id}/blocks/{block_id}/draft
 # ---------------------------------------------------------------------------
 
+_OTHER_VALUES: frozenset[str] = frozenset({"otro", "otros", "other"})
+
+
+def _load_block_schema(block_id: str) -> dict | None:
+    """Return the parsed YAML dict for a core block, or None if not found."""
+    import yaml  # noqa: PLC0415
+    from pathlib import Path  # noqa: PLC0415
+
+    schema_dir = Path(__file__).parents[2] / "schemas" / "questionnaire-v2" / "core"
+    block_file = schema_dir / f"{block_id}.yaml"
+    if not block_file.exists():
+        return None
+    with block_file.open(encoding="utf-8") as fh:
+        return yaml.safe_load(fh)
+
+
+def _build_allowed_keys(block_schema: dict) -> frozenset[str]:
+    """
+    Build the set of payload keys permitted for a block.
+
+    Includes:
+    - Every question.id in the block (including composite sub_fields)
+    - `${question_id}_other_text` for every question whose options list
+      contains at least one value matching _OTHER_VALUES
+    """
+    allowed: set[str] = set()
+
+    def _walk(questions: list) -> None:
+        for q in questions:
+            qid = q.get("id")
+            if qid:
+                allowed.add(qid)
+                allowed.add(f"{qid}_other_text")
+            sub = q.get("sub_fields", [])
+            if sub:
+                _walk(sub)
+
+    _walk(block_schema.get("questions", []))
+    return frozenset(allowed)
+
+
 @router.put("/intake/{lead_id}/blocks/{block_id}/draft")
 async def put_block_draft(
     lead_id: str,
@@ -737,9 +778,29 @@ async def put_block_draft(
 
     - Requires admin auth (401 otherwise).
     - Requires lead to exist and be accepted (404/403 otherwise).
+    - Requires block_id to exist in schema (404 otherwise).
+    - Payload keys must match question ids or ${qid}_other_text (422 otherwise).
     - Last-write-wins semantics; stores updated_at for concurrency detection.
     """
     await _get_accepted_lead(db, lead_id)
+
+    # Validate block_id exists in schema
+    block_schema = _load_block_schema(block_id)
+    if block_schema is None:
+        raise ApiException(
+            status_code=404,
+            code="block_not_found",
+            detail=f"Block '{block_id}' not found in schema.",
+        )
+
+    # Validate payload keys against allowed set (REQ-4)
+    allowed_keys = _build_allowed_keys(block_schema)
+    offending = [k for k in body.payload if k not in allowed_keys]
+    if offending:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unknown payload key(s): {offending}. Allowed keys for block '{block_id}': {sorted(allowed_keys)}",
+        )
 
     draft = await _upsert_draft(db, lead_id, block_id, body.payload)
     await db.commit()

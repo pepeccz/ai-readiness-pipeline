@@ -4,8 +4,10 @@
  * Orchestrates:
  * - FieldRenderer per visible question (show_if evaluated by useSchemaForm)
  * - Submit button with loading state
- * - Auto-save restoration from localStorage
+ * - Draft autosave via useDraftAutosave (REQ-5)
+ * - Restoration from backend draft/submitted answer via useBlockPayload (REQ-6)
  * - Progress indicator (X of Y questions answered)
+ * - Read-only mode when block is already submitted, with "Editar respuestas" escape hatch
  *
  * REQ-5 / ADR-3: The inner form is keyed by `${schema.id}:${payloadFingerprint}`.
  * Changing block OR receiving an updated payload forces a full remount, which
@@ -13,21 +15,21 @@
  * canonical React idiom for "this is a different form instance".
  */
 
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { BlockSchema } from './types/schema'
 import { FieldRenderer } from './FieldRenderer'
 import { useSchemaForm, getAnsweredQuestions } from './hooks/useSchemaForm'
 import { useBlockSubmit } from './api/intake'
+import { useDraftAutosave } from './hooks/useDraftAutosave'
 
 interface BlockRendererProps {
   leadId: string
   schema: BlockSchema
   initialPayload?: Record<string, unknown>
+  /** 'submitted' | 'draft' | 'none' — from useBlockPayload */
+  source?: 'submitted' | 'draft' | 'none'
   onSubmitSuccess?: (blockAnalysisId: string) => void
 }
-
-const LOCAL_STORAGE_KEY = (sessionId: string, blockId: string) =>
-  `intake_session_${sessionId}_block_${blockId}`
 
 /**
  * Produces a short stable fingerprint of the payload so React's key prop can
@@ -46,6 +48,7 @@ export function BlockRenderer({
   leadId,
   schema,
   initialPayload,
+  source,
   onSubmitSuccess,
 }: BlockRendererProps) {
   const formKey = useMemo(
@@ -59,6 +62,7 @@ export function BlockRenderer({
       leadId={leadId}
       schema={schema}
       initialPayload={initialPayload}
+      source={source}
       onSubmitSuccess={onSubmitSuccess}
     />
   )
@@ -72,43 +76,31 @@ function BlockForm({
   leadId,
   schema,
   initialPayload,
+  source,
   onSubmitSuccess,
 }: BlockRendererProps) {
   const form = useSchemaForm(schema)
   const submitMutation = useBlockSubmit(leadId, schema.id)
-  const autoSaveTimer = useRef<ReturnType<typeof setInterval> | null>(null)
-  const storageKey = LOCAL_STORAGE_KEY(leadId, schema.id)
 
-  // Restore from localStorage on mount
+  // REQ-6: read-only mode when block is submitted; user can unlock via "Editar respuestas"
+  const [isReadOnly, setIsReadOnly] = useState(source === 'submitted')
+
+  // REQ-5: autosave — enabled only when form is dirty and not in read-only mode
+  const autosave = useDraftAutosave(
+    leadId,
+    schema.id,
+    form.values,
+    form.isDirty,
+    !isReadOnly,
+  )
+
+  // Restore initial payload on mount
   useEffect(() => {
     if (initialPayload) {
-      // Server payload takes precedence
       Object.entries(initialPayload).forEach(([k, v]) => form.setValue(k, v))
-      return
-    }
-    const saved = localStorage.getItem(storageKey)
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved) as Record<string, unknown>
-        Object.entries(parsed).forEach(([k, v]) => form.setValue(k, v))
-      } catch {
-        // Ignore malformed cache
-      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schema.id])
-
-  // Auto-save every 30s
-  useEffect(() => {
-    autoSaveTimer.current = setInterval(() => {
-      if (form.isDirty) {
-        localStorage.setItem(storageKey, JSON.stringify(form.values))
-      }
-    }, 30_000)
-    return () => {
-      if (autoSaveTimer.current) clearInterval(autoSaveTimer.current)
-    }
-  }, [form.isDirty, form.values, storageKey])
 
   const visibleQuestions = form.getVisibleQuestions()
   // REQ-1: use shared helper so composite questions count correctly
@@ -122,8 +114,8 @@ function BlockForm({
     const payload = form.buildPayload()
     try {
       const result = await submitMutation.mutateAsync(payload)
-      // Clear localStorage on success
-      localStorage.removeItem(storageKey)
+      // Clear localStorage draft on success
+      localStorage.removeItem(`draft_${leadId}_${schema.id}`)
       form.reset()
       onSubmitSuccess?.(result.block_analysis_id)
     } catch {
@@ -131,16 +123,47 @@ function BlockForm({
     }
   }
 
+  function handleEdit() {
+    setIsReadOnly(false)
+  }
+
+  // Format savedAt as HH:MM
+  const savedAtLabel = autosave.savedAt
+    ? autosave.savedAt.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+    : null
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="border-b pb-4">
-        <h2 className="text-lg font-semibold text-neutral-900">{schema.title}</h2>
+        <div className="flex items-start justify-between">
+          <h2 className="text-lg font-semibold text-neutral-900">{schema.title}</h2>
+          {/* REQ-6: unlock button for submitted blocks */}
+          {isReadOnly && (
+            <button
+              type="button"
+              onClick={handleEdit}
+              className="text-xs text-blue-600 hover:text-blue-700 underline-offset-2 hover:underline ml-4 flex-shrink-0"
+            >
+              Editar respuestas
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-4 mt-2 text-xs text-neutral-500">
           <span>~{schema.estimated_minutes} min</span>
           <span>
             {answeredCount} / {visibleQuestions.length} preguntas respondidas
           </span>
+          {/* REQ-5: subtle autosave indicator */}
+          {savedAtLabel && autosave.status === 'saved' && (
+            <span className="text-neutral-400">Guardado {savedAtLabel}</span>
+          )}
+          {autosave.status === 'saving' && (
+            <span className="text-neutral-400">Guardando...</span>
+          )}
+          {autosave.status === 'error' && (
+            <span className="text-amber-500">Sin conexión — borrador local</span>
+          )}
         </div>
         {/* Progress bar */}
         <div className="mt-2 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
@@ -153,6 +176,12 @@ function BlockForm({
             }}
           />
         </div>
+        {/* Submitted banner */}
+        {isReadOnly && (
+          <p className="mt-2 text-xs text-green-700 bg-green-50 rounded px-2 py-1">
+            Este bloque ya fue enviado. Las respuestas son de solo lectura.
+          </p>
+        )}
       </div>
 
       {/* Questions */}
@@ -163,20 +192,22 @@ function BlockForm({
             question={question}
             values={form.values}
             errors={form.errors}
-            onChange={form.setValue}
+            onChange={isReadOnly ? () => {} : form.setValue}
           />
         ))}
 
-        {/* Submit */}
-        <div className="flex justify-end pt-4 border-t">
-          <button
-            type="submit"
-            disabled={submitMutation.isPending}
-            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {submitMutation.isPending ? 'Guardando...' : 'Guardar bloque'}
-          </button>
-        </div>
+        {/* Submit — hidden when read-only */}
+        {!isReadOnly && (
+          <div className="flex justify-end pt-4 border-t">
+            <button
+              type="submit"
+              disabled={submitMutation.isPending}
+              className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {submitMutation.isPending ? 'Guardando...' : 'Guardar bloque'}
+            </button>
+          </div>
+        )}
 
         {/* Error feedback */}
         {submitMutation.isError && (

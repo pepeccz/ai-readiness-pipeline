@@ -38,6 +38,9 @@ export interface BlockPayloadResponse {
   block_id: string
   payload: FormValues
   status: string
+  /** 'submitted' | 'draft' | 'none' — returned by backend since REQ-6 */
+  source: 'submitted' | 'draft' | 'none'
+  updated_at: string | null
 }
 
 export interface Suggestion {

@@ -103,6 +103,7 @@ export function IntakeApp({ leadId }: IntakeAppProps) {
               leadId={leadId}
               schema={activeBlock}
               initialPayload={blockPayload?.payload}
+              source={blockPayload?.source}
               onSubmitSuccess={() => {
                 setLastSubmittedBlock(activeBlockId)
               }}

@@ -115,6 +115,21 @@ export function LeadDetailPage() {
             />
           </div>
 
+          {lead.status === 'accepted' && (
+            <div className="mt-4 flex items-center justify-between bg-teal-50 border border-teal-200 rounded-md px-4 py-3">
+              <div>
+                <p className="text-sm font-medium text-teal-900">Lead aceptado</p>
+                <p className="text-xs text-teal-700 mt-0.5">Lista para arrancar la sesión 1 de diagnóstico (CORE).</p>
+              </div>
+              <button
+                onClick={() => navigate(`/intake/${lead.id}`)}
+                className="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-md hover:bg-teal-700 transition-colors"
+              >
+                Iniciar sesión 1 →
+              </button>
+            </div>
+          )}
+
           {lead.rejected_reason && (
             <div className="mt-4 bg-red-50 border border-red-200 rounded-md px-4 py-3 text-sm text-red-700">
               <span className="font-medium">Motivo de rechazo:</span> {lead.rejected_reason}

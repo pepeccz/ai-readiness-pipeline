@@ -1,0 +1,160 @@
+/**
+ * LeadActionPanel — Accept / Reject / Request extra info action buttons.
+ * Shown on LeadDetailPage for leads in pending_review status.
+ */
+
+import { useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { patchLead } from '../../api/leads'
+import type { LeadDetail, RejectReason } from '../../api/leads'
+import { ApiError } from '../../../admin/api/client'
+
+const REJECT_REASONS: { value: RejectReason; label: string }[] = [
+  { value: 'not_qualified_size', label: 'Empresa demasiado pequeña/grande' },
+  { value: 'out_of_sector', label: 'Fuera de sectores objetivo' },
+  { value: 'no_decision_authority', label: 'Sin autoridad de decisión' },
+  { value: 'not_aligned_with_offering', label: 'No encaja con el producto' },
+  { value: 'not_a_real_lead', label: 'Sospecha de competencia/test' },
+  { value: 'other', label: 'Otro' },
+]
+
+interface LeadActionPanelProps {
+  lead: LeadDetail
+  onActionComplete: () => void
+}
+
+export function LeadActionPanel({ lead, onActionComplete }: LeadActionPanelProps) {
+  const queryClient = useQueryClient()
+  const [showRejectForm, setShowRejectForm] = useState(false)
+  const [rejectReason, setRejectReason] = useState<RejectReason>('not_qualified_size')
+  const [consultantId, setConsultantId] = useState('')
+  const [showAcceptForm, setShowAcceptForm] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const mutation = useMutation({
+    mutationFn: (body: Parameters<typeof patchLead>[1]) => patchLead(lead.id, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead', lead.id] })
+      queryClient.invalidateQueries({ queryKey: ['leads'] })
+      setShowRejectForm(false)
+      setShowAcceptForm(false)
+      setError(null)
+      onActionComplete()
+    },
+    onError: (err) => {
+      if (err instanceof ApiError) {
+        setError(err.message)
+      } else {
+        setError('Error inesperado. Intentá de nuevo.')
+      }
+    },
+  })
+
+  if (lead.status !== 'pending_review') {
+    return null
+  }
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-5 space-y-4">
+      <h3 className="text-sm font-semibold text-gray-700">Acciones</h3>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-md px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      {!showAcceptForm && !showRejectForm && (
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => setShowAcceptForm(true)}
+            className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors"
+          >
+            Aceptar
+          </button>
+          <button
+            onClick={() => setShowRejectForm(true)}
+            className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors"
+          >
+            Rechazar
+          </button>
+          <button
+            onClick={() => mutation.mutate({ action: 'request_extra_info' })}
+            disabled={mutation.isPending}
+            className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-200 transition-colors disabled:opacity-50"
+          >
+            Pedir más info
+          </button>
+        </div>
+      )}
+
+      {showAcceptForm && (
+        <div className="space-y-3">
+          <label className="block">
+            <span className="text-sm font-medium text-gray-700">ID del consultor asignado</span>
+            <input
+              type="text"
+              value={consultantId}
+              onChange={(e) => setConsultantId(e.target.value)}
+              placeholder="UUID del consultor..."
+              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+            />
+          </label>
+          <div className="flex gap-2">
+            <button
+              onClick={() =>
+                mutation.mutate({ action: 'accept', consultant_id: consultantId })
+              }
+              disabled={mutation.isPending || !consultantId.trim()}
+              className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors"
+            >
+              {mutation.isPending ? 'Guardando...' : 'Confirmar aceptación'}
+            </button>
+            <button
+              onClick={() => setShowAcceptForm(false)}
+              className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-200 transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showRejectForm && (
+        <div className="space-y-3">
+          <label className="block">
+            <span className="text-sm font-medium text-gray-700">Motivo del rechazo</span>
+            <select
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value as RejectReason)}
+              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+            >
+              {REJECT_REASONS.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="flex gap-2">
+            <button
+              onClick={() =>
+                mutation.mutate({ action: 'reject', reason: rejectReason })
+              }
+              disabled={mutation.isPending}
+              className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 disabled:opacity-50 transition-colors"
+            >
+              {mutation.isPending ? 'Guardando...' : 'Confirmar rechazo'}
+            </button>
+            <button
+              onClick={() => setShowRejectForm(false)}
+              className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-200 transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

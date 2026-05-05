@@ -74,6 +74,77 @@ Está en estado pending_review esperando tu revisión:
     return subject, body
 
 
+def get_lead_accepted_email(lead: "Lead") -> tuple[str, str]:  # noqa: F821
+    """
+    Acceptance email sent to a lead after admin accepts their TRIAGE submission.
+
+    Args:
+        lead: Lead model instance.
+
+    Returns:
+        (subject, body) tuple — both plain-text strings.
+    """
+    subject = "Tu diagnóstico IA está en camino — Zanovix"
+    body = (
+        f"Hola {lead.full_name},\n\n"
+        "Nos complace informarte que hemos revisado tu caso y hemos decidido avanzar.\n\n"
+        "En los próximos días un consultor de Zanovix se pondrá en contacto contigo para\n"
+        "coordinar la primera sesión de diagnóstico.\n\n"
+        f"Empresa: {lead.company_name}\n\n"
+        "Mientras tanto, si tenés alguna pregunta no dudes en responder este email.\n\n"
+        "— Equipo Zanovix\n"
+    )
+    return subject, body
+
+
+def get_lead_rejected_email(lead: "Lead") -> tuple[str, str]:  # noqa: F821
+    """
+    Soft rejection email sent to a lead after admin rejects their TRIAGE submission.
+
+    Args:
+        lead: Lead model instance.
+
+    Returns:
+        (subject, body) tuple — both plain-text strings.
+    """
+    subject = "Actualización sobre tu solicitud — Zanovix"
+    body = (
+        f"Hola {lead.full_name},\n\n"
+        "Gracias por tu interés en nuestros servicios de diagnóstico de IA.\n\n"
+        "Tras revisar tu caso, en este momento no podemos ofrecerte el servicio que necesitás.\n"
+        "Esto no significa que tu empresa no tenga potencial — simplemente que el ajuste con\n"
+        "nuestra oferta actual no es el adecuado en este momento.\n\n"
+        "Si tu situación cambia o querés explorar otras opciones en el futuro, no dudes en\n"
+        "contactarnos nuevamente.\n\n"
+        "Un saludo cordial,\n\n"
+        "— Equipo Zanovix\n"
+    )
+    return subject, body
+
+
+def get_lead_extra_info_email(lead: "Lead") -> tuple[str, str]:  # noqa: F821
+    """
+    Email requesting additional information from a lead.
+
+    Args:
+        lead: Lead model instance.
+
+    Returns:
+        (subject, body) tuple — both plain-text strings.
+    """
+    subject = "Necesitamos un poco más de información — Zanovix"
+    body = (
+        f"Hola {lead.full_name},\n\n"
+        "Hemos revisado tu solicitud y antes de continuar necesitamos un poco más de\n"
+        "contexto sobre tu situación.\n\n"
+        "Por favor, respondé este email con cualquier información adicional que pueda\n"
+        "ayudarnos a entender mejor tus necesidades y el estado actual de vuestra empresa.\n\n"
+        "Gracias por tu tiempo.\n\n"
+        "— Equipo Zanovix\n"
+    )
+    return subject, body
+
+
 def client_report_email(company_name: str, download_url: str) -> tuple[str, str]:
     """
     Email sent to the client with a signed download link for their IA Readiness report,

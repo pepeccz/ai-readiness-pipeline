@@ -8,6 +8,8 @@ import { ResetPasswordPage } from './admin/pages/ResetPasswordPage'
 import { AssessmentListPage } from './admin/pages/AssessmentListPage'
 import { AssessmentEditorPage } from './admin/pages/AssessmentEditorPage'
 import { NewAssessmentPage } from './admin/pages/NewAssessmentPage'
+import { LeadsListPage } from './admin/pages/LeadsListPage'
+import { LeadDetailPage } from './admin/pages/LeadDetailPage'
 
 export const router = createBrowserRouter([
   {
@@ -30,6 +32,9 @@ export const router = createBrowserRouter([
           // IMPORTANT: 'new' must come BEFORE ':id' so the router matches it first
           { path: 'assessments/new', element: <NewAssessmentPage /> },
           { path: 'assessments/:id', element: <AssessmentEditorPage /> },
+          // B4 — Lead management
+          { path: 'leads', element: <LeadsListPage /> },
+          { path: 'leads/:id', element: <LeadDetailPage /> },
         ],
       },
     ],

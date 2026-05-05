@@ -11,6 +11,7 @@
  */
 
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useIntakeSchema } from './api/intake'
 import { useIntakeSession } from './hooks/useIntakeSession'
 import { AreaSelector } from './AreaSelector'
@@ -24,6 +25,7 @@ interface IntakeAppProps {
 }
 
 export function IntakeApp({ leadId }: IntakeAppProps) {
+  const navigate = useNavigate()
   const { session, isLoading: sessionLoading, hasAreaSelected } = useIntakeSession(leadId)
   const { data: schemaData, isLoading: schemaLoading } = useIntakeSchema(leadId)
   const [currentBlockId, setCurrentBlockId] = useState<string | null>(null)
@@ -68,7 +70,17 @@ export function IntakeApp({ leadId }: IntakeAppProps) {
   const activeBlock = schemaData?.blocks?.find((b) => b.id === activeBlockId)
 
   return (
-    <div className="flex gap-6 py-8 px-4 max-w-5xl mx-auto">
+    <div className="max-w-5xl mx-auto py-6 px-4">
+      <header className="flex items-center justify-between mb-6 pb-4 border-b border-neutral-200">
+        <button
+          onClick={() => navigate(`/admin/leads/${leadId}`)}
+          className="text-sm text-neutral-600 hover:text-neutral-900 transition-colors flex items-center gap-1"
+        >
+          ← Volver al lead
+        </button>
+        <span className="text-xs text-neutral-500">Sesión 1 — Intake CORE</span>
+      </header>
+      <div className="flex gap-6">
       {/* Sidebar */}
       <BlockNav
         blocksOrder={blocksOrder}
@@ -104,6 +116,7 @@ export function IntakeApp({ leadId }: IntakeAppProps) {
             Seleccioná un bloque para comenzar.
           </div>
         )}
+      </div>
       </div>
     </div>
   )

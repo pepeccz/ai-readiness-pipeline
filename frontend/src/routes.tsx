@@ -44,9 +44,18 @@ export const router = createBrowserRouter([
     element: <TRIAGEWizard />,
   },
   {
-    // Consultant intake form (session 1) — protected by admin auth in IntakeApp itself
-    path: '/intake/:leadId',
-    element: <IntakePage />,
+    // Consultant intake (session 1) — needs same providers as /admin/* tree
+    // (QueryClient + AuthProvider). Wrap in AdminLayout + ProtectedRoute.
+    path: '/intake',
+    element: <AdminLayout />,
+    children: [
+      {
+        element: <ProtectedRoute />,
+        children: [
+          { path: ':leadId', element: <IntakePage /> },
+        ],
+      },
+    ],
   },
   {
     // Public client DEEP form (session 2) — accessed via signed URL

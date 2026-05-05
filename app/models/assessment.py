@@ -83,12 +83,13 @@ class Assessment(Base):
     )
 
     # ── Ownership ─────────────────────────────────────────────────────────────
-    # Nullable FKs — SET NULL when user is deleted (handled in app layer since
-    # SQLite doesn't support partial ON DELETE actions per-column in SQLAlchemy
-    # mapped_column without explicit ForeignKey constructor; the migration sets
-    # ON DELETE SET NULL at the DDL level).
-    created_by_id: Mapped[UUID | None] = mapped_column(nullable=True)
-    last_edited_by_id: Mapped[UUID | None] = mapped_column(nullable=True)
+    # Nullable FKs to users.id — SET NULL on user delete (DDL-level, from migration).
+    created_by_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    last_edited_by_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
 
     # ── Flat identity columns (queryable / shown in list) ────────────────────
     company_name: Mapped[str] = mapped_column(Text, nullable=False, default="")

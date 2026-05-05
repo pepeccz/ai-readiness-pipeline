@@ -65,7 +65,7 @@ from app.email.templates import new_submission_email
 from app.jobs import runners
 from app.models.assessment import Assessment
 from app.models.user import User
-from app.pipeline_steps.map_form import map_form_to_rec
+
 from app.schemas.common import ApiException
 from app.signed_urls import SignedUrlError, verify
 from config import settings
@@ -217,7 +217,6 @@ async def submit_assessment(
 
     # ── 3. Map payload + INSERT row ───────────────────────────────────────────
     form_dict = payload.model_dump()
-    rec = map_form_to_rec(form_dict)
 
     # Flat columns: identity fields queryable for admin list/filters.
     # form_data blob: full raw payload (audit trail for LLM context).
@@ -233,6 +232,11 @@ async def submit_assessment(
         if not k.startswith("llm_")
     }
 
+    # Build respondent_name_role from contact_name + contact_role (v1 form fields)
+    respondent_name_role = form_dict.get("contact_name", "")
+    if form_dict.get("contact_role"):
+        respondent_name_role += f" — {form_dict['contact_role']}"
+
     assessment = Assessment(
         id=assessment_id,
         status="pending_review",
@@ -240,15 +244,15 @@ async def submit_assessment(
         created_at=now,
         updated_at=now,
         # Flat identity columns (queryable / shown in admin list)
-        company_name=rec.get("company_name", form_dict.get("company_name", "")),
-        sector=rec.get("sector", ""),
-        employee_range=rec.get("employee_range", ""),
-        revenue_range=rec.get("revenue_range", ""),
-        respondent_name_role=rec.get("respondent_name_role", ""),
+        company_name=form_dict.get("company_name", ""),
+        sector=form_dict.get("sector", ""),
+        employee_range=form_dict.get("employee_range", ""),
+        revenue_range=form_dict.get("revenue_range", ""),
+        respondent_name_role=respondent_name_role,
         respondent_email=form_dict.get("respondent_email") or None,
-        who_decides=rec.get("who_decides", ""),
-        budget=rec.get("budget", ""),
-        priority_text=rec.get("proceso_urgencia", ""),
+        who_decides=form_dict.get("tech_decision_maker", ""),
+        budget=form_dict.get("investment_budget", ""),
+        priority_text=form_dict.get("urgency", ""),
         # JSON blobs
         form_data=form_dict,        # full raw payload — audit trail
         llm_enriched_data=None,     # populated by enrichment_chain

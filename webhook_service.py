@@ -11,17 +11,16 @@ routes can match, causing silent 404s on all API calls.
 Route registration order (CRITICAL — do not change):
   1. app.include_router(auth_routes.router, prefix="/api/admin")       ← admin auth API
   2. app.include_router(assessment_routes.router, prefix="/api/admin") ← admin assessment API
-  3. app.include_router(public_routes.router, prefix="/api")           ← public API
-  4. app.include_router(legacy_routes.router, prefix="/api")           ← legacy 410 endpoints
-  5. SPA fallback GET /admin/{path:path}                               ← React Router
-  6. app.mount("/", StaticFiles(...))                                   ← React SPA LAST
+  3. app.include_router(public_routes.router, prefix="/api")           ← public API (v1)
+  4. app.include_router(intake_routes.router, prefix="/api")           ← TRIAGE v2 public
+  5. app.include_router(client_routes.router, prefix="/api")           ← client session 2
+  6. SPA fallback GET /admin/{path:path}                               ← React Router
+  7. app.mount("/", StaticFiles(...))                                   ← React SPA LAST
 
 Endpoints (current — Phase D complete):
   GET  /                          → React SPA (static files)
   POST /api/assessment            → Submit assessment form (public_routes.py)
   GET  /api/assessment/{id}/download → Download PDF via signed URL (public_routes.py)
-  GET  /api/status/{task_id}      → 410 Gone — deprecated (legacy_routes.py)
-  GET  /api/download/{task_id}    → 410 Gone — deprecated (legacy_routes.py)
   GET  /api/health                → Service health check
   GET  /api/admin/diagnostics     → Admin-only diagnostics (assessment_routes.py)
 
@@ -210,7 +209,7 @@ async def health():
 from app.api import auth_routes  # noqa: E402
 from app.api import assessment_routes  # noqa: E402
 from app.api import public_routes  # noqa: E402 — Phase C Batch 1 (TASK-C-01..C-03, C-09)
-from app.api import legacy_routes  # noqa: E402 — Phase C Batch 2 (TASK-C-06)
+
 from app.api import intake_routes  # noqa: E402 — B3 TRIAGE público
 from app.api.admin import leads_routes as admin_leads_routes  # noqa: E402 — B4
 from app.api import client_routes  # noqa: E402 — B8 client session 2
@@ -219,7 +218,7 @@ app.include_router(auth_routes.router, prefix="/api/admin")
 app.include_router(assessment_routes.router, prefix="/api/admin")
 app.include_router(admin_leads_routes.router, prefix="/api/admin")  # B4 leads
 app.include_router(public_routes.router, prefix="/api")
-app.include_router(legacy_routes.router, prefix="/api")  # 410 Gone for deprecated endpoints
+
 app.include_router(intake_routes.router, prefix="/api")  # TRIAGE público (B3)
 app.include_router(client_routes.router, prefix="/api")  # B8 client session 2
 

@@ -27,7 +27,7 @@ from datetime import datetime
 from uuid import UUID
 
 import structlog
-from sqlalchemy import DateTime, Index, Text
+from sqlalchemy import DateTime, ForeignKey, Index, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -45,7 +45,9 @@ class SessionRow(Base):
 
     # FK to users.id — CASCADE DELETE so orphan sessions are impossible.
     # Index defined in __table_args__ via the migration (idx_sessions_user_id).
-    user_id: Mapped[UUID] = mapped_column(nullable=False)
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=datetime.utcnow

@@ -59,12 +59,6 @@ export function LeadsListPage() {
             <span className="text-base font-semibold text-gray-800">Zanovix Admin</span>
             <nav className="flex gap-1 ml-4">
               <button
-                onClick={() => navigate('/admin/assessments')}
-                className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 rounded-md hover:bg-gray-100 transition-colors"
-              >
-                Assessments
-              </button>
-              <button
                 className="px-3 py-1.5 text-sm font-medium text-teal-700 bg-teal-50 rounded-md"
               >
                 Leads

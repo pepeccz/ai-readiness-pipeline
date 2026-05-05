@@ -20,7 +20,7 @@ export function LoginPage() {
 
     try {
       await login(email, password)
-      navigate('/admin/assessments', { replace: true })
+      navigate('/admin/leads', { replace: true })
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 429) {

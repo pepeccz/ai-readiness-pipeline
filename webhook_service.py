@@ -10,7 +10,7 @@ routes can match, causing silent 404s on all API calls.
 
 Route registration order (CRITICAL — do not change):
   1. app.include_router(auth_routes.router, prefix="/api/admin")       ← admin auth API
-  2. app.include_router(assessment_routes.router, prefix="/api/admin") ← admin assessment API
+  2. app.include_router(admin_leads_routes.router, prefix="/api/admin") ← admin leads API
   3. app.include_router(public_routes.router, prefix="/api")           ← public API (v1)
   4. app.include_router(intake_routes.router, prefix="/api")           ← TRIAGE v2 public
   5. app.include_router(client_routes.router, prefix="/api")           ← client session 2
@@ -22,7 +22,7 @@ Endpoints (current — Phase D complete):
   POST /api/assessment            → Submit assessment form (public_routes.py)
   GET  /api/assessment/{id}/download → Download PDF via signed URL (public_routes.py)
   GET  /api/health                → Service health check
-  GET  /api/admin/diagnostics     → Admin-only diagnostics (assessment_routes.py)
+
 
 Startup lifecycle (Phase D — app/startup.py):
   1. prune_login_attempts()        — hygiene DELETE of rows > 7 days old
@@ -207,7 +207,6 @@ async def health():
 # Legacy routes go AFTER public routes: different paths so no conflict, but discipline
 # ensures /api/assessment/{id}/download is never shadowed by /api/download/{task_id}.
 from app.api import auth_routes  # noqa: E402
-from app.api import assessment_routes  # noqa: E402
 from app.api import public_routes  # noqa: E402 — Phase C Batch 1 (TASK-C-01..C-03, C-09)
 
 from app.api import intake_routes  # noqa: E402 — B3 TRIAGE público
@@ -215,7 +214,6 @@ from app.api.admin import leads_routes as admin_leads_routes  # noqa: E402 — B
 from app.api import client_routes  # noqa: E402 — B8 client session 2
 
 app.include_router(auth_routes.router, prefix="/api/admin")
-app.include_router(assessment_routes.router, prefix="/api/admin")
 app.include_router(admin_leads_routes.router, prefix="/api/admin")  # B4 leads
 app.include_router(public_routes.router, prefix="/api")
 

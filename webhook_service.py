@@ -237,6 +237,18 @@ if os.path.exists(frontend_dist):
     async def spa_admin_fallback(path: str):
         return FileResponse(os.path.join(frontend_dist, "index.html"))
 
+    @app.get("/triage", include_in_schema=False)
+    async def spa_triage_fallback():
+        return FileResponse(os.path.join(frontend_dist, "index.html"))
+
+    @app.get("/intake/{path:path}", include_in_schema=False)
+    async def spa_intake_fallback(path: str):
+        return FileResponse(os.path.join(frontend_dist, "index.html"))
+
+    @app.get("/client/{path:path}", include_in_schema=False)
+    async def spa_client_fallback(path: str):
+        return FileResponse(os.path.join(frontend_dist, "index.html"))
+
     app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="static")
 
 

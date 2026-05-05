@@ -29,7 +29,7 @@ class IntakeSession(Base):
     lead_id: Mapped[str] = mapped_column(
         ForeignKey("leads.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
+        unique=True,
     )
 
     primary_area: Mapped[str] = mapped_column(String(50), nullable=False)

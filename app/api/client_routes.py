@@ -162,6 +162,14 @@ async def submit_client_deep_branch(
     if lead is None:
         raise _token_401()
 
+    # Resolve the session for this lead to validate branch ownership.
+    session_result = await db.execute(
+        select(IntakeSession).where(IntakeSession.lead_id == lead_id)
+    )
+    session = session_result.scalar_one_or_none()
+    if session is None:
+        raise HTTPException(status_code=404, detail="Sesión no encontrada.")
+
     # Find the specific branch to update
     branch_result = await db.execute(
         select(DeepBranch).where(DeepBranch.id == body.branch_id)
@@ -169,6 +177,17 @@ async def submit_client_deep_branch(
     branch = branch_result.scalar_one_or_none()
     if branch is None:
         raise HTTPException(status_code=404, detail="Branch no encontrado.")
+
+    # REQ-12 cross-tenant guard: branch must belong to this lead's session.
+    if branch.intake_session_id != session.id:
+        logger.warning(
+            "deep_submit_cross_tenant_rejected",
+            lead_id=lead_id,
+            branch_id=body.branch_id,
+            branch_session_id=branch.intake_session_id,
+            expected_session_id=session.id,
+        )
+        raise HTTPException(status_code=403, detail="Branch no pertenece a la sesión del token.")
 
     # Persist responses
     branch.client_responses = body.responses
@@ -185,11 +204,7 @@ async def submit_client_deep_branch(
     )
 
     # Check if all branches for the session are received
-    session_result = await db.execute(
-        select(IntakeSession).where(IntakeSession.id == branch.intake_session_id)
-    )
-    session = session_result.scalar_one()
-
+    # (session already loaded and validated above — reuse it)
     all_branches_result = await db.execute(
         select(DeepBranch).where(
             DeepBranch.intake_session_id == branch.intake_session_id

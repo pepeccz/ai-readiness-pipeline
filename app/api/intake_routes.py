@@ -20,7 +20,9 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, R
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
+from app.api._intake_helpers import get_or_create_session as _shared_get_or_create_session
 from app.auth.middleware import require_admin
 from app.auth.rate_limit import check_rate_limit, record_attempt
 from app.db.session import get_db
@@ -391,22 +393,8 @@ async def _get_accepted_lead(db: AsyncSession, lead_id: str) -> Lead:
 
 
 async def _get_or_create_session(db: AsyncSession, lead_id: str) -> IntakeSession:
-    """Return existing IntakeSession or create a new not_started one."""
-    stmt = select(IntakeSession).where(IntakeSession.lead_id == lead_id)
-    result = await db.execute(stmt)
-    session = result.scalar_one_or_none()
-    if session is None:
-        session = IntakeSession(
-            lead_id=lead_id,
-            primary_area="not_set",
-            secondary_area=None,
-            areas_involved=[],
-            state="not_started",
-            blocks_completed=[],
-        )
-        db.add(session)
-        await db.flush()
-    return session
+    """Thin shim — delegates to shared helper in app.api._intake_helpers."""
+    return await _shared_get_or_create_session(db, lead_id)
 
 
 # ---------------------------------------------------------------------------
@@ -444,18 +432,29 @@ async def get_intake_schema(
     area_selector = core.get("area_selector", {})
 
     if area:
-        # Build personalised response with blocks list
-        variant = core.get("block_2_variants", {})
-        b2_id = variant.get("full", "block-2-process-critical-full")
+        # REQ-10 / ADR-7: select block-2 variant by primary_area.
+        # Mapping: cross_area_communication → cross_area variant; else → full.
+        # "reduced" variant is reserved for secondary-area sessions (handled at session level).
+        # Never expose raw b2_id or block_2_variants in the response.
+        block_2_variants: dict = core.get("block_2_variants", {})
+        if area == "cross_area_communication":
+            b2_variant_key = "cross_area"
+        else:
+            b2_variant_key = "full"
 
-        # Instantiate blocks
-        blocks_data = root.get("blocks", [])
-        if not blocks_data:
-            # Load blocks directly from schema files
-            blocks_data = _load_core_blocks(blocks_order)
+        b2_block_id = block_2_variants.get(b2_variant_key, "block-2-process-critical-full")
+
+        # Replace the default block-2 entry in blocks_order with the area-specific variant.
+        resolved_blocks_order = [
+            b2_block_id if b.startswith("block-2-") else b
+            for b in blocks_order
+        ]
+
+        # Load blocks for the resolved order.
+        blocks_data = _load_core_blocks(resolved_blocks_order)
 
         return {
-            "blocks_order": blocks_order,
+            "blocks_order": resolved_blocks_order,
             "area_selector": area_selector,
             "area": area,
             "blocks": blocks_data,
@@ -793,21 +792,22 @@ async def get_block_analysis(
     if session is None:
         raise HTTPException(status_code=404, detail="No intake session found for this lead.")
 
-    ba_stmt = select(BlockAnalysis).where(
-        BlockAnalysis.intake_session_id == session.id,
-        BlockAnalysis.block_id == block_id,
+    ba_stmt = (
+        select(BlockAnalysis)
+        .where(
+            BlockAnalysis.intake_session_id == session.id,
+            BlockAnalysis.block_id == block_id,
+        )
+        .options(selectinload(BlockAnalysis.suggestions))
     )
     ba_result = await db.execute(ba_stmt)
     ba = ba_result.scalar_one_or_none()
     if ba is None:
         raise HTTPException(status_code=404, detail=f"No analysis found for block_id={block_id}.")
 
-    # Load suggestions if ready
+    # Suggestions are now eagerly loaded — no extra query.
     suggestions_data: list[dict] = []
     if ba.status == "ready":
-        sug_stmt = select(Suggestion).where(Suggestion.block_analysis_id == ba.id)
-        sug_result = await db.execute(sug_stmt)
-        suggestions = sug_result.scalars().all()
         suggestions_data = [
             {
                 "id": s.id,
@@ -818,7 +818,7 @@ async def get_block_analysis(
                 "priority": s.priority,
                 "consultant_action": s.consultant_action,
             }
-            for s in suggestions
+            for s in ba.suggestions
         ]
 
     return AnalysisResponse(

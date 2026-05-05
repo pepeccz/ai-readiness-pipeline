@@ -83,6 +83,20 @@ def get_schema_version() -> str:
     return str(_LOADED_SCHEMA.get("schema_version", "unknown"))
 
 
+def get_triage_schema() -> dict:
+    """Return the triage section of the loaded schema as a dict."""
+    if _LOADED_SCHEMA is None:
+        raise RuntimeError("Schema not loaded — call load_all() first")
+    return _LOADED_SCHEMA.get("triage", {})
+
+
+def get_root_schema() -> dict:
+    """Return the full loaded schema dict."""
+    if _LOADED_SCHEMA is None:
+        raise RuntimeError("Schema not loaded — call load_all() first")
+    return _LOADED_SCHEMA
+
+
 # ---------------------------------------------------------------------------
 # Internal — YAML loading
 # ---------------------------------------------------------------------------

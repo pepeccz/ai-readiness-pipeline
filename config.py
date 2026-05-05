@@ -63,6 +63,13 @@ class Settings(BaseSettings):
     # Setting this to True on a directly-exposed app allows IP spoofing.
     trusted_proxy: bool = False
 
+    # Salt for IP hashing (GDPR). Combined with raw IP before sha256.
+    # Generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"
+    ip_hash_salt: str = ""
+
+    # Consultant notification email — receives auto_accept + new lead alerts.
+    consultant_email: str = ""
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

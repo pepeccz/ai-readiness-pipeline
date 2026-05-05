@@ -27,7 +27,10 @@ interface IntakeAppProps {
 export function IntakeApp({ leadId }: IntakeAppProps) {
   const navigate = useNavigate()
   const { session, isLoading: sessionLoading, hasAreaSelected } = useIntakeSession(leadId)
-  const { data: schemaData, isLoading: schemaLoading } = useIntakeSchema(leadId)
+  const { data: schemaData, isLoading: schemaLoading } = useIntakeSchema(
+    leadId,
+    session?.primary_area ?? undefined,
+  )
   const [currentBlockId, setCurrentBlockId] = useState<string | null>(null)
   const [lastSubmittedBlock, setLastSubmittedBlock] = useState<string | null>(null)
 

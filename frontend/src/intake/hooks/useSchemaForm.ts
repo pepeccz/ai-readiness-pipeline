@@ -151,7 +151,7 @@ function isQuestionAnswered(q: Question, values: FormValues): boolean {
 // ---------------------------------------------------------------------------
 
 function validateSchemaContract(schema: BlockSchema | null): void {
-  if (process.env.NODE_ENV !== 'production' && schema) {
+  if (import.meta.env.DEV && schema) {
     // Assert: no question id ends in reserved suffix '_other_text'
     const violations: string[] = []
 

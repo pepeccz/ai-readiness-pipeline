@@ -33,6 +33,7 @@ Startup lifecycle (Phase D — app/startup.py):
 
 import asyncio
 import os
+import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
@@ -49,6 +50,9 @@ from config import settings
 
 # Holds background tasks spawned at startup so we can cancel them on shutdown.
 _background_tasks: set[asyncio.Task] = set()
+
+# Uptime tracking — set at startup
+_startup_time: float = time.monotonic()
 
 
 @asynccontextmanager
@@ -136,21 +140,65 @@ app.add_middleware(RequestIdMiddleware)
 # --- API Endpoints ---
 
 
+def _get_git_sha() -> str:
+    """Resolve git SHA from GIT_SHA env var or .git/HEAD file."""
+    git_sha = os.environ.get("GIT_SHA", "")
+    if git_sha:
+        return git_sha
+    try:
+        git_head = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".git", "HEAD")
+        with open(git_head) as f:
+            head_content = f.read().strip()
+        if head_content.startswith("ref: "):
+            ref_path = head_content[5:]
+            ref_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".git", ref_path)
+            with open(ref_file) as f:
+                return f.read().strip()[:7]
+        return head_content[:7]
+    except Exception:
+        return "unknown"
+
+
+async def _check_db_connection() -> str:
+    """Ping DB with a lightweight query. Returns 'ok' or 'fail'."""
+    try:
+        from app.db.session import async_session_factory  # noqa: PLC0415
+        from sqlalchemy import text  # noqa: PLC0415
+        async with async_session_factory() as db:
+            await db.execute(text("SELECT 1"))
+        return "ok"
+    except Exception:
+        return "fail"
+
+
 @app.get("/api/health")
 async def health():
-    """Service health check."""
+    """Enriched service health check (T10.3)."""
     from app.services.questionnaire import schema_loader as _sl  # noqa: PLC0415
+
     try:
         schema_version = _sl.get_schema_version()
     except RuntimeError:
         schema_version = None
 
+    db_status = await _check_db_connection()
+    overall_status = "ok" if db_status == "ok" else "degraded"
+    uptime_seconds = int(time.monotonic() - _startup_time)
+    git_sha = _get_git_sha()
+
+    from app.observability import get_counters  # noqa: PLC0415
+    counters = get_counters()
+
     return {
-        "status": "healthy",
-        "service": "ai-readiness-pipeline",
-        "version": "2.0",
-        "schema_version": schema_version,
-        "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+        "status": overall_status,
+        "schema_version": schema_version or "unknown",
+        "db_connection": db_status,
+        "llm_availability": "unknown",  # not pinged on every health check to avoid cost
+        "uptime_seconds": uptime_seconds,
+        "git_sha": git_sha,
+        # Observability metrics (T10.4)
+        "rate_limit_hits": counters.get("rate_limit_hits", 0),
+        "rate_limit_blocks": counters.get("rate_limit_blocks", 0),
     }
 
 

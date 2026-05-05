@@ -121,6 +121,10 @@ async def submit_triage(
         attempt_type="public_submission",
     )
     if not allowed:
+        from app.observability import increment as _obs_inc  # noqa: PLC0415
+        _obs_inc("rate_limit_hits")
+        _obs_inc("rate_limit_blocks")
+        logger.warning("rate_limit_exceeded", ip_hash=ip_h, endpoint="triage_submit")
         raise HTTPException(
             status_code=429,
             detail={
@@ -228,10 +232,16 @@ async def submit_triage(
         background_tasks.add_task(_notify_consultant)
 
     logger.info(
-        "triage_submitted",
+        "lead_created",
         lead_id=lead.id,
         bucket=bucket,
         score=score_result.total_score,
+    )
+    logger.info(
+        "lead_bucket_assigned",
+        lead_id=lead.id,
+        bucket=bucket,
+        override_applied=bool(score_result.flags),
     )
 
     return TriageResponse(
@@ -503,6 +513,12 @@ async def post_area_selection(
     await db.commit()
 
     logger.info(
+        "intake_session_started",
+        lead_id=lead_id,
+        primary_area=body.primary_area,
+        secondary_area=body.secondary_area,
+    )
+    logger.info(
         "intake_area_selected",
         lead_id=lead_id,
         primary_area=body.primary_area,
@@ -605,11 +621,13 @@ async def submit_block(
 
     background_tasks.add_task(_run_analysis)
 
+    import json as _json  # noqa: PLC0415
     logger.info(
         "block_submitted",
         lead_id=lead_id,
         block_id=block_id,
         block_analysis_id=block_analysis.id,
+        payload_size=len(_json.dumps(body.payload)),
     )
 
     return BlockSubmitResponse(
@@ -859,7 +877,7 @@ async def suggestion_action(
     await db.commit()
 
     logger.info(
-        "suggestion_action_recorded",
+        "suggestion_action",
         lead_id=lead_id,
         suggestion_id=suggestion_id,
         action=body.action,

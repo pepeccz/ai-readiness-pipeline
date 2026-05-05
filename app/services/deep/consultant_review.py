@@ -158,9 +158,20 @@ async def send_branch_to_client(
         f"Saludos,\nEquipo de Consultoría IA"
     )
 
+    logger.info(
+        "deep_branch_sent",
+        lead_id=lead_id,
+        branch_id=deep_branch_id,
+        signed_token_purpose="deep_form",
+    )
     try:
-        await send_email(to=lead.email, subject=subject, body=body)
-        logger.info("deep_branch_sent_to_client", branch_id=deep_branch_id, lead_email=lead.email)
+        await send_email(
+            to=lead.email,
+            subject=subject,
+            body=body,
+            template="deep_form_invitation",
+            lead_id=lead_id,
+        )
     except Exception as exc:
         logger.error("deep_branch_email_failed", branch_id=deep_branch_id, error=str(exc))
         # Don't roll back — branch is already marked as sent

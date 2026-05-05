@@ -176,6 +176,14 @@ async def submit_client_deep_branch(
     branch.received_at = datetime.now(tz=timezone.utc)
     db.add(branch)
 
+    response_count = len(body.responses) if isinstance(body.responses, dict) else 0
+    logger.info(
+        "deep_branch_received",
+        lead_id=lead_id,
+        branch_id=branch.id,
+        response_count=response_count,
+    )
+
     # Check if all branches for the session are received
     session_result = await db.execute(
         select(IntakeSession).where(IntakeSession.id == branch.intake_session_id)

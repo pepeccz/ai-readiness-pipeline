@@ -183,11 +183,11 @@ class BlockAnalyzer:
 
             latency_ms = int((time.monotonic() - start_ts) * 1000)
             logger.info(
-                "block_analysis_ready",
-                block_analysis_id=block_analysis_id,
+                "block_analyzed",
+                lead_id=ba.intake_session_id,  # session_id used as proxy here
                 block_id=block_id,
-                model=model,
-                analysis_latency_ms=latency_ms,
+                llm_model=model,
+                latency_ms=latency_ms,
                 suggestions_count=len(filtered_follow_ups),
             )
 

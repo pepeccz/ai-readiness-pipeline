@@ -41,7 +41,7 @@ def _smtp_from() -> str:
     return settings.smtp_from or settings.smtp_user
 
 
-async def send_email(to: str, subject: str, body: str) -> bool:
+async def send_email(to: str, subject: str, body: str, template: str = "unknown", lead_id: str | None = None) -> bool:
     """
     Send a plain-text email asynchronously.
 
@@ -92,8 +92,10 @@ async def send_email(to: str, subject: str, body: str) -> bool:
     try:
         await aiosmtplib.send(message, **smtp_kwargs)
         logger.info(
-            "smtp_send_success",
-            to=to,
+            "email_sent",
+            recipient=to,
+            template=template,
+            lead_id=lead_id,
             subject=subject,
             smtp_host=settings.smtp_host,
             smtp_port=settings.smtp_port,

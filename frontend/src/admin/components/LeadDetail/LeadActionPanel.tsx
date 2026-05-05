@@ -3,11 +3,17 @@
  * Shown on LeadDetailPage for leads in pending_review status.
  */
 
-import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState, useEffect } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { patchLead } from '../../api/leads'
 import type { LeadDetail, RejectReason } from '../../api/leads'
-import { ApiError } from '../../../admin/api/client'
+import { ApiError, fetchJson } from '../../../admin/api/client'
+
+interface ConsultantOption {
+  id: string
+  email: string
+  display_name: string
+}
 
 const REJECT_REASONS: { value: RejectReason; label: string }[] = [
   { value: 'not_qualified_size', label: 'Empresa demasiado pequeña/grande' },
@@ -28,6 +34,18 @@ export function LeadActionPanel({ lead, onActionComplete }: LeadActionPanelProps
   const [showRejectForm, setShowRejectForm] = useState(false)
   const [rejectReason, setRejectReason] = useState<RejectReason>('not_qualified_size')
   const [consultantId, setConsultantId] = useState('')
+
+  const { data: consultants = [] } = useQuery<ConsultantOption[]>({
+    queryKey: ['admin-users'],
+    queryFn: () => fetchJson<ConsultantOption[]>('/admin/users'),
+    staleTime: 5 * 60_000,
+  })
+
+  useEffect(() => {
+    if (!consultantId && consultants.length > 0) {
+      setConsultantId(consultants[0].id)
+    }
+  }, [consultants, consultantId])
   const [showAcceptForm, setShowAcceptForm] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -91,14 +109,22 @@ export function LeadActionPanel({ lead, onActionComplete }: LeadActionPanelProps
       {showAcceptForm && (
         <div className="space-y-3">
           <label className="block">
-            <span className="text-sm font-medium text-gray-700">ID del consultor asignado</span>
-            <input
-              type="text"
-              value={consultantId}
-              onChange={(e) => setConsultantId(e.target.value)}
-              placeholder="UUID del consultor..."
-              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
-            />
+            <span className="text-sm font-medium text-gray-700">Consultor asignado</span>
+            {consultants.length === 0 ? (
+              <p className="mt-1 text-sm text-gray-500">Cargando consultores...</p>
+            ) : (
+              <select
+                value={consultantId}
+                onChange={(e) => setConsultantId(e.target.value)}
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+              >
+                {consultants.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.display_name} ({c.email})
+                  </option>
+                ))}
+              </select>
+            )}
           </label>
           <div className="flex gap-2">
             <button

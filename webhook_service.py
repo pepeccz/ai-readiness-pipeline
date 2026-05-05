@@ -211,10 +211,12 @@ from app.api import public_routes  # noqa: E402 — Phase C Batch 1 (TASK-C-01..
 
 from app.api import intake_routes  # noqa: E402 — B3 TRIAGE público
 from app.api.admin import leads_routes as admin_leads_routes  # noqa: E402 — B4
+from app.api.admin import users_routes as admin_users_routes  # noqa: E402
 from app.api import client_routes  # noqa: E402 — B8 client session 2
 
 app.include_router(auth_routes.router, prefix="/api/admin")
 app.include_router(admin_leads_routes.router, prefix="/api/admin")  # B4 leads
+app.include_router(admin_users_routes.router, prefix="/api/admin")  # consultant dropdowns
 app.include_router(public_routes.router, prefix="/api")
 
 app.include_router(intake_routes.router, prefix="/api")  # TRIAGE público (B3)

@@ -13,7 +13,7 @@
  * This component always renders what it receives.
  */
 
-import type { Question, FormValues, FormErrors } from './types/schema'
+import type { Question, FormValues, FormErrors, TextQuestion } from './types/schema'
 import { RadioGroup } from '../components/ui/RadioGroup'
 import { MultiSelect } from '../components/ui/MultiSelect'
 import { TextInput } from '../components/ui/TextInput'
@@ -115,21 +115,30 @@ export function FieldRenderer({ question, values, errors, onChange }: FieldRende
         </div>
       )
 
+    case 'matrix':
+      return (
+        <p className="text-xs text-neutral-500">
+          Matrix question rendering not yet implemented.
+        </p>
+      )
+
     // text | email | phone | number
-    default:
+    default: {
+      const q = question as TextQuestion
       return (
         <FormField
-          label={question.label}
+          label={q.label}
           error={error}
-          required={question.required}
+          required={q.required}
         >
           <TextInput
-            type={question.type === 'email' ? 'email' : 'text'}
+            type={q.type === 'email' ? 'email' : 'text'}
             value={(value as string) ?? ''}
-            onChange={(v) => onChange(question.id, v)}
-            placeholder={question.placeholder}
+            onChange={(v) => onChange(q.id, v)}
+            placeholder={q.placeholder}
           />
         </FormField>
       )
+    }
   }
 }

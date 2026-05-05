@@ -17,12 +17,17 @@ import structlog
 from datetime import datetime, timezone
 from typing import Literal
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.api._intake_helpers import get_or_create_session as _shared_get_or_create_session
+from app.api._intake_helpers import (
+    delete_draft as _delete_draft,
+    get_draft as _get_draft,
+    get_or_create_session as _shared_get_or_create_session,
+    upsert_draft as _upsert_draft,
+)
 from app.auth.middleware import require_admin
 from app.auth.rate_limit import check_rate_limit, record_attempt
 from app.db.session import get_db
@@ -349,6 +354,8 @@ class AreaSelectionResponse(BaseModel):
 
 
 class BlockSubmitRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
     payload: dict
 
 
@@ -361,6 +368,17 @@ class BlockPayloadResponse(BaseModel):
     block_id: str
     payload: dict
     status: str
+    source: str = "submitted"
+    updated_at: str | None = None
+
+
+class DraftRequest(BaseModel):
+    payload: dict
+
+
+class DraftResponse(BaseModel):
+    payload: dict
+    updated_at: str
 
 
 class IntakeStateResponse(BaseModel):
@@ -607,6 +625,9 @@ async def submit_block(
         session.blocks_completed or [], block_id
     )
 
+    # Delete draft for this block on successful submit (TB.6)
+    await _delete_draft(db, lead_id, block_id)
+
     await db.commit()
 
     # Auto-dispatch LLM analysis (T6.13)
@@ -656,20 +677,83 @@ async def get_block_payload(
     if session is None:
         raise ApiException(status_code=404, code="session_not_found", detail="No intake session found.")
 
-    # Find block analysis
+    # Find block analysis (submitted answer)
     ba_stmt = select(BlockAnalysis).where(
         BlockAnalysis.intake_session_id == session.id,
         BlockAnalysis.block_id == block_id,
     )
     ba_result = await db.execute(ba_stmt)
     block_analysis = ba_result.scalar_one_or_none()
-    if block_analysis is None:
-        raise ApiException(status_code=404, code="block_not_found", detail=f"No payload for block {block_id}.")
 
-    return BlockPayloadResponse(
+    if block_analysis is not None:
+        # Submitted answer takes precedence; include draft updated_at if any
+        draft = await _get_draft(db, lead_id, block_id)
+        return BlockPayloadResponse(
+            block_id=block_id,
+            payload=block_analysis.payload,
+            status=block_analysis.status,
+            source="submitted",
+            updated_at=draft.updated_at.isoformat() if draft else None,
+        )
+
+    # No submitted answer — check for draft
+    draft = await _get_draft(db, lead_id, block_id)
+    if draft is not None:
+        return BlockPayloadResponse(
+            block_id=block_id,
+            payload=draft.payload,
+            status="draft",
+            source="draft",
+            updated_at=draft.updated_at.isoformat(),
+        )
+
+    raise ApiException(status_code=404, code="block_not_found", detail=f"No payload for block {block_id}.")
+
+
+# ---------------------------------------------------------------------------
+# GET /api/intake/{lead_id}/blocks/{block_id}/payload — draft fallback
+# When no BlockAnalysis exists but a draft does, return draft.
+# ---------------------------------------------------------------------------
+
+# The route above handles submitted. This GET is extended inline above.
+# When GET is called and no BlockAnalysis exists, fall through to draft.
+# We rewrite the route to check both paths.
+
+
+# ---------------------------------------------------------------------------
+# PUT /api/intake/{lead_id}/blocks/{block_id}/draft
+# ---------------------------------------------------------------------------
+
+@router.put("/intake/{lead_id}/blocks/{block_id}/draft")
+async def put_block_draft(
+    lead_id: str,
+    block_id: str,
+    body: DraftRequest,
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> DraftResponse:
+    """
+    Upsert a partial block payload draft for (lead_id, block_id).
+
+    - Requires admin auth (401 otherwise).
+    - Requires lead to exist and be accepted (404/403 otherwise).
+    - Last-write-wins semantics; stores updated_at for concurrency detection.
+    """
+    await _get_accepted_lead(db, lead_id)
+
+    draft = await _upsert_draft(db, lead_id, block_id, body.payload)
+    await db.commit()
+    await db.refresh(draft)
+
+    logger.info(
+        "block_draft_saved",
+        lead_id=lead_id,
         block_id=block_id,
-        payload=block_analysis.payload,
-        status=block_analysis.status,
+    )
+
+    return DraftResponse(
+        payload=draft.payload,
+        updated_at=draft.updated_at.isoformat(),
     )
 
 

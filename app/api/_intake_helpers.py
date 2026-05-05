@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.block_draft import BlockDraft
 from app.models.intake_session import IntakeSession
 
 
@@ -52,3 +53,60 @@ async def get_or_create_session(db: AsyncSession, lead_id: str) -> IntakeSession
         session = result.scalar_one()
 
     return session
+
+
+# ---------------------------------------------------------------------------
+# BlockDraft repository helpers (TB.4)
+# ---------------------------------------------------------------------------
+
+
+async def upsert_draft(
+    db: AsyncSession, lead_id: str, block_id: str, payload: dict
+) -> BlockDraft:
+    """
+    Insert or update a BlockDraft for (lead_id, block_id).
+
+    Always refreshes updated_at on write.
+    """
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    stmt = select(BlockDraft).where(
+        BlockDraft.lead_id == lead_id,
+        BlockDraft.block_id == block_id,
+    )
+    result = await db.execute(stmt)
+    draft = result.scalar_one_or_none()
+
+    now = datetime.now(tz=timezone.utc)
+    if draft is None:
+        draft = BlockDraft(lead_id=lead_id, block_id=block_id, payload=payload, updated_at=now)
+        db.add(draft)
+    else:
+        draft.payload = payload
+        draft.updated_at = now
+
+    await db.flush()
+    return draft
+
+
+async def get_draft(
+    db: AsyncSession, lead_id: str, block_id: str
+) -> BlockDraft | None:
+    """Return BlockDraft for (lead_id, block_id) or None if not found."""
+    stmt = select(BlockDraft).where(
+        BlockDraft.lead_id == lead_id,
+        BlockDraft.block_id == block_id,
+    )
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+async def delete_draft(db: AsyncSession, lead_id: str, block_id: str) -> None:
+    """Delete BlockDraft for (lead_id, block_id) if it exists. No-op if absent."""
+    from sqlalchemy import delete as sa_delete  # noqa: PLC0415
+
+    stmt = sa_delete(BlockDraft).where(
+        BlockDraft.lead_id == lead_id,
+        BlockDraft.block_id == block_id,
+    )
+    await db.execute(stmt)

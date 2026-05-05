@@ -20,6 +20,7 @@ Models:
 """
 
 from app.models.assessment import Assessment
+from app.models.block_draft import BlockDraft
 from app.models.block_analysis import BlockAnalysis
 from app.models.consent import Consent
 from app.models.deep_branch import DeepBranch
@@ -33,6 +34,7 @@ from app.models.user import User
 __all__ = [
     "Assessment",
     "BlockAnalysis",
+    "BlockDraft",
     "Consent",
     "DeepBranch",
     "IntakeSession",

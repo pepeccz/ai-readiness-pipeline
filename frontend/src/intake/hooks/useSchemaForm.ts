@@ -147,6 +147,42 @@ function isQuestionAnswered(q: Question, values: FormValues): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Dev-mode schema contract validation (TD.2, REQ-7)
+// ---------------------------------------------------------------------------
+
+function validateSchemaContract(schema: BlockSchema | null): void {
+  if (process.env.NODE_ENV !== 'production' && schema) {
+    // Assert: no question id ends in reserved suffix '_other_text'
+    const violations: string[] = []
+
+    function checkQuestionIds(questions: Question[]): void {
+      for (const q of questions) {
+        if (q.id.endsWith('_other_text')) {
+          violations.push(q.id)
+        }
+        // Check sub-fields in composite questions
+        if (q.type === 'composite') {
+          for (const sub of q.sub_fields) {
+            if (sub.id.endsWith('_other_text')) {
+              violations.push(sub.id)
+            }
+          }
+        }
+      }
+    }
+
+    checkQuestionIds(schema.questions)
+
+    if (violations.length > 0) {
+      console.error(
+        `[Schema Contract Violation] The following question IDs end in the reserved suffix '_other_text', ` +
+          `which would collide with companion free-text keys. Please rename them:\n  ${violations.join(', ')}`
+      )
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
 
@@ -165,6 +201,9 @@ export function useSchemaForm(schema: BlockSchema | null): UseSchemaFormResult {
   const [values, setValues] = useState<FormValues>({})
   const [errors, setErrors] = useState<FormErrors>({})
   const [isDirty, setIsDirty] = useState(false)
+
+  // Validate schema contract on mount
+  validateSchemaContract(schema)
 
   const setValue = useCallback((id: string, value: unknown) => {
     setValues((prev) => ({ ...prev, [id]: value }))

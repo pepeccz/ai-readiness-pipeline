@@ -18,6 +18,7 @@ import { getLead } from '../api/leads'
 import { BucketBadge } from '../components/LeadDetail/BucketBadge'
 import { LeadActionPanel } from '../components/LeadDetail/LeadActionPanel'
 import { LifecycleBadge } from '../components/LifecycleBadge'
+import { SessionSynthesisPanel } from '../components/SessionSynthesisPanel'
 import { useIntakeState } from '../../intake/api/intake'
 
 const STATUS_LABELS: Record<string, string> = {
@@ -236,6 +237,9 @@ export function LeadDetailPage() {
 
         {/* Action panel */}
         <LeadActionPanel lead={lead} onActionComplete={() => refetch()} />
+
+        {/* Synthesis panel — visible when intake state >= deep_pending */}
+        {id && <SessionSynthesisPanel leadId={id} />}
       </main>
     </div>
   )

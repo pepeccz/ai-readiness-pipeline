@@ -10,6 +10,17 @@ import type { CoreSchema, FormValues } from '../types/schema'
 // Types
 // ---------------------------------------------------------------------------
 
+export type SynthesisStatus = 'not_started' | 'pending' | 'ready' | 'failed'
+
+export interface Session1Synthesis {
+  summary: string
+  key_insights: string[]
+  recommendations: string[]
+  hypothesis: string
+  generated_at: string
+  model: string
+}
+
 export interface IntakeState {
   lead_id: string
   state: string
@@ -17,6 +28,13 @@ export interface IntakeState {
   secondary_area: string | null
   areas_involved: string[]
   blocks_completed: string[]
+  deep_branches_count: number
+  session1_synthesis: Session1Synthesis | null
+  session1_synthesis_status: SynthesisStatus
+}
+
+export interface FinalClosePayload {
+  force?: boolean
 }
 
 export interface AreaSelectionPayload {
@@ -104,6 +122,25 @@ export function useIntakeState(leadId: string) {
     queryKey: intakeKeys.state(leadId),
     queryFn: () => fetchJson<IntakeState>(`/intake/${leadId}/state`),
     enabled: Boolean(leadId),
+    refetchInterval: (query) => {
+      const status = query.state.data?.session1_synthesis_status
+      return status === 'pending' ? 5000 : false
+    },
+  })
+}
+
+export function useFinalClose(leadId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: FinalClosePayload) =>
+      fetchJson<IntakeState>(`/intake/${leadId}/close`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead', leadId] })
+      queryClient.invalidateQueries({ queryKey: intakeKeys.state(leadId) })
+    },
   })
 }
 
@@ -154,6 +191,19 @@ export function useSuggestionAction(leadId: string, blockId: string) {
     onSuccess: () => {
       // Narrow invalidation to the specific block (ADR-2: explicit per-surface invalidation)
       queryClient.invalidateQueries({ queryKey: intakeKeys.blockAnalysis(leadId, blockId) })
+    },
+  })
+}
+
+export function useSession1Close(leadId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () =>
+      fetchJson<IntakeState>(`/intake/${leadId}/session1/close`, {
+        method: 'POST',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: intakeKeys.state(leadId) })
     },
   })
 }

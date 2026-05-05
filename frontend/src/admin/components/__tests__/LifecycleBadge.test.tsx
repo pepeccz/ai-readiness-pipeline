@@ -53,6 +53,7 @@ vi.mock('../../../intake/api/intake', () => ({
   }),
   useIntakeSchema: vi.fn().mockReturnValue({ data: null, isLoading: false }),
   useBlockPayload: vi.fn().mockReturnValue({ data: null }),
+  useSession1Close: vi.fn().mockReturnValue({ mutate: vi.fn(), isPending: false }),
   intakeKeys: {
     state: (leadId: string) => ['intake', leadId, 'state'],
   },

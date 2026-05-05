@@ -20,6 +20,7 @@ import { BlockRenderer } from './BlockRenderer'
 import { BlockNav } from './components/BlockNav'
 import { AnalysisPanel } from './AnalysisPanel'
 import { useBlockPayload } from './api/intake'
+import { Session1CloseFooter } from './components/Session1CloseFooter'
 
 interface IntakeAppProps {
   leadId: string
@@ -126,6 +127,12 @@ export function IntakeApp({ leadId }: IntakeAppProps) {
         )}
       </div>
       </div>
+
+      <Session1CloseFooter
+        leadId={leadId}
+        state={session?.state ?? ''}
+        blocksCompleted={session?.blocks_completed ?? []}
+      />
     </div>
   )
 }

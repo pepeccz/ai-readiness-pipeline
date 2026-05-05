@@ -8,7 +8,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { patchLead } from '../../api/leads'
 import type { LeadDetail, RejectReason } from '../../api/leads'
 import { ApiError, fetchJson } from '../../../admin/api/client'
-import { intakeKeys } from '../../../intake/api/intake'
+import { intakeKeys, useIntakeState, useFinalClose } from '../../../intake/api/intake'
+import { ConfirmModal } from '../../../shared/components/ConfirmModal'
 
 interface ConsultantOption {
   id: string
@@ -35,6 +36,16 @@ export function LeadActionPanel({ lead, onActionComplete }: LeadActionPanelProps
   const [showRejectForm, setShowRejectForm] = useState(false)
   const [rejectReason, setRejectReason] = useState<RejectReason>('not_qualified_size')
   const [consultantId, setConsultantId] = useState('')
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false)
+
+  const { data: intakeState } = useIntakeState(lead.id)
+  const finalClose = useFinalClose(lead.id)
+
+  const isDeepReceived = intakeState?.state === 'deep_received'
+  const isDeepPendingZero =
+    intakeState?.state === 'deep_pending' && (intakeState?.deep_branches_count ?? 1) === 0
+  const showCloseButton = isDeepReceived || isDeepPendingZero
+  const useForce = isDeepPendingZero && !isDeepReceived
 
   const { data: consultants = [] } = useQuery<ConsultantOption[]>({
     queryKey: ['admin-users'],
@@ -70,7 +81,7 @@ export function LeadActionPanel({ lead, onActionComplete }: LeadActionPanelProps
     },
   })
 
-  if (lead.status !== 'pending_review') {
+  if (lead.status !== 'pending_review' && !showCloseButton) {
     return null
   }
 
@@ -147,6 +158,32 @@ export function LeadActionPanel({ lead, onActionComplete }: LeadActionPanelProps
           </div>
         </div>
       )}
+
+      {showCloseButton && (
+        <div className="pt-2 border-t border-gray-100">
+          <button
+            onClick={() => setShowCloseConfirm(true)}
+            disabled={finalClose.isPending}
+            className="px-4 py-2 bg-gray-700 text-white text-sm font-medium rounded-md hover:bg-gray-800 disabled:opacity-50 transition-colors"
+          >
+            {finalClose.isPending ? 'Cerrando...' : 'Marcar como cerrado'}
+          </button>
+        </div>
+      )}
+
+      <ConfirmModal
+        open={showCloseConfirm}
+        title="Cerrar sesión definitivamente"
+        body="Esto cierra la sesión definitivamente. No podrás reabrirla. ¿Continuar?"
+        confirmLabel="Confirmar"
+        cancelLabel="Cancelar"
+        variant="danger"
+        onCancel={() => setShowCloseConfirm(false)}
+        onConfirm={() => {
+          setShowCloseConfirm(false)
+          finalClose.mutate({ force: useForce })
+        }}
+      />
 
       {showRejectForm && (
         <div className="space-y-3">

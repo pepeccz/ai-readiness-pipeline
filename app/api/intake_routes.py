@@ -27,6 +27,7 @@ from app.db.session import get_db
 from app.email.sender import send_email
 from app.models.block_analysis import BlockAnalysis
 from app.models.consent import Consent
+from app.models.deep_branch import DeepBranch
 from app.models.intake_session import IntakeSession
 from app.models.lead import Lead
 from app.models.suggestion import Suggestion
@@ -873,3 +874,409 @@ async def suggestion_action(
         priority=suggestion.priority,
         consultant_action=suggestion.consultant_action,
     )
+
+
+# ===========================================================================
+# SESSION 1 CLOSE — B7
+# ===========================================================================
+
+
+class SessionCloseResponse(BaseModel):
+    lead_id: str
+    state: str
+    deep_branches_created: int
+    synthesis_job_started: bool
+
+
+@router.post("/intake/{lead_id}/session1/close", status_code=202)
+async def close_session1(
+    lead_id: str,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> SessionCloseResponse:
+    """
+    Close session 1: run synthesis LLM + detect DEEP triggers + create DeepBranch rows.
+
+    Precondition: block-1-strategic must be submitted.
+    Steps:
+      1. Mark session state = blocks_completed
+      2. BackgroundTask: generate session 1 synthesis via LLM
+      3. Detect deep branches from block payloads
+      4. Create DeepBranch rows with status=pending_generation
+      5. BackgroundTask: generate questions for each branch
+      6. Mark session state = deep_pending
+    """
+    from app.services.deep.trigger_detector import TriggerDetector  # noqa: PLC0415
+    from app.services.sessions.session_closing import SessionClosingService  # noqa: PLC0415
+
+    await _get_accepted_lead(db, lead_id)
+
+    session_stmt = select(IntakeSession).where(IntakeSession.lead_id == lead_id)
+    session_result = await db.execute(session_stmt)
+    session = session_result.scalar_one_or_none()
+    if session is None:
+        raise HTTPException(status_code=404, detail="No intake session found.")
+
+    # Precondition: strategic block must be submitted
+    blocks_done = session.blocks_completed or []
+    if "block-1-strategic" not in blocks_done:
+        raise HTTPException(
+            status_code=422,
+            detail="block-1-strategic is required before closing session 1.",
+        )
+
+    # Load block payloads for trigger detection
+    ba_stmt = select(BlockAnalysis).where(
+        BlockAnalysis.intake_session_id == session.id
+    )
+    ba_result = await db.execute(ba_stmt)
+    block_analyses = ba_result.scalars().all()
+
+    block_payloads = {ba.block_id: ba.payload for ba in block_analyses}
+    block_syntheses = {
+        ba.block_id: (ba.llm_output or {}).get("synthesis", "")
+        for ba in block_analyses
+        if ba.status == "ready" and ba.llm_output
+    }
+
+    # Detect deep branches
+    activated_branches = TriggerDetector.detect_from_all_blocks(block_payloads)
+
+    # Create DeepBranch rows
+    created_count = 0
+    for branch_name in activated_branches:
+        branch = DeepBranch(
+            intake_session_id=session.id,
+            branch_id=branch_name,
+            generated_questions=[],
+            status="pending_generation",
+        )
+        db.add(branch)
+        created_count += 1
+
+    # Update session state
+    session.state = "deep_pending"
+    await db.commit()
+
+    logger.info(
+        "session1_closed",
+        lead_id=lead_id,
+        session_id=session.id,
+        deep_branches_created=created_count,
+    )
+
+    # BackgroundTask: synthesis LLM
+    session_id = session.id
+
+    async def _run_synthesis():
+        from app.db.session import async_session_factory  # noqa: PLC0415
+        from app.models.lead import Lead as LeadModel  # noqa: PLC0415
+        async with async_session_factory() as syn_db:
+            lead_stmt = select(LeadModel).where(LeadModel.id == lead_id)
+            lead_result = await syn_db.execute(lead_stmt)
+            lead = lead_result.scalar_one_or_none()
+            triage_payload = lead.triage_payload if lead else {}
+
+            svc = SessionClosingService()
+            try:
+                synthesis = await svc.generate_synthesis(
+                    lead_triage_payload=triage_payload,
+                    block_payloads=block_payloads,
+                    block_syntheses=block_syntheses,
+                )
+                logger.info("session1_synthesis_completed", session_id=session_id)
+                # Could persist synthesis to IntakeSession if model had that field
+                # For now logged + available for future
+            except Exception as exc:
+                logger.error("session1_synthesis_failed", session_id=session_id, error=str(exc))
+
+    background_tasks.add_task(_run_synthesis)
+
+    # BackgroundTask: generate DEEP questions per branch
+    async def _run_deep_generation():
+        from app.db.session import async_session_factory  # noqa: PLC0415
+        from app.services.deep.generator import generate_all_branches  # noqa: PLC0415
+        async with async_session_factory() as gen_db:
+            await generate_all_branches(gen_db, session_id)
+
+    background_tasks.add_task(_run_deep_generation)
+
+    return SessionCloseResponse(
+        lead_id=lead_id,
+        state="deep_pending",
+        deep_branches_created=created_count,
+        synthesis_job_started=True,
+    )
+
+
+# ===========================================================================
+# DEEP CONSULTANT REVIEW ENDPOINTS — B7
+# ===========================================================================
+
+
+class DeepBranchResponse(BaseModel):
+    id: str
+    branch_id: str
+    status: str
+    generated_questions: list[dict] = Field(default_factory=list)
+    consultant_edits: list[dict] | None = None
+    consultant_reviewed_at: str | None = None
+    sent_to_client_at: str | None = None
+
+
+class DeepListResponse(BaseModel):
+    lead_id: str
+    branches: list[DeepBranchResponse] = Field(default_factory=list)
+
+
+class DeepPatchRequest(BaseModel):
+    questions: list[dict]
+
+
+class DeepSendResponse(BaseModel):
+    signed_url: str
+    sent_to: str
+    expires_at: str
+
+
+def _branch_to_response(b: DeepBranch) -> DeepBranchResponse:
+    return DeepBranchResponse(
+        id=b.id,
+        branch_id=b.branch_id,
+        status=b.status,
+        generated_questions=b.generated_questions or [],
+        consultant_edits=b.consultant_edits,
+        consultant_reviewed_at=b.consultant_reviewed_at.isoformat() if b.consultant_reviewed_at else None,
+        sent_to_client_at=b.sent_to_client_at.isoformat() if b.sent_to_client_at else None,
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /api/intake/{lead_id}/deep
+# ---------------------------------------------------------------------------
+
+@router.get("/intake/{lead_id}/deep")
+async def list_deep_branches(
+    lead_id: str,
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> DeepListResponse:
+    """Return all DeepBranch rows for this lead's intake session."""
+    await _get_accepted_lead(db, lead_id)
+
+    session_stmt = select(IntakeSession).where(IntakeSession.lead_id == lead_id)
+    session_result = await db.execute(session_stmt)
+    session = session_result.scalar_one_or_none()
+    if session is None:
+        return DeepListResponse(lead_id=lead_id, branches=[])
+
+    from app.services.deep.consultant_review import list_branches  # noqa: PLC0415
+    branches = await list_branches(db, session.id)
+
+    return DeepListResponse(
+        lead_id=lead_id,
+        branches=[_branch_to_response(b) for b in branches],
+    )
+
+
+# ---------------------------------------------------------------------------
+# PATCH /api/intake/{lead_id}/deep/{branch_id}
+# ---------------------------------------------------------------------------
+
+@router.patch("/intake/{lead_id}/deep/{branch_id}")
+async def patch_deep_branch(
+    lead_id: str,
+    branch_id: str,
+    body: DeepPatchRequest,
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> DeepBranchResponse:
+    """Edit questions on a DeepBranch (consultant review)."""
+    await _get_accepted_lead(db, lead_id)
+
+    from app.services.deep.consultant_review import update_branch_questions  # noqa: PLC0415
+    try:
+        branch = await update_branch_questions(db, branch_id, body.questions)
+    except ValueError:
+        raise HTTPException(status_code=404, detail=f"DeepBranch {branch_id} not found.")
+
+    return _branch_to_response(branch)
+
+
+# ---------------------------------------------------------------------------
+# POST /api/intake/{lead_id}/deep/{branch_id}/send
+# ---------------------------------------------------------------------------
+
+@router.post("/intake/{lead_id}/deep/{branch_id}/send")
+async def send_deep_branch(
+    lead_id: str,
+    branch_id: str,
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> DeepSendResponse:
+    """Approve + send a DeepBranch to the client via email with signed URL."""
+    await _get_accepted_lead(db, lead_id)
+
+    from app.services.deep.consultant_review import send_branch_to_client  # noqa: PLC0415
+    try:
+        result = await send_branch_to_client(db, lead_id, branch_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail=f"DeepBranch {branch_id} not found.")
+
+    return DeepSendResponse(**result)
+
+
+# ===========================================================================
+# CLIENT DEEP FORM ENDPOINTS — public, signed URL auth
+# ===========================================================================
+
+
+class ClientDeepGetResponse(BaseModel):
+    lead_id: str
+    status: str
+    deep_branches: list[dict] = Field(default_factory=list)
+
+
+class ClientDeepSubmitRequest(BaseModel):
+    branch_id: str
+    responses: dict
+
+
+class ClientDeepSubmitResponse(BaseModel):
+    received: bool
+    branch_id: str
+
+
+def _verify_deep_token(token: str) -> dict:
+    """Verify and decode a DEEP form signed URL token. Raises HTTPException on failure."""
+    from app.signed_urls import SignedUrlError, verify_payload  # noqa: PLC0415
+    try:
+        return verify_payload(token)
+    except SignedUrlError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+
+
+# ---------------------------------------------------------------------------
+# GET /api/client/deep/{signed_token}
+# ---------------------------------------------------------------------------
+
+@router.get("/client/deep/{signed_token}")
+async def client_deep_get(
+    signed_token: str,
+    db: AsyncSession = Depends(get_db),
+) -> ClientDeepGetResponse:
+    """Return DEEP branch questions for client (authenticated via signed URL)."""
+    payload = _verify_deep_token(signed_token)
+    lead_id = payload.get("lead_id")
+    branch_ids = payload.get("branch_ids", [])
+
+    # Load branches
+    if branch_ids:
+        branches_stmt = select(DeepBranch).where(DeepBranch.id.in_(branch_ids))
+    else:
+        # Fallback: load all sent branches for this lead's session
+        session_stmt = select(IntakeSession).where(IntakeSession.lead_id == lead_id)
+        session_result = await db.execute(session_stmt)
+        session = session_result.scalar_one_or_none()
+        if session is None:
+            return ClientDeepGetResponse(lead_id=lead_id, status="no_session", deep_branches=[])
+        branches_stmt = select(DeepBranch).where(
+            DeepBranch.intake_session_id == session.id,
+            DeepBranch.status.in_(["sent_to_client", "received"]),
+        )
+
+    branches_result = await db.execute(branches_stmt)
+    branches = branches_result.scalars().all()
+
+    return ClientDeepGetResponse(
+        lead_id=lead_id,
+        status="active",
+        deep_branches=[
+            {
+                "id": b.id,
+                "branch_id": b.branch_id,
+                "generated_questions": b.generated_questions or [],
+                "status": b.status,
+            }
+            for b in branches
+        ],
+    )
+
+
+# ---------------------------------------------------------------------------
+# POST /api/client/deep/{signed_token}/submit
+# ---------------------------------------------------------------------------
+
+@router.post("/client/deep/{signed_token}/submit")
+async def client_deep_submit(
+    signed_token: str,
+    body: ClientDeepSubmitRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+) -> ClientDeepSubmitResponse:
+    """Submit client responses for a DEEP branch."""
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    payload = _verify_deep_token(signed_token)
+    lead_id = payload.get("lead_id")
+
+    # Load the branch
+    branch_stmt = select(DeepBranch).where(DeepBranch.id == body.branch_id)
+    branch_result = await db.execute(branch_stmt)
+    branch = branch_result.scalar_one_or_none()
+    if branch is None:
+        raise HTTPException(status_code=404, detail="Branch not found.")
+
+    # Persist responses
+    branch.client_responses = body.responses
+    branch.status = "received"
+    branch.received_at = datetime.now(tz=timezone.utc)
+    await db.commit()
+
+    # Check if all branches for this session are received → transition state
+    all_branches_stmt = select(DeepBranch).where(
+        DeepBranch.intake_session_id == branch.intake_session_id
+    )
+    all_result = await db.execute(all_branches_stmt)
+    all_branches = all_result.scalars().all()
+
+    all_received = all(b.status == "received" for b in all_branches)
+
+    if all_received:
+        session_stmt = select(IntakeSession).where(
+            IntakeSession.id == branch.intake_session_id
+        )
+        session_result = await db.execute(session_stmt)
+        session = session_result.scalar_one_or_none()
+        if session:
+            session.state = "deep_received"
+            await db.commit()
+
+    # Send confirmation email to lead
+    lead_stmt = select(Lead).where(Lead.id == lead_id)
+    lead_result = await db.execute(lead_stmt)
+    lead = lead_result.scalar_one_or_none()
+
+    if lead:
+        async def _send_confirmation():
+            from app.email.sender import send_email  # noqa: PLC0415
+            subject = "Respuestas recibidas — Diagnóstico IA"
+            body_text = (
+                f"Hola {lead.full_name},\n\n"
+                f"Hemos recibido tus respuestas del cuestionario de profundización IA.\n"
+                f"Tu consultor las revisará y te contactará con los próximos pasos.\n\n"
+                f"Gracias,\nEquipo de Consultoría IA"
+            )
+            await send_email(to=lead.email, subject=subject, body=body_text)
+
+        background_tasks.add_task(_send_confirmation)
+
+    logger.info(
+        "client_deep_submitted",
+        lead_id=lead_id,
+        branch_id=body.branch_id,
+        all_received=all_received,
+    )
+
+    return ClientDeepSubmitResponse(received=True, branch_id=body.branch_id)

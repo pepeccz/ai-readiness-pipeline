@@ -25,6 +25,7 @@ import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.intake_session import IntakeSession
 from app.models.lead import Lead
 from app.models.session_row import SessionRow
 from app.models.user import User
@@ -354,3 +355,53 @@ async def test_get_lead_detail_not_found(client: AsyncClient, test_db: AsyncSess
         "/api/admin/leads/nonexistent-id", cookies={"admin_sid": sid}
     )
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# W-1 — intake_state field in LeadSummaryDTO
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_list_leads_intake_state_null_without_session(
+    client: AsyncClient, test_db: AsyncSession
+) -> None:
+    """Leads without an IntakeSession must return intake_state=null."""
+    _, sid = await _create_admin_session(test_db)
+
+    lead = _make_lead(email="no-session@test.com")
+    test_db.add(lead)
+    await test_db.commit()
+
+    resp = await client.get("/api/admin/leads", cookies={"admin_sid": sid})
+    assert resp.status_code == 200
+    item = resp.json()["items"][0]
+    assert "intake_state" in item, "intake_state field missing from LeadSummaryDTO"
+    assert item["intake_state"] is None
+
+
+@pytest.mark.asyncio
+async def test_list_leads_intake_state_set_when_session_exists(
+    client: AsyncClient, test_db: AsyncSession
+) -> None:
+    """Leads with an IntakeSession must return intake_state=session.state."""
+    _, sid = await _create_admin_session(test_db)
+
+    lead = _make_lead(email="has-session@test.com", status="accepted")
+    test_db.add(lead)
+    await test_db.flush()
+
+    session = IntakeSession(
+        lead_id=lead.id,
+        primary_area="estrategia",
+        areas_involved=["estrategia"],
+        state="in_progress",
+    )
+    test_db.add(session)
+    await test_db.commit()
+
+    resp = await client.get("/api/admin/leads", cookies={"admin_sid": sid})
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    assert len(items) == 1
+    assert items[0]["intake_state"] == "in_progress"

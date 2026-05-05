@@ -40,6 +40,7 @@ from sqlalchemy.orm import selectinload
 
 from app.auth.middleware import require_admin
 from app.db.session import get_db
+from app.models.intake_session import IntakeSession
 from app.models.lead import Lead
 from app.models.user import User
 from app.schemas.admin_leads import (
@@ -168,15 +169,26 @@ async def list_leads(
     total_result = await db.execute(count_stmt)
     total: int = total_result.scalar_one()
 
-    # Data
+    # Data — LEFT JOIN IntakeSession to expose intake_state per lead
     offset = (page - 1) * page_size
-    data_stmt = select(Lead).order_by(Lead.created_at.desc()).offset(offset).limit(page_size)
+    data_stmt = (
+        select(Lead, IntakeSession.state.label("intake_state"))
+        .outerjoin(IntakeSession, IntakeSession.lead_id == Lead.id)
+        .order_by(Lead.created_at.desc())
+        .offset(offset)
+        .limit(page_size)
+    )
     if conditions:
         data_stmt = data_stmt.where(*conditions)
     rows_result = await db.execute(data_stmt)
-    rows = rows_result.scalars().all()
+    rows = rows_result.all()
 
-    items = [LeadSummaryDTO.model_validate(row) for row in rows]
+    items = [
+        LeadSummaryDTO.model_validate(
+            {**lead.__dict__, "intake_state": intake_state}
+        )
+        for lead, intake_state in rows
+    ]
     pages = ceil(total / page_size) if page_size > 0 else 0
 
     logger.debug(

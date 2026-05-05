@@ -68,6 +68,7 @@ class LeadSummaryDTO(BaseModel):
     status: str
     created_at: datetime
     assigned_consultant_id: str | None
+    intake_state: str | None
 
     model_config = {"from_attributes": True}
 

@@ -86,7 +86,7 @@ function AnalysisSkeleton() {
 
 export function AnalysisPanel({ leadId, blockId }: AnalysisPanelProps) {
   const { data: analysis, isLoading, isError } = useBlockAnalysisPolling(leadId, blockId)
-  const actionMutation = useSuggestionAction(leadId)
+  const actionMutation = useSuggestionAction(leadId, blockId)
 
   if (isLoading || !analysis) return null
 

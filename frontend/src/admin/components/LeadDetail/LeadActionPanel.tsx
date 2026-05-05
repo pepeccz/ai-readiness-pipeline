@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { patchLead } from '../../api/leads'
 import type { LeadDetail, RejectReason } from '../../api/leads'
 import { ApiError, fetchJson } from '../../../admin/api/client'
+import { intakeKeys } from '../../../intake/api/intake'
 
 interface ConsultantOption {
   id: string
@@ -53,7 +54,8 @@ export function LeadActionPanel({ lead, onActionComplete }: LeadActionPanelProps
     mutationFn: (body: Parameters<typeof patchLead>[1]) => patchLead(lead.id, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lead', lead.id] })
-      queryClient.invalidateQueries({ queryKey: ['leads'] })
+      queryClient.invalidateQueries({ queryKey: ['leads'], exact: false })
+      queryClient.invalidateQueries({ queryKey: intakeKeys.state(lead.id) })
       setShowRejectForm(false)
       setShowAcceptForm(false)
       setError(null)

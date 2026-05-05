@@ -65,6 +65,12 @@ export interface BlockAnalysis {
 
 // ---------------------------------------------------------------------------
 // Query keys
+//
+// Cache invalidation convention (ADR-2):
+//   - Each mutation that touches multiple surfaces issues multiple explicit
+//     invalidateQueries calls — one per surface (NOT a single broad predicate).
+//   - Use exact: false for hierarchical prefix invalidation (e.g. ['leads']).
+//   - Narrow to the most specific key possible (e.g. blockAnalysis per block).
 // ---------------------------------------------------------------------------
 
 export const intakeKeys = {
@@ -134,7 +140,7 @@ export function useBlockAnalysis(leadId: string, blockId: string) {
   })
 }
 
-export function useSuggestionAction(leadId: string) {
+export function useSuggestionAction(leadId: string, blockId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ suggestionId, action }: { suggestionId: string; action: string }) =>
@@ -143,8 +149,8 @@ export function useSuggestionAction(leadId: string) {
         body: JSON.stringify({ action }),
       }),
     onSuccess: () => {
-      // Invalidate all analysis queries for this lead
-      queryClient.invalidateQueries({ queryKey: ['intake', leadId] })
+      // Narrow invalidation to the specific block (ADR-2: explicit per-surface invalidation)
+      queryClient.invalidateQueries({ queryKey: intakeKeys.blockAnalysis(leadId, blockId) })
     },
   })
 }
@@ -160,6 +166,7 @@ export function useBlockSubmit(leadId: string, blockId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: intakeKeys.state(leadId) })
       queryClient.invalidateQueries({ queryKey: intakeKeys.blockPayload(leadId, blockId) })
+      queryClient.invalidateQueries({ queryKey: intakeKeys.blockAnalysis(leadId, blockId) })
     },
   })
 }

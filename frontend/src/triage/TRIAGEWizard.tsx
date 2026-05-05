@@ -21,8 +21,13 @@ interface TriageSchemaResponse {
   schema_version: string
   schema: {
     questions: Question[]
-    consents: Question[]
   }
+}
+
+// Backend Pydantic key — strip "triage.q." prefix; nested ids → last segment.
+function backendKey(qid: string): string {
+  const stripped = qid.replace(/^triage\.q\./, '')
+  return stripped.split('.').pop() ?? stripped
 }
 
 interface TriageSubmitResponse {
@@ -143,45 +148,54 @@ export function TRIAGEWizard() {
     setErrors((prev) => ({ ...prev, [id]: '' }))
   }, [])
 
-  const allQuestions: Question[] = [
-    ...(schema?.schema.questions ?? []),
-    ...(schema?.schema.consents ?? []),
-  ]
-
+  const allQuestions: Question[] = schema?.schema.questions ?? []
   const visibleQuestions = allQuestions.filter((q) => isVisible(q, values))
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
-    // Validate all visible questions
+    // Validate visible questions (composite validates each sub_field)
     const newErrors: FormErrors = {}
     let valid = true
     for (const q of visibleQuestions) {
-      const err = validateQuestion(q, values[q.id])
-      if (err) {
-        newErrors[q.id] = err
-        valid = false
+      if (q.type === 'composite' && 'sub_fields' in q && q.sub_fields) {
+        for (const sub of q.sub_fields) {
+          const err = validateQuestion(sub, values[sub.id])
+          if (err) { newErrors[sub.id] = err; valid = false }
+        }
+      } else {
+        const err = validateQuestion(q, values[q.id])
+        if (err) { newErrors[q.id] = err; valid = false }
       }
     }
     setErrors(newErrors)
     if (!valid) return
 
-    // Build payload: answers + consents
+    // Build payload: flat answers + consents array (backend Pydantic shape)
     const answers: FormValues = {}
-    const consentIds = new Set((schema?.schema.consents ?? []).map((c) => c.id))
     const consents: Array<{ type: string; accepted: boolean; policy_version: string }> = []
 
     for (const q of visibleQuestions) {
-      if (consentIds.has(q.id)) {
-        if (q.type === 'consent') {
+      if (q.type === 'consent') {
+        // id "triage.q.consent_privacy" → type "privacy"
+        const consentType = q.id.replace(/^.*consent_/, '')
+        const accepted = Boolean(values[q.id])
+        // Always send privacy. Marketing only when accepted (avoid sending unaccepted optional).
+        if (consentType === 'privacy' || accepted) {
           consents.push({
-            type: q.id, // convention: question id is the consent type (e.g. "privacy")
-            accepted: Boolean(values[q.id]),
-            policy_version: (q as { policy_version?: string }).policy_version ?? 'v1.0-2025-05',
+            type: consentType,
+            accepted,
+            policy_version: (q as { policy_version?: string }).policy_version ?? 'v1.0-2026-05',
           })
         }
+      } else if (q.type === 'composite' && 'sub_fields' in q && q.sub_fields) {
+        for (const sub of q.sub_fields) {
+          const v = values[sub.id]
+          if (v !== undefined && v !== '') answers[backendKey(sub.id)] = v
+        }
       } else {
-        answers[q.id] = values[q.id]
+        const v = values[q.id]
+        if (v !== undefined && v !== '') answers[backendKey(q.id)] = v
       }
     }
 
@@ -261,10 +275,9 @@ export function TRIAGEWizard() {
 
   // ── Form ─────────────────────────────────────────────────────────────────
 
-  const consentQuestions = schema?.schema.consents ?? []
-  const regularQuestions = schema?.schema.questions ?? []
-  const visibleRegular = regularQuestions.filter((q) => isVisible(q, values))
-  const visibleConsents = consentQuestions.filter((q) => isVisible(q, values))
+  const allQs = schema?.schema.questions ?? []
+  const visibleRegular = allQs.filter((q) => q.type !== 'consent' && isVisible(q, values))
+  const visibleConsents = allQs.filter((q) => q.type === 'consent' && isVisible(q, values))
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">

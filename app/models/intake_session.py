@@ -53,6 +53,11 @@ class IntakeSession(Base):
         DateTime(timezone=True), nullable=True
     )
 
+    # Report content generated after session 2 (HTML or PDF path string)
+    report_content: Mapped[str | None] = mapped_column(
+        String(10000), nullable=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=datetime.utcnow
     )

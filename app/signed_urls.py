@@ -34,9 +34,12 @@ Design reference: design §2.4.
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
+import json
 import time
+from typing import Any
 
 
 class SignedUrlError(Exception):
@@ -145,3 +148,70 @@ def verify(token: str) -> str:
         raise SignedUrlError("bad_signature", status=403)
 
     return assessment_id
+
+
+# ---------------------------------------------------------------------------
+# Generic payload signed URL (for DEEP form, multi-branch tokens)
+# ---------------------------------------------------------------------------
+
+
+def sign_payload(payload: dict, ttl_seconds: int) -> str:
+    """
+    Generate a signed URL token encoding an arbitrary JSON payload.
+
+    Token format: base64(json_payload).{expires_at}.{hmac_hex}
+
+    The payload is base64url-encoded so it survives URL embedding.
+    Expiry and HMAC are computed over "b64_payload.expires_at".
+    """
+    expires_at = int(time.time()) + ttl_seconds
+    b64 = base64.urlsafe_b64encode(json.dumps(payload, separators=(",", ":")).encode()).decode().rstrip("=")
+    to_sign = f"{b64}.{expires_at}"
+    sig = hmac.new(
+        _get_key(),
+        to_sign.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return f"{to_sign}.{sig}"
+
+
+def verify_payload(token: str) -> dict:
+    """
+    Verify a payload signed URL token and return the decoded payload dict.
+
+    Raises SignedUrlError on any validation failure (malformed / expired / bad_signature).
+    """
+    try:
+        # Split from right to handle the b64_payload which may contain dots after encoding
+        # Format: b64.expires_at.sig — split from right to separate sig, then expires_at
+        last_dot = token.rfind(".")
+        second_last_dot = token.rfind(".", 0, last_dot)
+        if last_dot == -1 or second_last_dot == -1:
+            raise ValueError("wrong part count")
+        b64_payload = token[:second_last_dot]
+        expires_at_str = token[second_last_dot + 1 : last_dot]
+        sig = token[last_dot + 1 :]
+        expires_at = int(expires_at_str)
+    except (ValueError, AttributeError):
+        raise SignedUrlError("malformed", status=403)
+
+    # Expiry before HMAC (cheap, not secret)
+    if expires_at < int(time.time()):
+        raise SignedUrlError("expired", status=410)
+
+    # HMAC verify
+    to_sign = f"{b64_payload}.{expires_at}"
+    expected = hmac.new(
+        _get_key(),
+        to_sign.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    if not hmac.compare_digest(sig, expected):
+        raise SignedUrlError("bad_signature", status=403)
+
+    # Decode payload
+    try:
+        padding = "=" * (4 - len(b64_payload) % 4) if len(b64_payload) % 4 else ""
+        return json.loads(base64.urlsafe_b64decode(b64_payload + padding))
+    except Exception:
+        raise SignedUrlError("malformed", status=403)

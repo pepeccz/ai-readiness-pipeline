@@ -174,3 +174,21 @@ Gracias por confiar en nosotros.
 — Equipo Zanovix
 """
     return subject, body
+
+
+def deep_form_received_thanks_email(
+    full_name: str, company_name: str
+) -> tuple[str, str]:
+    """
+    Confirmation email sent to the client after they submit DEEP form branches.
+    """
+    subject = "Recibimos tus respuestas — Zanovix"
+    body = (
+        f"Hola {full_name},\n\n"
+        f"Confirmamos que recibimos tus respuestas del cuestionario de diagnóstico profundo"
+        f" para {company_name}.\n\n"
+        "Tu consultor revisará la información y en breve te contactará para coordinar la sesión 2.\n\n"
+        "¡Gracias por tu tiempo y colaboración!\n\n"
+        "— Equipo Zanovix\n"
+    )
+    return subject, body

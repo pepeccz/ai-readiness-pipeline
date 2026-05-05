@@ -24,7 +24,7 @@ interface IntakeAppProps {
 }
 
 export function IntakeApp({ leadId }: IntakeAppProps) {
-  const { session, isLoading: sessionLoading, hasAreaSelected, isBlockCompleted } = useIntakeSession(leadId)
+  const { session, isLoading: sessionLoading, hasAreaSelected } = useIntakeSession(leadId)
   const { data: schemaData, isLoading: schemaLoading } = useIntakeSchema(leadId)
   const [currentBlockId, setCurrentBlockId] = useState<string | null>(null)
   const [lastSubmittedBlock, setLastSubmittedBlock] = useState<string | null>(null)
@@ -88,7 +88,7 @@ export function IntakeApp({ leadId }: IntakeAppProps) {
               leadId={leadId}
               schema={activeBlock}
               initialPayload={blockPayload?.payload}
-              onSubmitSuccess={(blockAnalysisId) => {
+              onSubmitSuccess={() => {
                 setLastSubmittedBlock(activeBlockId)
               }}
             />

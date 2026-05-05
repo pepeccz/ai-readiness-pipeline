@@ -8,7 +8,7 @@
  * - Exposes helpers: setValue, getVisible, submit
  */
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback } from 'react'
 import type { BlockSchema, Question, ShowIfRule, FormValues, FormErrors } from '../types/schema'
 
 // ---------------------------------------------------------------------------

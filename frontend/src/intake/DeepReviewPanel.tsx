@@ -11,7 +11,6 @@
  * - Loading skeleton while branches are in pending_generation
  */
 
-import React from 'react'
 import { useDeep } from './hooks/useDeep'
 import type { DeepBranch } from './api/deep'
 

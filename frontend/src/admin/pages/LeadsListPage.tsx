@@ -11,9 +11,9 @@
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../AuthContext'
-import { listLeads, patchLead } from '../api/leads'
+import { listLeads } from '../api/leads'
 import type { LeadFilters, LeadSummary } from '../api/leads'
 import { LeadFiltersPanel } from '../components/LeadFilters/index'
 import { BucketBadge } from '../components/LeadDetail/BucketBadge'
@@ -33,25 +33,12 @@ const STATUS_LABELS: Record<string, string> = {
 export function LeadsListPage() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const [filters, setFilters] = useState<LeadFilters>(DEFAULT_FILTERS)
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['leads', filters],
     queryFn: () => listLeads(filters),
     staleTime: 5_000,
-  })
-
-  const acceptMutation = useMutation({
-    mutationFn: ({ id, consultantId }: { id: string; consultantId: string }) =>
-      patchLead(id, { action: 'accept', consultant_id: consultantId }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leads'] }),
-  })
-
-  const rejectMutation = useMutation({
-    mutationFn: ({ id }: { id: string }) =>
-      patchLead(id, { action: 'reject', reason: 'not_qualified_size' }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leads'] }),
   })
 
   const updateFilters = (partial: Partial<LeadFilters>) => {

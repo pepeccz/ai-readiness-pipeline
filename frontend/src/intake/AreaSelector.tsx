@@ -15,11 +15,6 @@ interface AreaSelectorProps {
   onSuccess?: () => void
 }
 
-const VALID_AREAS = new Set([
-  'attention', 'marketing', 'sales', 'operations',
-  'finance', 'hr', 'product', 'cross_area_communication', 'other',
-])
-
 export function AreaSelector({ leadId, schema, onSuccess }: AreaSelectorProps) {
   const [primaryArea, setPrimaryArea] = useState('')
   const [secondaryArea, setSecondaryArea] = useState('')

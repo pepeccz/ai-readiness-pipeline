@@ -124,7 +124,7 @@ export function FieldRenderer({ question, values, errors, onChange }: FieldRende
           required={question.required}
         >
           <TextInput
-            type={question.type === 'number' ? 'number' : question.type === 'email' ? 'email' : 'text'}
+            type={question.type === 'email' ? 'email' : 'text'}
             value={(value as string) ?? ''}
             onChange={(v) => onChange(question.id, v)}
             placeholder={question.placeholder}

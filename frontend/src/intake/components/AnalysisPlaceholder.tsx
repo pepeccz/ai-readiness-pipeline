@@ -6,11 +6,10 @@
  */
 
 interface AnalysisPlaceholderProps {
-  blockId: string
   status: string
 }
 
-export function AnalysisPlaceholder({ blockId, status }: AnalysisPlaceholderProps) {
+export function AnalysisPlaceholder({ status }: AnalysisPlaceholderProps) {
   if (status !== 'submitted') return null
 
   return (

@@ -142,7 +142,7 @@ export function useSuggestionAction(leadId: string) {
         method: 'POST',
         body: JSON.stringify({ action }),
       }),
-    onSuccess: (_data, { suggestionId }) => {
+    onSuccess: () => {
       // Invalidate all analysis queries for this lead
       queryClient.invalidateQueries({ queryKey: ['intake', leadId] })
     },

@@ -1,6 +1,13 @@
+// REQ-2: otherValues prop + is_other detection (Decision 3)
+// Default set covers 'otro', 'otros', 'other' without requiring YAML migration.
+// An option can also carry is_other: true for forward-compatible schema declaration.
+
+const DEFAULT_OTHER_VALUES = ['otro', 'otros', 'other']
+
 interface MultiSelectOption {
   value: string
   label: string
+  is_other?: boolean
 }
 
 interface MultiSelectProps {
@@ -11,6 +18,8 @@ interface MultiSelectProps {
   otherValue?: string
   onOtherChange?: (value: string) => void
   otherPlaceholder?: string
+  /** Values that trigger the free-text input. Defaults to ['otro','otros','other']. */
+  otherValues?: string[]
 }
 
 export function MultiSelect({
@@ -21,14 +30,25 @@ export function MultiSelect({
   otherValue,
   onOtherChange,
   otherPlaceholder = 'Especifica cuál...',
+  otherValues = DEFAULT_OTHER_VALUES,
 }: MultiSelectProps) {
-  const hasOtherOption = options.some(o => o.value === 'otro')
-  const otherSelected = selected.includes('otro')
+  // An option is the "other" trigger if its value is in otherValues OR it has is_other: true
+  function isOtherOption(opt: MultiSelectOption): boolean {
+    return otherValues.includes(opt.value) || opt.is_other === true
+  }
+
+  const hasOtherOption = options.some(isOtherOption)
+  const otherSelected = selected.some((v) => {
+    const opt = options.find((o) => o.value === v)
+    return opt ? isOtherOption(opt) : otherValues.includes(v)
+  })
 
   function toggle(value: string) {
     if (selected.includes(value)) {
-      onChange(selected.filter(v => v !== value))
-      if (value === 'otro' && onOtherChange) {
+      onChange(selected.filter((v) => v !== value))
+      // If toggling off an "other" option, clear the companion text
+      const opt = options.find((o) => o.value === value)
+      if (opt && isOtherOption(opt) && onOtherChange) {
         onOtherChange('')
       }
     } else {

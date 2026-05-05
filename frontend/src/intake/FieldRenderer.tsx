@@ -39,11 +39,30 @@ export function FieldRenderer({ question, values, errors, onChange }: FieldRende
           error={error}
           required={question.required}
         >
+          {/* REQ-3: pass otherValue/onOtherChange; companion key is ${q.id}_other_text.
+              Switching away from "otro" calls onChange which hides the input; the
+              onOtherChange('') call below removes the companion key from payload. */}
           <RadioGroup
             name={question.id}
             options={question.options.map((o) => ({ value: o.value, label: o.label }))}
             value={(value as string) ?? ''}
-            onChange={(v) => onChange(question.id, v)}
+            onChange={(v) => {
+              onChange(question.id, v)
+              // If switching away from "otro", clear companion text
+              const prev = value as string
+              const OTHER_VALS = ['otro', 'otros', 'other']
+              if (OTHER_VALS.includes(prev) && !OTHER_VALS.includes(v)) {
+                onChange(`${question.id}_other_text`, undefined)
+              }
+            }}
+            otherValue={(values[`${question.id}_other_text`] as string) ?? ''}
+            onOtherChange={(v) => {
+              if (v === '') {
+                onChange(`${question.id}_other_text`, undefined)
+              } else {
+                onChange(`${question.id}_other_text`, v)
+              }
+            }}
           />
         </FormField>
       )
@@ -55,10 +74,21 @@ export function FieldRenderer({ question, values, errors, onChange }: FieldRende
           error={error}
           required={question.required}
         >
+          {/* REQ-2: pass otherValue/onOtherChange; companion key is ${q.id}_other_text.
+              On deselect of "otro", MultiSelect calls onOtherChange('') which removes the key. */}
           <MultiSelect
-            options={question.options.map((o) => ({ value: o.value, label: o.label }))}
+            options={question.options.map((o) => ({ value: o.value, label: o.label, is_other: (o as any).is_other }))}
             selected={(value as string[]) ?? []}
             onChange={(v) => onChange(question.id, v)}
+            otherValue={(values[`${question.id}_other_text`] as string) ?? ''}
+            onOtherChange={(v) => {
+              if (v === '') {
+                // Remove the companion key by setting undefined signals removal
+                onChange(`${question.id}_other_text`, undefined)
+              } else {
+                onChange(`${question.id}_other_text`, v)
+              }
+            }}
           />
         </FormField>
       )

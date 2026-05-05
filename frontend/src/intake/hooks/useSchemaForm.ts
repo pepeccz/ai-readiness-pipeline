@@ -9,7 +9,7 @@
  */
 
 import { useState, useCallback } from 'react'
-import type { BlockSchema, Question, ShowIfRule, FormValues, FormErrors } from '../types/schema'
+import type { BlockSchema, Question, ShowIfRule, FormValues, FormErrors, MatrixQuestion } from '../types/schema'
 
 // ---------------------------------------------------------------------------
 // show_if evaluation
@@ -60,6 +60,21 @@ function isVisible(question: Question, values: FormValues): boolean {
 // ---------------------------------------------------------------------------
 
 function validateQuestion(q: Question, value: unknown): string | null {
+  // Matrix: validate that every required row has a selected column (ADR-6)
+  if (q.type === 'matrix') {
+    const matrixQ = q as MatrixQuestion
+    if (!matrixQ.required) return null
+    const answers = value as Record<string, string> | undefined
+    if (!answers || typeof answers !== 'object') {
+      return 'Este campo es obligatorio'
+    }
+    const missingRow = matrixQ.rows.find((row) => !answers[row.id])
+    if (missingRow) {
+      return `Seleccioná una opción para "${missingRow.label}"`
+    }
+    return null
+  }
+
   if (q.required && (value === undefined || value === null || value === '')) {
     return 'Este campo es obligatorio'
   }
@@ -170,6 +185,11 @@ export function useSchemaForm(schema: BlockSchema | null): UseSchemaFormResult {
           }
         }
         payload[q.id] = subPayload
+      } else if (q.type === 'matrix') {
+        // Matrix payload: { [rowId]: columnId } dict — passed through directly (ADR-6)
+        if (values[q.id] !== undefined) {
+          payload[q.id] = values[q.id]
+        }
       } else if (values[q.id] !== undefined) {
         payload[q.id] = values[q.id]
       }

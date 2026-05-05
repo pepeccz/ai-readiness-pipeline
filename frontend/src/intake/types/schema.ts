@@ -78,12 +78,33 @@ export interface ConsentQuestion extends BaseQuestion {
   policy_file?: string
 }
 
+export interface MatrixRow {
+  id: string
+  label: string
+}
+
+export interface MatrixColumn {
+  id: string
+  label: string
+}
+
+/**
+ * Matrix question — single-select per row.
+ * Payload shape (ADR-6): { [rowId: string]: string } (row → selected column id)
+ */
+export interface MatrixQuestion extends BaseQuestion {
+  type: 'matrix'
+  rows: MatrixRow[]
+  columns: MatrixColumn[]
+}
+
 export type Question =
   | SingleChoiceQuestion
   | MultiChoiceQuestion
   | TextQuestion
   | CompositeQuestion
   | ConsentQuestion
+  | MatrixQuestion
 
 export interface ClosingAnalysis {
   trigger_event: 'block_completed' | 'session_closing'

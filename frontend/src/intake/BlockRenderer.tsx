@@ -6,9 +6,14 @@
  * - Submit button with loading state
  * - Auto-save restoration from localStorage
  * - Progress indicator (X of Y questions answered)
+ *
+ * REQ-5 / ADR-3: The inner form is keyed by `${schema.id}:${payloadFingerprint}`.
+ * Changing block OR receiving an updated payload forces a full remount, which
+ * discards stale useState and re-seeds from `initialPayload`. This is the
+ * canonical React idiom for "this is a different form instance".
  */
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import type { BlockSchema } from './types/schema'
 import { FieldRenderer } from './FieldRenderer'
 import { useSchemaForm } from './hooks/useSchemaForm'
@@ -24,7 +29,46 @@ interface BlockRendererProps {
 const LOCAL_STORAGE_KEY = (sessionId: string, blockId: string) =>
   `intake_session_${sessionId}_block_${blockId}`
 
+/**
+ * Produces a short stable fingerprint of the payload so React's key prop can
+ * detect identity changes without an expensive deep-equal on every render.
+ * Uses JSON.stringify sorted by key for determinism.
+ */
+function payloadFingerprint(payload: Record<string, unknown> | undefined): string {
+  if (!payload) return 'empty'
+  const sorted = Object.keys(payload)
+    .sort()
+    .reduce<Record<string, unknown>>((acc, k) => { acc[k] = payload[k]; return acc }, {})
+  return JSON.stringify(sorted)
+}
+
 export function BlockRenderer({
+  leadId,
+  schema,
+  initialPayload,
+  onSubmitSuccess,
+}: BlockRendererProps) {
+  const formKey = useMemo(
+    () => `${schema.id}:${payloadFingerprint(initialPayload)}`,
+    [schema.id, initialPayload],
+  )
+
+  return (
+    <BlockForm
+      key={formKey}
+      leadId={leadId}
+      schema={schema}
+      initialPayload={initialPayload}
+      onSubmitSuccess={onSubmitSuccess}
+    />
+  )
+}
+
+/**
+ * BlockForm is the actual stateful form. It is always mounted fresh when
+ * BlockRenderer's key changes (i.e. on block navigation or payload update).
+ */
+function BlockForm({
   leadId,
   schema,
   initialPayload,

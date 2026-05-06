@@ -82,6 +82,9 @@ function BlockForm({
   const form = useSchemaForm(schema)
   const submitMutation = useBlockSubmit(leadId, schema.id)
 
+  // REQ-4: local submit error state for banner
+  const [localError, setLocalError] = useState<string | null>(null)
+
   // REQ-6: read-only mode when block is submitted; user can unlock via "Editar respuestas"
   const [isReadOnly, setIsReadOnly] = useState(source === 'submitted')
 
@@ -113,13 +116,16 @@ function BlockForm({
 
     const payload = form.buildPayload()
     try {
+      setLocalError(null)
       const result = await submitMutation.mutateAsync(payload)
       // Clear localStorage draft on success
       localStorage.removeItem(`draft_${leadId}_${schema.id}`)
       form.reset()
       onSubmitSuccess?.(result.block_analysis_id)
-    } catch {
-      // Error handled by mutation state
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error al guardar. Intentá de nuevo.'
+      console.error('[BlockRenderer] submit error:', err)
+      setLocalError(message)
     }
   }
 
@@ -183,6 +189,16 @@ function BlockForm({
           </p>
         )}
       </div>
+
+      {/* REQ-4: submit error banner — top of form, clears on next successful submit */}
+      {localError && (
+        <div
+          role="alert"
+          className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700"
+        >
+          <span className="font-medium">Error al enviar:</span> {localError}
+        </div>
+      )}
 
       {/* Questions */}
       <form onSubmit={handleSubmit} className="space-y-6">

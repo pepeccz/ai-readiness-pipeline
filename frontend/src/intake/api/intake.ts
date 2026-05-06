@@ -124,8 +124,9 @@ export function useIntakeState(leadId: string) {
     enabled: Boolean(leadId),
     refetchInterval: (query) => {
       const status = query.state.data?.session1_synthesis_status
-      return status === 'pending' ? 5000 : false
+      return status === 'pending' ? 5000 : 30000
     },
+    refetchOnWindowFocus: true,
   })
 }
 
@@ -216,6 +217,26 @@ export function useBlockSubmit(leadId: string, blockId: string) {
         method: 'POST',
         body: JSON.stringify({ payload }),
       }),
+    onMutate: async () => {
+      // Cancel in-flight queries to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: intakeKeys.state(leadId) })
+      // Snapshot for rollback
+      const snapshot = queryClient.getQueryData<IntakeState>(intakeKeys.state(leadId))
+      // Optimistic append with Set dedupe
+      if (snapshot) {
+        queryClient.setQueryData<IntakeState>(intakeKeys.state(leadId), {
+          ...snapshot,
+          blocks_completed: Array.from(new Set([...snapshot.blocks_completed, blockId])),
+        })
+      }
+      return { snapshot }
+    },
+    onError: (_err, _vars, context) => {
+      // Roll back to snapshot
+      if (context?.snapshot !== undefined) {
+        queryClient.setQueryData<IntakeState>(intakeKeys.state(leadId), context.snapshot)
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: intakeKeys.state(leadId) })
       queryClient.invalidateQueries({ queryKey: intakeKeys.blockPayload(leadId, blockId) })

@@ -23,6 +23,106 @@ function wrapper(qc: QueryClient) {
     React.createElement(QueryClientProvider, { client: qc }, children)
 }
 
+// ---------------------------------------------------------------------------
+// TB.1 — REQ-1: refetchInterval and refetchOnWindowFocus (strict TDD)
+// ---------------------------------------------------------------------------
+
+describe('useIntakeState — REQ-1: polling intervals', () => {
+  let qc: QueryClient
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  })
+
+  it('uses refetchInterval=5000 when session1_synthesis_status is pending', async () => {
+    mockFetchJson.mockResolvedValue({
+      lead_id: 'lead-1',
+      state: 'in_progress',
+      primary_area: null,
+      secondary_area: null,
+      areas_involved: [],
+      blocks_completed: [],
+      deep_branches_count: 0,
+      session1_synthesis: null,
+      session1_synthesis_status: 'pending',
+    })
+
+    const { result } = renderHook(() => useIntakeState('lead-1'), {
+      wrapper: wrapper(qc),
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    // Access the observer to check refetchInterval behavior
+    const queryCache = qc.getQueryCache()
+    const query = queryCache.find({ queryKey: ['intake', 'lead-1', 'state'] })
+    expect(query).toBeDefined()
+
+    // The refetchInterval function should return 5000 for pending
+    const interval = (query!.options as { refetchInterval?: (q: typeof query) => number | false }).refetchInterval
+    if (typeof interval === 'function') {
+      // The query state now has pending status data
+      expect(interval(query as never)).toBe(5000)
+    }
+  })
+
+  it('uses refetchInterval>=30000 when session1_synthesis_status is NOT pending', async () => {
+    mockFetchJson.mockResolvedValue({
+      lead_id: 'lead-1',
+      state: 'in_progress',
+      primary_area: null,
+      secondary_area: null,
+      areas_involved: [],
+      blocks_completed: [],
+      deep_branches_count: 0,
+      session1_synthesis: null,
+      session1_synthesis_status: 'ready',
+    })
+
+    const { result } = renderHook(() => useIntakeState('lead-1'), {
+      wrapper: wrapper(qc),
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    const queryCache = qc.getQueryCache()
+    const query = queryCache.find({ queryKey: ['intake', 'lead-1', 'state'] })
+    expect(query).toBeDefined()
+
+    const interval = (query!.options as { refetchInterval?: (q: typeof query) => number | false }).refetchInterval
+    if (typeof interval === 'function') {
+      const value = interval(query as never)
+      expect(value).toBeGreaterThanOrEqual(30000)
+    }
+  })
+
+  it('has refetchOnWindowFocus true', async () => {
+    mockFetchJson.mockResolvedValue({
+      lead_id: 'lead-1',
+      state: 'in_progress',
+      primary_area: null,
+      secondary_area: null,
+      areas_involved: [],
+      blocks_completed: [],
+      deep_branches_count: 0,
+      session1_synthesis: null,
+      session1_synthesis_status: 'not_started',
+    })
+
+    const { result } = renderHook(() => useIntakeState('lead-1'), {
+      wrapper: wrapper(qc),
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    const queryCache = qc.getQueryCache()
+    const query = queryCache.find({ queryKey: ['intake', 'lead-1', 'state'] })
+    expect(query).toBeDefined()
+    expect(query!.options.refetchOnWindowFocus).toBe(true)
+  })
+})
+
 describe('useIntakeState — synthesis extension', () => {
   let qc: QueryClient
 

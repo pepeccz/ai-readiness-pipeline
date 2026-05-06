@@ -12,7 +12,8 @@
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useIntakeSchema } from './api/intake'
+import { useQueryClient } from '@tanstack/react-query'
+import { useIntakeSchema, intakeKeys } from './api/intake'
 import { useIntakeSession } from './hooks/useIntakeSession'
 import { LifecycleBadge } from '../admin/components/LifecycleBadge'
 import { AreaSelector } from './AreaSelector'
@@ -28,6 +29,7 @@ interface IntakeAppProps {
 
 export function IntakeApp({ leadId }: IntakeAppProps) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { session, isLoading: sessionLoading, hasAreaSelected } = useIntakeSession(leadId)
   const { data: schemaData, isLoading: schemaLoading } = useIntakeSchema(
     leadId,
@@ -110,6 +112,8 @@ export function IntakeApp({ leadId }: IntakeAppProps) {
               initialPayload={blockPayload?.payload}
               source={blockPayload?.source}
               onSubmitSuccess={() => {
+                // Defense-in-depth: invalidate state here even though useBlockSubmit already does it
+                queryClient.invalidateQueries({ queryKey: intakeKeys.state(leadId) })
                 setLastSubmittedBlock(activeBlockId)
               }}
             />

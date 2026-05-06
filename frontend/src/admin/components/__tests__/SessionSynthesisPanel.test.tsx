@@ -21,6 +21,15 @@ vi.mock('../../../intake/api/intake', async (importOriginal) => {
   }
 })
 
+const mockMutate = vi.fn()
+vi.mock('../../../intake/hooks/useSession1Synthesize', () => ({
+  useSession1Synthesize: () => ({
+    mutate: mockMutate,
+    isPending: false,
+    isError: false,
+  }),
+}))
+
 import { SessionSynthesisPanel } from '../SessionSynthesisPanel'
 
 function wrapper() {
@@ -96,7 +105,7 @@ describe('SessionSynthesisPanel', () => {
     expect(screen.getByText('Hypothesis text')).toBeInTheDocument()
   })
 
-  it('shows error card with disabled retry when status is failed', () => {
+  it('shows error card with active retry button when status is failed', () => {
     mockUseIntakeState.mockReturnValue({
       data: { state: 'deep_pending', session1_synthesis_status: 'failed', session1_synthesis: null },
       isLoading: false,
@@ -107,7 +116,7 @@ describe('SessionSynthesisPanel', () => {
     )
     expect(screen.getByText(/falló generación/i)).toBeInTheDocument()
     const retryBtn = screen.getByRole('button', { name: /reintentar/i })
-    expect(retryBtn).toBeDisabled()
+    expect(retryBtn).not.toBeDisabled()
   })
 
   it('shows soft-timeout warning after 3 minutes (mocked timer)', () => {

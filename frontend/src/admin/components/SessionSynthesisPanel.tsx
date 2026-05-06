@@ -8,6 +8,7 @@
 
 import { useState, useEffect } from 'react'
 import { useIntakeState } from '../../intake/api/intake'
+import { useSession1Synthesize } from '../../intake/hooks/useSession1Synthesize'
 
 const PRE_SYNTHESIS_STATES = new Set(['not_started', 'in_progress', 'blocks_completed'])
 const SOFT_TIMEOUT_MS = 3 * 60 * 1000 // 3 minutes
@@ -18,6 +19,7 @@ interface Props {
 
 export function SessionSynthesisPanel({ leadId }: Props) {
   const { data } = useIntakeState(leadId)
+  const synthesizeMutation = useSession1Synthesize(leadId)
   const [firstPendingAt, setFirstPendingAt] = useState<number | null>(null)
   const [now, setNow] = useState<number>(Date.now())
 
@@ -68,12 +70,21 @@ export function SessionSynthesisPanel({ leadId }: Props) {
       <div className="bg-white rounded-lg border border-red-200 p-6 space-y-3">
         <p className="text-sm font-semibold text-red-700">Falló generación de síntesis</p>
         <button
-          disabled
-          title="Próximamente"
-          className="px-3 py-1.5 text-sm bg-gray-100 text-gray-400 rounded-md cursor-not-allowed"
+          onClick={() => synthesizeMutation.mutate()}
+          disabled={synthesizeMutation.isPending}
+          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+            synthesizeMutation.isPending
+              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              : 'bg-red-600 text-white hover:bg-red-700'
+          }`}
         >
-          Reintentar
+          {synthesizeMutation.isPending ? 'Reintentando…' : 'Reintentar síntesis'}
         </button>
+        {synthesizeMutation.isError && (
+          <p className="text-xs text-red-500">
+            Error al reintentar. Intentá de nuevo.
+          </p>
+        )}
       </div>
     )
   }
@@ -89,22 +100,22 @@ export function SessionSynthesisPanel({ leadId }: Props) {
           <p className="text-sm text-gray-800">{s.summary}</p>
         </div>
 
-        {s.key_insights.length > 0 && (
+        {(s.key_insights?.length ?? 0) > 0 && (
           <div>
             <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Insights clave</p>
             <ul className="list-disc list-inside space-y-1">
-              {s.key_insights.map((insight, i) => (
+              {s.key_insights!.map((insight: string, i: number) => (
                 <li key={i} className="text-sm text-gray-700">{insight}</li>
               ))}
             </ul>
           </div>
         )}
 
-        {s.recommendations.length > 0 && (
+        {(s.recommendations?.length ?? 0) > 0 && (
           <div>
             <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Recomendaciones</p>
             <ul className="list-disc list-inside space-y-1">
-              {s.recommendations.map((rec, i) => (
+              {s.recommendations!.map((rec: string, i: number) => (
                 <li key={i} className="text-sm text-gray-700">{rec}</li>
               ))}
             </ul>

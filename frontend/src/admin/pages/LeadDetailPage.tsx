@@ -20,6 +20,7 @@ import { LeadActionPanel } from '../components/LeadDetail/LeadActionPanel'
 import { LifecycleBadge } from '../components/LifecycleBadge'
 import { SessionSynthesisPanel } from '../components/SessionSynthesisPanel'
 import { useIntakeState } from '../../intake/api/intake'
+import { DeepReviewPanel } from '../../intake/DeepReviewPanel'
 
 const STATUS_LABELS: Record<string, string> = {
   pending_review: 'Pendiente revisión',
@@ -121,7 +122,9 @@ export function LeadDetailPage() {
             />
           </div>
 
-          {lead.status === 'accepted' && (
+          {lead.status === 'accepted' &&
+            (intakeState?.state == null ||
+              ['not_started', 'in_progress'].includes(intakeState.state)) && (
             <div className="mt-4 flex items-center justify-between bg-teal-50 border border-teal-200 rounded-md px-4 py-3">
               <div>
                 <p className="text-sm font-medium text-teal-900">Lead aceptado</p>
@@ -240,6 +243,11 @@ export function LeadDetailPage() {
 
         {/* Synthesis panel — visible when intake state >= deep_pending */}
         {id && <SessionSynthesisPanel leadId={id} />}
+
+        {/* Deep review panel — visible for deep_pending and deep_received */}
+        {id && ['deep_pending', 'deep_received'].includes(intakeState?.state ?? '') && (
+          <DeepReviewPanel leadId={id} />
+        )}
       </main>
     </div>
   )

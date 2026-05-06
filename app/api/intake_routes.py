@@ -609,6 +609,7 @@ async def submit_block(
     Idempotent: re-submitting same block_id replaces previous BlockAnalysis.
     Auto-dispatches LLM analysis as BackgroundTask (T6.13).
     """
+    _assert_block_id_valid(block_id)
     await _get_accepted_lead(db, lead_id)
     session = await _get_or_create_session(db, lead_id)
 
@@ -639,10 +640,14 @@ async def submit_block(
         session.blocks_completed or [], block_id
     )
 
-    # Delete draft for this block on successful submit (TB.6)
-    await _delete_draft(db, lead_id, block_id)
-
     await db.commit()
+
+    # Best-effort: delete draft AFTER commit so completion is always durable (REQ-3)
+    try:
+        await _delete_draft(db, lead_id, block_id)
+        await db.commit()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("delete_draft_failed", lead_id=lead_id, block_id=block_id, error=str(exc))
 
     # Auto-dispatch LLM analysis (T6.13)
     ba_id = block_analysis.id
@@ -682,6 +687,7 @@ async def get_block_payload(
     db: AsyncSession = Depends(get_db),
 ) -> BlockPayloadResponse:
     """Return stored payload for a submitted block (auto-save retrieval)."""
+    _assert_block_id_valid(block_id)
     await _get_accepted_lead(db, lead_id)
 
     # Find session
@@ -741,6 +747,25 @@ async def get_block_payload(
 _OTHER_VALUES: frozenset[str] = frozenset({"otro", "otros", "other"})
 
 
+def _assert_block_id_valid(block_id: str) -> None:
+    """
+    Raise HTTPException 404 if block_id is not in the active YAML schema blocks_order.
+
+    Uses the module-level cached schema (loaded at startup). O(1) on cached schema. (REQ-6)
+    """
+    try:
+        root = schema_loader.get_root_schema()
+    except RuntimeError:
+        # Schema not loaded yet (test context) — load now
+        root = schema_loader.load_all()
+    blocks_order: list[str] = root.get("core", {}).get("blocks_order", [])
+    if block_id not in blocks_order:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Block '{block_id}' not found in active schema.",
+        )
+
+
 def _load_block_schema(block_id: str) -> dict | None:
     """Return the parsed YAML dict for a core block, or None if not found."""
     import yaml  # noqa: PLC0415
@@ -796,6 +821,7 @@ async def put_block_draft(
     - Payload keys must match question ids or ${qid}_other_text (422 otherwise).
     - Last-write-wins semantics; stores updated_at for concurrency detection.
     """
+    _assert_block_id_valid(block_id)
     await _get_accepted_lead(db, lead_id)
 
     # Validate block_id exists in schema
@@ -943,6 +969,7 @@ async def get_block_analysis(
 
     Used for polling from frontend (refetchInterval 2s while pending_analysis).
     """
+    _assert_block_id_valid(block_id)
     await _get_accepted_lead(db, lead_id)
 
     session_stmt = select(IntakeSession).where(IntakeSession.lead_id == lead_id)

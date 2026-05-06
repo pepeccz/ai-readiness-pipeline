@@ -154,3 +154,156 @@ class TestBlockSubmit:
         resp = await client.get(f"/api/intake/{lead_id}/state", cookies={"admin_sid": sid})
         assert resp.status_code == 200
         assert resp.json()["state"] in ("not_started", "in_progress")
+
+
+# ---------------------------------------------------------------------------
+# TA.1 — REQ-3: _delete_draft raises after commit; 202 + completion persists
+# ---------------------------------------------------------------------------
+
+class TestSubmitDeleteDraftBestEffort:
+    """REQ-3: draft cleanup is best-effort; block completion must survive _delete_draft failure."""
+
+    async def test_submit_returns_202_even_if_delete_draft_raises(
+        self, client: AsyncClient, test_db: AsyncSession, monkeypatch
+    ):
+        """
+        TA.1: If _delete_draft raises AFTER mark_block_completed is committed,
+        the submit handler must still return 202.
+        """
+        import app.api.intake_routes as intake_module
+
+        async def _failing_delete_draft(db, lead_id, block_id):
+            raise RuntimeError("simulated draft delete failure")
+
+        monkeypatch.setattr(intake_module, "_delete_draft", _failing_delete_draft)
+
+        user, sid = await _create_admin_session(test_db, "req3.a@t.com", "req3-sid-aaaa0001")
+        lead_id = await _create_accepted_lead(client, sid, user.id, "req3.lead.a@t.com")
+        await client.post(
+            f"/api/intake/{lead_id}/area-selection",
+            json={"primary_area": "marketing"},
+            cookies={"admin_sid": sid},
+        )
+
+        resp = await client.post(
+            f"/api/intake/{lead_id}/blocks/block-1-strategic/submit",
+            json={"payload": {"q1_2_sponsor": "ceo_total"}},
+            cookies={"admin_sid": sid},
+        )
+        assert resp.status_code == 202, resp.text
+
+    async def test_blocks_completed_persists_even_if_delete_draft_raises(
+        self, client: AsyncClient, test_db: AsyncSession, monkeypatch
+    ):
+        """
+        TA.1: blocks_completed row must be durable in DB even if _delete_draft raises.
+        """
+        import app.api.intake_routes as intake_module
+
+        async def _failing_delete_draft(db, lead_id, block_id):
+            raise RuntimeError("simulated draft delete failure")
+
+        monkeypatch.setattr(intake_module, "_delete_draft", _failing_delete_draft)
+
+        user, sid = await _create_admin_session(test_db, "req3.b@t.com", "req3-sid-bbbb0002")
+        lead_id = await _create_accepted_lead(client, sid, user.id, "req3.lead.b@t.com")
+        await client.post(
+            f"/api/intake/{lead_id}/area-selection",
+            json={"primary_area": "marketing"},
+            cookies={"admin_sid": sid},
+        )
+
+        await client.post(
+            f"/api/intake/{lead_id}/blocks/block-1-strategic/submit",
+            json={"payload": {"q1_2_sponsor": "ceo_total"}},
+            cookies={"admin_sid": sid},
+        )
+
+        state_resp = await client.get(
+            f"/api/intake/{lead_id}/state", cookies={"admin_sid": sid}
+        )
+        assert state_resp.status_code == 200
+        assert "block-1-strategic" in state_resp.json()["blocks_completed"]
+
+
+# ---------------------------------------------------------------------------
+# TA.5 — REQ-6: unknown block_id returns 404 on all four routes
+# ---------------------------------------------------------------------------
+
+class TestBlockIdValidation:
+    """REQ-6: all block-scoped routes must 404 on unknown block_id."""
+
+    async def test_submit_unknown_block_id_returns_404(
+        self, client: AsyncClient, test_db: AsyncSession
+    ):
+        user, sid = await _create_admin_session(test_db, "req6.a@t.com", "req6-sid-aaaa0001")
+        lead_id = await _create_accepted_lead(client, sid, user.id, "req6.lead.a@t.com")
+        resp = await client.post(
+            f"/api/intake/{lead_id}/blocks/block-nonexistent/submit",
+            json={"payload": {}},
+            cookies={"admin_sid": sid},
+        )
+        assert resp.status_code == 404
+
+    async def test_draft_put_unknown_block_id_returns_404(
+        self, client: AsyncClient, test_db: AsyncSession
+    ):
+        user, sid = await _create_admin_session(test_db, "req6.b@t.com", "req6-sid-bbbb0002")
+        lead_id = await _create_accepted_lead(client, sid, user.id, "req6.lead.b@t.com")
+        resp = await client.put(
+            f"/api/intake/{lead_id}/blocks/block-nonexistent/draft",
+            json={"payload": {}},
+            cookies={"admin_sid": sid},
+        )
+        assert resp.status_code == 404
+
+    async def test_payload_get_unknown_block_id_returns_404(
+        self, client: AsyncClient, test_db: AsyncSession
+    ):
+        user, sid = await _create_admin_session(test_db, "req6.c@t.com", "req6-sid-cccc0003")
+        lead_id = await _create_accepted_lead(client, sid, user.id, "req6.lead.c@t.com")
+        # First create a session (area-selection) so we don't get session_not_found
+        await client.post(
+            f"/api/intake/{lead_id}/area-selection",
+            json={"primary_area": "marketing"},
+            cookies={"admin_sid": sid},
+        )
+        resp = await client.get(
+            f"/api/intake/{lead_id}/blocks/block-nonexistent/payload",
+            cookies={"admin_sid": sid},
+        )
+        assert resp.status_code == 404
+
+    async def test_analysis_get_unknown_block_id_returns_404(
+        self, client: AsyncClient, test_db: AsyncSession
+    ):
+        user, sid = await _create_admin_session(test_db, "req6.d@t.com", "req6-sid-dddd0004")
+        lead_id = await _create_accepted_lead(client, sid, user.id, "req6.lead.d@t.com")
+        await client.post(
+            f"/api/intake/{lead_id}/area-selection",
+            json={"primary_area": "marketing"},
+            cookies={"admin_sid": sid},
+        )
+        resp = await client.get(
+            f"/api/intake/{lead_id}/blocks/block-nonexistent/analysis",
+            cookies={"admin_sid": sid},
+        )
+        assert resp.status_code == 404
+
+    async def test_submit_valid_block_id_still_works(
+        self, client: AsyncClient, test_db: AsyncSession
+    ):
+        """Regression: valid block_id must not be blocked by the new validation."""
+        user, sid = await _create_admin_session(test_db, "req6.e@t.com", "req6-sid-eeee0005")
+        lead_id = await _create_accepted_lead(client, sid, user.id, "req6.lead.e@t.com")
+        await client.post(
+            f"/api/intake/{lead_id}/area-selection",
+            json={"primary_area": "marketing"},
+            cookies={"admin_sid": sid},
+        )
+        resp = await client.post(
+            f"/api/intake/{lead_id}/blocks/block-1-strategic/submit",
+            json={"payload": {"q1_2_sponsor": "ceo_total"}},
+            cookies={"admin_sid": sid},
+        )
+        assert resp.status_code == 202

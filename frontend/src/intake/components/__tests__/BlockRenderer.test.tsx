@@ -4,6 +4,7 @@
  * TA.5 — REQ-1: BlockRenderer rehydration with composite expansion
  * TA.9 — REQ-4: BlockRenderer error copy mapping by errorKind
  * TA.11 — REQ-3: BlockRenderer formKey remount — no form.reset()
+ * A-1 — REQ-1: isReadOnly syncs one-way (false→true) when source changes to 'submitted'
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, act, fireEvent, waitFor } from '@testing-library/react'
@@ -555,5 +556,64 @@ describe('BlockRenderer — TA.11: formKey remount, no form.reset() (REQ-3)', ()
     })
     // Should not throw; no form.reset() is called
     expect(screen.queryByRole('alert')).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// A-1 — REQ-1: isReadOnly one-way sync via useEffect([source])
+// ---------------------------------------------------------------------------
+
+describe('BlockRenderer — A-1: isReadOnly one-way sync when source=submitted (REQ-1)', () => {
+  beforeEach(() => {
+    mockAutosaveReturn = { savedAt: null, status: 'idle' }
+    vi.clearAllMocks()
+    localStorage.clear()
+  })
+
+  it('A-1: isReadOnly is true on first render when source=submitted (no double-click needed)', () => {
+    const schema = makeSimpleSchema('block-readonly-sync')
+    render(<BlockRenderer leadId="lead-1" schema={schema} source="submitted" />)
+    // When source='submitted', the block should be read-only from the first render.
+    // The submit/skip buttons must be absent.
+    expect(screen.queryByRole('button', { name: /cerrar bloque/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /cerrar sin análisis ia/i })).toBeNull()
+    // The "Editar respuestas" unlock button must be visible.
+    expect(screen.getByRole('button', { name: /editar respuestas/i })).toBeInTheDocument()
+  })
+
+  it('A-1: isReadOnly transitions to true when source prop changes from undefined to submitted', async () => {
+    const schema = makeSimpleSchema('block-readonly-transition')
+    const { rerender } = render(
+      <BlockRenderer leadId="lead-1" schema={schema} source={undefined} />,
+    )
+    // Initially editable — submit button is visible
+    expect(screen.getByRole('button', { name: /cerrar bloque/i })).toBeInTheDocument()
+
+    // Parent refetches and sets source='submitted'
+    await act(async () => {
+      rerender(<BlockRenderer leadId="lead-1" schema={schema} source="submitted" />)
+    })
+
+    // After source changes to 'submitted', block must be read-only
+    expect(screen.queryByRole('button', { name: /cerrar bloque/i })).toBeNull()
+    expect(screen.getByRole('button', { name: /editar respuestas/i })).toBeInTheDocument()
+  })
+
+  it('A-1: isReadOnly does NOT flip back to false when source changes from submitted to non-submitted', async () => {
+    const schema = makeSimpleSchema('block-readonly-guard')
+    const { rerender } = render(
+      <BlockRenderer leadId="lead-1" schema={schema} source="submitted" />,
+    )
+    // Currently read-only
+    expect(screen.getByRole('button', { name: /editar respuestas/i })).toBeInTheDocument()
+
+    // Source changes transiently to non-submitted — guard must hold
+    await act(async () => {
+      rerender(<BlockRenderer leadId="lead-1" schema={schema} source="draft" />)
+    })
+
+    // isReadOnly must remain true — submit buttons still absent
+    expect(screen.queryByRole('button', { name: /cerrar bloque/i })).toBeNull()
+    expect(screen.getByRole('button', { name: /editar respuestas/i })).toBeInTheDocument()
   })
 })

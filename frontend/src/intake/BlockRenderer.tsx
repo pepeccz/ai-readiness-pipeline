@@ -102,8 +102,17 @@ function BlockForm({
   const [localValidationError, setLocalValidationError] = useState<{ count: number } | null>(null)
   const formRef = useRef<HTMLFormElement>(null)
 
-  // REQ-6: read-only mode when block is submitted; user can unlock via "Editar respuestas"
+  // REQ-6 / A-1: read-only mode when block is submitted; user can unlock via "Editar respuestas"
+  // One-way transition: false → true when source becomes 'submitted'. Never flips back.
   const [isReadOnly, setIsReadOnly] = useState(source === 'submitted')
+
+  useEffect(() => {
+    if (source === 'submitted' && !isReadOnly) {
+      setIsReadOnly(true)
+    }
+    // Intentionally no cleanup / reverse: one-way transition only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [source])
 
   // REQ-5: autosave — enabled only when form is dirty and not in read-only mode
   // TA.8: accept buildPayload callable so autosave wire shape matches submit shape (ADR-2)

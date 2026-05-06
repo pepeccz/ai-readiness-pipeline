@@ -120,12 +120,16 @@ export function IntakeApp({ leadId }: IntakeAppProps) {
                 setLastSubmittedBlock(activeBlockId)
               }}
             />
-            {lastSubmittedBlock === activeBlockId && (
-              <AnalysisPanel
-                leadId={leadId}
-                blockId={activeBlockId}
-              />
-            )}
+            {/* A-2: Always-rendered placeholder reserves vertical space (prevents CLS).
+                AnalysisPanel fades in within this container once analysis arrives. */}
+            <div className="min-h-[300px]">
+              {lastSubmittedBlock === activeBlockId && (
+                <AnalysisPanel
+                  leadId={leadId}
+                  blockId={activeBlockId}
+                />
+              )}
+            </div>
           </>
         ) : (
           <div className="text-sm text-neutral-500 text-center py-16">

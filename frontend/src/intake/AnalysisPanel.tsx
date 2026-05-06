@@ -9,6 +9,7 @@
  *   - failed → error message
  */
 
+import { useEffect, useRef } from 'react'
 import { useBlockAnalysisPolling } from '../shared/hooks/useBlockAnalysisPolling'
 import { useSuggestionAction, type Suggestion } from './api/intake'
 
@@ -87,6 +88,17 @@ function AnalysisSkeleton() {
 export function AnalysisPanel({ leadId, blockId }: AnalysisPanelProps) {
   const { data: analysis, isLoading, isError } = useBlockAnalysisPolling(leadId, blockId)
   const actionMutation = useSuggestionAction(leadId, blockId)
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  // A-3: scroll panel into view 100ms after analysis arrives (covers React commit + layout pass)
+  useEffect(() => {
+    if (analysis?.status === 'ready') {
+      const id = setTimeout(() => {
+        panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 100)
+      return () => clearTimeout(id)
+    }
+  }, [analysis?.status])
 
   if (isLoading || !analysis) return null
 
@@ -119,7 +131,7 @@ export function AnalysisPanel({ leadId, blockId }: AnalysisPanelProps) {
   }
 
   return (
-    <div data-testid="analysis-panel" className="mt-4 space-y-4">
+    <div ref={panelRef} data-testid="analysis-panel" className="mt-4 space-y-4">
       {llm_output?.synthesis && (
         <div className="p-3 bg-teal-50 border border-teal-200 rounded">
           <p className="text-xs font-semibold text-teal-700 mb-1">Síntesis</p>

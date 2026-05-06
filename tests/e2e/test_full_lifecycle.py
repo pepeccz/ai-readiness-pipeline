@@ -75,7 +75,7 @@ _TRIAGE_PAYLOAD = {
 
 _ALL_BLOCKS = [
     "block-1-strategic",
-    "block-2-process-critical",
+    "block-2-process-critical-full",
     "block-3-data",
     "block-4-talent",
     "block-5-infrastructure",

@@ -169,6 +169,16 @@ function BlockForm({
   }
 
   async function handleSkipAnalysis() {
+    const valid = form.validate()
+    if (!valid) {
+      const visibleReqs = form.getVisibleQuestions().filter((q) => q.required && q.type !== 'composite')
+      const count = visibleReqs.length > 0 ? visibleReqs.length : 1
+      setLocalValidationError({ count })
+      requestAnimationFrame(() => {
+        formRef.current?.querySelector('[data-error="true"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      })
+      return
+    }
     const payload = form.buildPayload()
     try {
       setLocalError(null)

@@ -138,10 +138,9 @@ class SessionClosingService:
 
         Returns an Anthropic Message object.
         """
-        import anthropic
-        from config import settings
+        from app.services.llm.client_factory import get_anthropic_client
 
-        client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+        client = get_anthropic_client()
         return await client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=1500,

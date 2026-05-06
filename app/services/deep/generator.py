@@ -132,11 +132,10 @@ def _build_context_message(
 
 async def _call_llm_for_branch(branch_id: str, user_message: str) -> str:
     """Call Anthropic SDK and return raw text response."""
-    import anthropic
-    from config import settings
+    from app.services.llm.client_factory import get_anthropic_client
 
     model = _get_model_for_branch(branch_id)
-    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+    client = get_anthropic_client()
 
     response = await client.messages.create(
         model=model,

@@ -220,7 +220,10 @@
       margin: 0 0 0.55cm;
       letter-spacing: -0.01em;
       line-height: 1.15;
+      page-break-after: avoid;
     }
+    .section-num { page-break-after: avoid; }
+    .section { page-break-inside: auto; }
     h2::after {
       content: "";
       display: block;
@@ -386,10 +389,16 @@
       padding-top: 0.25cm;
       margin-top: 0.15cm;
     }
-    .rec-meta-badges { display: table-cell; vertical-align: middle; width: 55%; }
-    .rec-meta-svc { display: table-cell; vertical-align: middle; text-align: right; width: 45%; }
-    .rec-meta-svc .svc-tag-label { display: block; margin-bottom: 0.1cm; margin-right: 0; }
-    .rec-meta-svc .svc-tag { display: block; line-height: 1.3; }
+    .rec-meta-badges { display: table-cell; vertical-align: middle; width: 48%; }
+    .rec-meta-svc { display: table-cell; vertical-align: middle; text-align: right; width: 52%; padding-left: 0.3cm; }
+    .rec-meta-svc .svc-tag-label { display: block; margin-bottom: 0.08cm; margin-right: 0; font-size: 7.5pt; }
+    .rec-meta-svc .svc-tag {
+      display: block;
+      line-height: 1.25;
+      font-size: 9pt;
+      hyphens: auto;
+      word-break: normal;
+    }
 
     .badge {
       font-family: Helvetica, Arial, sans-serif;
@@ -708,7 +717,7 @@
 
     <div class="cover-footer">
       <div class="cover-footer-l">Documento confidencial — uso exclusivo de {{ lead.company_name }}</div>
-      <div class="cover-footer-r">Diagnóstico estratégico de adopción IA</div>
+      <div class="cover-footer-r">Tu hoja de ruta para adoptar IA con criterio</div>
     </div>
   </div>
 
@@ -778,7 +787,7 @@
      01 · Resumen ejecutivo
      ═══════════════════════════════════════════════════════════════════════ #}
   {% if synthesis.summary %}
-  <div class="section" style="page-break-before: always;">
+  <div class="section" >
     <span class="section-num">01 · Resumen ejecutivo</span>
     <h2>Visión global del diagnóstico</h2>
     <div class="summary-block">
@@ -806,7 +815,7 @@
      03 · Recomendaciones priorizadas
      ═══════════════════════════════════════════════════════════════════════ #}
   {% if synthesis.recommendations %}
-  <div class="section" style="page-break-before: always;">
+  <div class="section" >
     <span class="section-num">03 · Recomendaciones priorizadas</span>
     <h2>Acciones con mayor impacto</h2>
 
@@ -871,7 +880,7 @@
      04 · Hoja de ruta
      ═══════════════════════════════════════════════════════════════════════ #}
   {% if synthesis.roadmap %}
-  <div class="section" style="page-break-before: always;">
+  <div class="section" >
     <span class="section-num">04 · Hoja de ruta</span>
     <h2>30 · 60 · 90 días</h2>
 

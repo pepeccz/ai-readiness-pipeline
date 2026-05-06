@@ -2,210 +2,218 @@ id: block-3-data
 layer: core
 order: 3
 estimated_minutes: 14
-title: "Bloque 3 — Datos"
-
+title: Bloque 3 — Datos
 questions:
-  - id: q3_1_sources
-    type: multi_choice
-    required: true
-    label: "¿De dónde vienen los datos relevantes para este proceso?"
-    hint_didactic: "Tener Excel ≠ tener dataset utilizable. 'Solo cabezas' es red flag para IA — el primer entregable sería extracción de conocimiento implícito."
-    options:
-      - value: "erp"
-        label: "ERP (SAP, Odoo, etc.)"
-      - value: "crm"
-        label: "CRM (Salesforce, HubSpot, etc.)"
-      - value: "hojas"
-        label: "Hojas de cálculo (Excel, Google Sheets)"
-      - value: "email"
-        label: "Email / comunicaciones"
-      - value: "docs"
-        label: "Documentos (Word, PDFs, presentaciones)"
-      - value: "bbdd_propia"
-        label: "Base de datos propia"
-      - value: "apis"
-        label: "APIs de terceros"
-      - value: "conocimiento_cabezas"
-        label: "Conocimiento en la cabeza de personas"
-        deep_branches: ["extraccion_conocimiento"]
-      - value: "no_datos"
-        label: "No tenemos datos relevantes"
-
-  - id: q3_2_quality
-    type: composite
-    required: true
-    label: "¿Cómo evaluás la calidad de esos datos?"
-    hint_didactic: "Calidad es el predictor #1 de éxito en IA. Sobreestimación es muy común — el ejemplo concreto la reduce."
-    sub_fields:
-      - id: q3_2_level
-        type: single_choice
-        required: true
-        label: "Calidad auto-evaluada"
-        options:
-          - value: "excelente"
-            label: "Excelente — completos, consistentes, actualizados"
-          - value: "buena"
-            label: "Buena — algunas inconsistencias menores"
-          - value: "regular"
-            label: "Regular — muchos campos vacíos o inconsistentes"
-            deep_branches: ["auditoria_calidad"]
-          - value: "mala"
-            label: "Mala — datos no confiables"
-            deep_branches: ["auditoria_calidad"]
-          - value: "no_se"
-            label: "No sé / No hemos evaluado"
-            deep_branches: ["auditoria_calidad"]
-      - id: q3_2_example
-        type: text
-        required: false
-        label: "Ejemplo concreto de problema de calidad (opcional)"
-        validations:
-          - type: max_length
-            value: 150
-
-  - id: q3_3_volume
-    type: composite
-    required: true
-    label: "Volumen y antigüedad de los datos"
-    hint_didactic: "Volumen <1k registros con objetivo ML → considerar IA generativa o reglas. Retención <6 meses limita modelos de tendencia."
-    sub_fields:
-      - id: q3_3_volume_count
-        type: single_choice
-        required: true
-        label: "Registros / instancias disponibles"
-        options:
-          - value: "menos_100"
-            label: "Menos de 100"
-          - value: "100_1k"
-            label: "100 a 1.000"
-          - value: "1k_10k"
-            label: "1.000 a 10.000"
-          - value: "10k_100k"
-            label: "10.000 a 100.000"
-          - value: "mas_100k"
-            label: "Más de 100.000"
-          - value: "no_se"
-            label: "No sé"
-      - id: q3_3_retention
-        type: single_choice
-        required: true
-        label: "Antigüedad / retención de datos históricos"
-        options:
-          - value: "menos_6m"
-            label: "Menos de 6 meses"
-          - value: "6m_2a"
-            label: "6 meses a 2 años"
-          - value: "2a_5a"
-            label: "2 a 5 años"
-          - value: "mas_5a"
-            label: "Más de 5 años"
-          - value: "no_se"
-            label: "No sé"
-
-  - id: q3_4_personal_data
-    type: composite
-    required: true
-    label: "¿Los datos incluyen información personal o sensible?"
-    hint_didactic: "Definición RGPD: email empresa = personal. IP = personal. Suele estar mal entendida."
-    sub_fields:
-      - id: q3_4_category
-        type: single_choice
-        required: true
-        label: "Categoría principal"
-        options:
-          - value: "personal_identificable"
-            label: "Personal identificable (nombre, email, IP, DNI)"
-          - value: "sensible"
-            label: "Sensible (salud, ideología, biométrico, menores)"
-            deep_branches: ["dpia_obligatorio"]
-          - value: "confidencial_empresarial"
-            label: "Confidencial empresarial (contratos, finanzas)"
-          - value: "anonimos"
-            label: "Datos anónimos / agregados"
-          - value: "no_claro"
-            label: "No está claro"
-            deep_branches: ["auditoria_tratamiento"]
-      - id: q3_4_types
-        type: multi_choice
-        required: false
-        label: "Si incluye datos personales, ¿de qué tipos?"
-        show_if:
-          field: q3_4_category
-          op: in
-          value: ["personal_identificable", "sensible"]
-        options:
-          - value: "nombre_email"
-            label: "Nombre / Email"
-          - value: "ubicacion"
-            label: "Ubicación / Dirección"
-          - value: "salud"
-            label: "Datos de salud"
-          - value: "financieros"
-            label: "Datos financieros"
-          - value: "biometricos"
-            label: "Datos biométricos"
-          - value: "menores"
-            label: "Datos de menores"
-          - value: "ideologia"
-            label: "Ideología / creencias"
-          - value: "otros"
-            label: "Otros"
-
-  - id: q3_5_accessibility
+- id: q3_1_sources
+  type: multi_choice
+  required: true
+  label: ¿De dónde vienen los datos relevantes para este proceso?
+  hint_didactic: Tener Excel ≠ tener dataset utilizable. 'Solo cabezas' es red flag para IA — el primer entregable sería extracción
+    de conocimiento implícito.
+  options:
+  - value: erp
+    label: ERP (SAP, Odoo, etc.)
+  - value: crm
+    label: CRM (Salesforce, HubSpot, etc.)
+  - value: hojas
+    label: Hojas de cálculo (Excel, Google Sheets)
+  - value: email
+    label: Email / comunicaciones
+  - value: docs
+    label: Documentos (Word, PDFs, presentaciones)
+  - value: bbdd_propia
+    label: Base de datos propia
+  - value: apis
+    label: APIs de terceros
+  - value: conocimiento_cabezas
+    label: Conocimiento en la cabeza de personas
+    deep_branches:
+    - extraccion_conocimiento
+  - value: no_datos
+    label: No tenemos datos relevantes
+- id: q3_2_quality
+  type: composite
+  required: true
+  label: ¿Cómo evaluás la calidad de esos datos?
+  hint_didactic: 'Calidad es el predictor #1 de éxito en IA. Sobreestimación es muy común — el ejemplo concreto la reduce.'
+  sub_fields:
+  - id: q3_2_level
     type: single_choice
     required: true
-    label: "¿Cómo se puede acceder técnicamente a los datos?"
-    hint_didactic: "Vendor lock-in de datos es el bloqueante más caro. 'Tener datos' ≠ 'poder usarlos'."
+    label: Calidad auto-evaluada
     options:
-      - value: "api_directo"
-        label: "API directa disponible"
-      - value: "exportable"
-        label: "Exportable por lotes (CSV, Excel, etc.)"
-      - value: "solo_interfaz"
-        label: "Solo a través de interfaz humana (manual)"
-      - value: "bloqueado_proveedor"
-        label: "Bloqueado por proveedor — sin acceso directo"
-        deep_branches: ["migracion_negociacion"]
-      - value: "no_se"
-        label: "No sé"
-
+    - value: excelente
+      label: Excelente — completos, consistentes, actualizados
+    - value: buena
+      label: Buena — algunas inconsistencias menores
+    - value: regular
+      label: Regular — muchos campos vacíos o inconsistentes
+      deep_branches:
+      - auditoria_calidad
+    - value: mala
+      label: Mala — datos no confiables
+      deep_branches:
+      - auditoria_calidad
+    - value: no_se
+      label: No sé / No hemos evaluado
+      deep_branches:
+      - auditoria_calidad
+  - id: q3_2_example
+    type: text
+    required: false
+    label: Ejemplo concreto de problema de calidad (opcional)
+- id: q3_3_volume
+  type: composite
+  required: true
+  label: Volumen y antigüedad de los datos
+  hint_didactic: Volumen <1k registros con objetivo ML → considerar IA generativa o reglas. Retención <6 meses limita modelos
+    de tendencia.
+  sub_fields:
+  - id: q3_3_volume_count
+    type: single_choice
+    required: true
+    label: Registros / instancias disponibles
+    options:
+    - value: menos_100
+      label: Menos de 100
+    - value: 100_1k
+      label: 100 a 1.000
+    - value: 1k_10k
+      label: 1.000 a 10.000
+    - value: 10k_100k
+      label: 10.000 a 100.000
+    - value: mas_100k
+      label: Más de 100.000
+    - value: no_se
+      label: No sé
+  - id: q3_3_retention
+    type: single_choice
+    required: true
+    label: Antigüedad / retención de datos históricos
+    options:
+    - value: menos_6m
+      label: Menos de 6 meses
+    - value: 6m_2a
+      label: 6 meses a 2 años
+    - value: 2a_5a
+      label: 2 a 5 años
+    - value: mas_5a
+      label: Más de 5 años
+    - value: no_se
+      label: No sé
+- id: q3_4_personal_data
+  type: composite
+  required: true
+  label: ¿Los datos incluyen información personal o sensible?
+  hint_didactic: 'Definición RGPD: email empresa = personal. IP = personal. Suele estar mal entendida.'
+  sub_fields:
+  - id: q3_4_category
+    type: single_choice
+    required: true
+    label: Categoría principal
+    options:
+    - value: personal_identificable
+      label: Personal identificable (nombre, email, IP, DNI)
+    - value: sensible
+      label: Sensible (salud, ideología, biométrico, menores)
+      deep_branches:
+      - dpia_obligatorio
+    - value: confidencial_empresarial
+      label: Confidencial empresarial (contratos, finanzas)
+    - value: anonimos
+      label: Datos anónimos / agregados
+    - value: no_claro
+      label: No está claro
+      deep_branches:
+      - auditoria_tratamiento
+  - id: q3_4_types
+    type: multi_choice
+    required: false
+    label: Si incluye datos personales, ¿de qué tipos?
+    show_if:
+      field: q3_4_category
+      op: in
+      value:
+      - personal_identificable
+      - sensible
+    options:
+    - value: nombre_email
+      label: Nombre / Email
+    - value: ubicacion
+      label: Ubicación / Dirección
+    - value: salud
+      label: Datos de salud
+    - value: financieros
+      label: Datos financieros
+    - value: biometricos
+      label: Datos biométricos
+    - value: menores
+      label: Datos de menores
+    - value: ideologia
+      label: Ideología / creencias
+    - value: otros
+      label: Otros
+- id: q3_5_accessibility
+  type: single_choice
+  required: true
+  label: ¿Cómo se puede acceder técnicamente a los datos?
+  hint_didactic: Vendor lock-in de datos es el bloqueante más caro. 'Tener datos' ≠ 'poder usarlos'.
+  options:
+  - value: api_directo
+    label: API directa disponible
+  - value: exportable
+    label: Exportable por lotes (CSV, Excel, etc.)
+  - value: solo_interfaz
+    label: Solo a través de interfaz humana (manual)
+  - value: bloqueado_proveedor
+    label: Bloqueado por proveedor — sin acceso directo
+    deep_branches:
+    - migracion_negociacion
+  - value: no_se
+    label: No sé
 closing_analysis:
   trigger_event: block_completed
   llm_model: haiku
   output_schema:
-    synthesis: "string"
+    synthesis: string
     data_readiness:
-      score: "float 0-1"
-      level: "ready|limited|blocked|unknown"
-      blockers: "list"
-    compliance_flags: "list"
-    feasibility_implications: "string"
-    preliminary_hypothesis: "string"
-  filters: ["confidence", "dedup", "length"]
-
+      score: float 0-1
+      level: ready|limited|blocked|unknown
+      blockers: list
+    compliance_flags: list
+    feasibility_implications: string
+    preliminary_hypothesis: string
+  filters:
+  - confidence
+  - dedup
+  - length
 deep_triggers:
-  - condition:
-      field: q3_4_category
-      op: in
-      value: ["sensible"]
-    activates_branch: "dpia_obligatorio"
-  - condition:
-      field: q3_4_category
-      op: eq
-      value: "no_claro"
-    activates_branch: "auditoria_tratamiento"
-  - condition:
-      field: q3_2_level
-      op: in
-      value: ["mala", "no_se"]
-    activates_branch: "auditoria_calidad"
-  - condition:
-      field: q3_5_accessibility
-      op: eq
-      value: "bloqueado_proveedor"
-    activates_branch: "migracion_negociacion"
-  - condition:
-      field: q3_1_sources
-      op: in
-      value: ["conocimiento_cabezas"]
-    activates_branch: "extraccion_conocimiento"
+- condition:
+    field: q3_4_category
+    op: in
+    value:
+    - sensible
+  activates_branch: dpia_obligatorio
+- condition:
+    field: q3_4_category
+    op: eq
+    value: no_claro
+  activates_branch: auditoria_tratamiento
+- condition:
+    field: q3_2_level
+    op: in
+    value:
+    - mala
+    - no_se
+  activates_branch: auditoria_calidad
+- condition:
+    field: q3_5_accessibility
+    op: eq
+    value: bloqueado_proveedor
+  activates_branch: migracion_negociacion
+- condition:
+    field: q3_1_sources
+    op: in
+    value:
+    - conocimiento_cabezas
+  activates_branch: extraccion_conocimiento

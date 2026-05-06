@@ -2,165 +2,177 @@ id: block-7-governance
 layer: core
 order: 7
 estimated_minutes: 10
-title: "Bloque 7 — Governance & Ética"
-
+title: Bloque 7 — Governance & Ética
 questions:
-  - id: q7_1_approval
-    type: composite
-    required: true
-    label: "¿Cómo se aprueban las iniciativas IA en la empresa?"
-    hint_didactic: "Aprobación = filtro de riesgo + asignación de responsabilidad. Shadow AI es el riesgo #1 en PYMEs."
-    sub_fields:
-      - id: q7_1_process
-        type: single_choice
-        required: true
-        label: "Proceso de aprobación"
-        options:
-          - value: "comite_formal"
-            label: "Comité formal con criterios definidos"
-          - value: "persona_criterios"
-            label: "Persona responsable con criterios claros"
-          - value: "persona_sin_criterios"
-            label: "Persona responsable sin criterios formales"
-          - value: "caso_a_caso"
-            label: "Caso a caso sin proceso definido"
-          - value: "nadie"
-            label: "Nadie — cada uno hace lo que quiere"
-            deep_branches: ["governance_minimo"]
-      - id: q7_1_responsible
-        type: text
-        required: false
-        label: "¿Quién es el responsable? (rol, no nombre)"
-        show_if:
-          field: q7_1_process
-          op: in
-          value: ["comite_formal", "persona_criterios", "persona_sin_criterios"]
-        validations:
-          - type: max_length
-            value: 80
-
-  - id: q7_2_genai_policy
-    type: composite
-    required: true
-    label: "¿Tienen política de uso de IA generativa para empleados?"
-    hint_didactic: "Shadow AI ya ocurre. Política regulariza. Plantilla mínima: herramientas autorizadas, datos prohibidos, validación humana, documentación."
-    sub_fields:
-      - id: q7_2_policy_status
-        type: single_choice
-        required: true
-        label: "Estado de la política"
-        options:
-          - value: "firmada"
-            label: "Sí, firmada y comunicada a todos"
-          - value: "redactada_no_comunicada"
-            label: "Redactada pero no comunicada formalmente"
-          - value: "verbal"
-            label: "Solo verbal / acuerdo informal"
-          - value: "no_prohibimos_no_oficial"
-            label: "No prohibimos pero tampoco es oficial"
-            deep_branches: ["politica_genai"]
-          - value: "cada_uno"
-            label: "Cada persona hace lo que quiere"
-            deep_branches: ["politica_genai"]
-      - id: q7_2_risks_identified
-        type: multi_choice
-        required: false
-        label: "Riesgos de Shadow AI identificados"
-        show_if:
-          field: q7_2_policy_status
-          op: in
-          value: ["no_prohibimos_no_oficial", "cada_uno", "verbal"]
-        options:
-          - value: "datos_cliente_chatgpt"
-            label: "Datos de cliente subidos a ChatGPT"
-          - value: "codigo_sin_revisar"
-            label: "Código generado sin revisión"
-          - value: "docs_confidenciales"
-            label: "Documentos confidenciales procesados en IA pública"
-          - value: "decisiones_sin_validar"
-            label: "Decisiones basadas en IA sin validación humana"
-          - value: "sin_visibilidad"
-            label: "Sin visibilidad de qué herramientas se usan"
-
-  - id: q7_3_transparency
+- id: q7_1_approval
+  type: composite
+  required: true
+  label: ¿Cómo se aprueban las iniciativas IA en la empresa?
+  hint_didactic: 'Aprobación = filtro de riesgo + asignación de responsabilidad. Shadow AI es el riesgo #1 en PYMEs.'
+  sub_fields:
+  - id: q7_1_process
     type: single_choice
     required: true
-    label: "¿Informan a los clientes cuando usan IA en su servicio?"
-    hint_didactic: "AI Act Art.50 + RGPD Art.13-14 obligan a informar. NO declarar = incumplimiento."
+    label: Proceso de aprobación
     options:
-      - value: "siempre"
-        label: "Sí, siempre lo declaramos explícitamente"
-      - value: "casos_sensibles"
-        label: "Solo en casos sensibles"
-      - value: "asumimos_no_declaramos"
-        label: "Asumimos que el cliente lo sabe, no lo declaramos"
-        deep_branches: ["transparencia_ai_act"]
-      - value: "no_informamos"
-        label: "No informamos activamente"
-        deep_branches: ["transparencia_ai_act"]
-      - value: "no_aplica"
-        label: "No aplica — sin IA customer-facing"
-
-  - id: q7_4_error_plan
-    type: composite
+    - value: comite_formal
+      label: Comité formal con criterios definidos
+    - value: persona_criterios
+      label: Persona responsable con criterios claros
+    - value: persona_sin_criterios
+      label: Persona responsable sin criterios formales
+    - value: caso_a_caso
+      label: Caso a caso sin proceso definido
+    - value: nadie
+      label: Nadie — cada uno hace lo que quiere
+      deep_branches:
+      - governance_minimo
+  - id: q7_1_responsible
+    type: text
+    required: false
+    label: ¿Quién es el responsable? (rol, no nombre)
+    show_if:
+      field: q7_1_process
+      op: in
+      value:
+      - comite_formal
+      - persona_criterios
+      - persona_sin_criterios
+- id: q7_2_genai_policy
+  type: composite
+  required: true
+  label: ¿Tienen política de uso de IA generativa para empleados?
+  hint_didactic: 'Shadow AI ya ocurre. Política regulariza. Plantilla mínima: herramientas autorizadas, datos prohibidos,
+    validación humana, documentación.'
+  sub_fields:
+  - id: q7_2_policy_status
+    type: single_choice
     required: true
-    label: "¿Tienen plan documentado para gestionar errores de IA?"
-    hint_didactic: "AI Act exige plan de gestión de riesgos en alto riesgo. Componentes: detección, reversión, comunicación, aprendizaje post-mortem."
-    sub_fields:
-      - id: q7_4_plan_status
-        type: single_choice
-        required: true
-        label: "Estado del plan"
-        options:
-          - value: "documentado"
-            label: "Documentado con detección, reversión, comunicación y aprendizaje"
-          - value: "sabemos_no_doc"
-            label: "Sabemos qué haríamos, no está documentado"
-          - value: "lo_decidiriamos"
-            label: "Lo decidiríamos en el momento"
-            deep_branches: ["gestion_riesgo_ia"]
-          - value: "no_pensado"
-            label: "No lo hemos pensado"
-            deep_branches: ["gestion_riesgo_ia"]
-          - value: "no_aplica"
-            label: "No aplica — sin IA en producción"
-      - id: q7_4_example
-        type: text
-        required: false
-        label: "Ejemplo del peor error posible (para dimensionar el plan)"
-        validations:
-          - type: max_length
-            value: 150
-
+    label: Estado de la política
+    options:
+    - value: firmada
+      label: Sí, firmada y comunicada a todos
+    - value: redactada_no_comunicada
+      label: Redactada pero no comunicada formalmente
+    - value: verbal
+      label: Solo verbal / acuerdo informal
+    - value: no_prohibimos_no_oficial
+      label: No prohibimos pero tampoco es oficial
+      deep_branches:
+      - politica_genai
+    - value: cada_uno
+      label: Cada persona hace lo que quiere
+      deep_branches:
+      - politica_genai
+  - id: q7_2_risks_identified
+    type: multi_choice
+    required: false
+    label: Riesgos de Shadow AI identificados
+    show_if:
+      field: q7_2_policy_status
+      op: in
+      value:
+      - no_prohibimos_no_oficial
+      - cada_uno
+      - verbal
+    options:
+    - value: datos_cliente_chatgpt
+      label: Datos de cliente subidos a ChatGPT
+    - value: codigo_sin_revisar
+      label: Código generado sin revisión
+    - value: docs_confidenciales
+      label: Documentos confidenciales procesados en IA pública
+    - value: decisiones_sin_validar
+      label: Decisiones basadas en IA sin validación humana
+    - value: sin_visibilidad
+      label: Sin visibilidad de qué herramientas se usan
+- id: q7_3_transparency
+  type: single_choice
+  required: true
+  label: ¿Informan a los clientes cuando usan IA en su servicio?
+  hint_didactic: AI Act Art.50 + RGPD Art.13-14 obligan a informar. NO declarar = incumplimiento.
+  options:
+  - value: siempre
+    label: Sí, siempre lo declaramos explícitamente
+  - value: casos_sensibles
+    label: Solo en casos sensibles
+  - value: asumimos_no_declaramos
+    label: Asumimos que el cliente lo sabe, no lo declaramos
+    deep_branches:
+    - transparencia_ai_act
+  - value: no_informamos
+    label: No informamos activamente
+    deep_branches:
+    - transparencia_ai_act
+  - value: no_aplica
+    label: No aplica — sin IA customer-facing
+- id: q7_4_error_plan
+  type: composite
+  required: true
+  label: ¿Tienen plan documentado para gestionar errores de IA?
+  hint_didactic: 'AI Act exige plan de gestión de riesgos en alto riesgo. Componentes: detección, reversión, comunicación,
+    aprendizaje post-mortem.'
+  sub_fields:
+  - id: q7_4_plan_status
+    type: single_choice
+    required: true
+    label: Estado del plan
+    options:
+    - value: documentado
+      label: Documentado con detección, reversión, comunicación y aprendizaje
+    - value: sabemos_no_doc
+      label: Sabemos qué haríamos, no está documentado
+    - value: lo_decidiriamos
+      label: Lo decidiríamos en el momento
+      deep_branches:
+      - gestion_riesgo_ia
+    - value: no_pensado
+      label: No lo hemos pensado
+      deep_branches:
+      - gestion_riesgo_ia
+    - value: no_aplica
+      label: No aplica — sin IA en producción
+  - id: q7_4_example
+    type: text
+    required: false
+    label: Ejemplo del peor error posible (para dimensionar el plan)
 closing_analysis:
   trigger_event: block_completed
   llm_model: haiku
   output_schema:
-    synthesis: "string"
-    shadow_ai_risk: "low|medium|high|critical"
-    transparency_compliance: "compliant|partial|non_compliant"
-    missing_governance_artifacts: "list"
-    first_governance_deliverables: "list"
-  filters: ["confidence", "dedup", "length"]
-
+    synthesis: string
+    shadow_ai_risk: low|medium|high|critical
+    transparency_compliance: compliant|partial|non_compliant
+    missing_governance_artifacts: list
+    first_governance_deliverables: list
+  filters:
+  - confidence
+  - dedup
+  - length
 deep_triggers:
-  - condition:
-      field: q7_1_process
-      op: eq
-      value: "nadie"
-    activates_branch: "governance_minimo"
-  - condition:
-      field: q7_2_policy_status
-      op: in
-      value: ["no_prohibimos_no_oficial", "cada_uno"]
-    activates_branch: "politica_genai"
-  - condition:
-      field: q7_3_transparency
-      op: in
-      value: ["asumimos_no_declaramos", "no_informamos"]
-    activates_branch: "transparencia_ai_act"
-  - condition:
-      field: q7_4_plan_status
-      op: in
-      value: ["lo_decidiriamos", "no_pensado"]
-    activates_branch: "gestion_riesgo_ia"
+- condition:
+    field: q7_1_process
+    op: eq
+    value: nadie
+  activates_branch: governance_minimo
+- condition:
+    field: q7_2_policy_status
+    op: in
+    value:
+    - no_prohibimos_no_oficial
+    - cada_uno
+  activates_branch: politica_genai
+- condition:
+    field: q7_3_transparency
+    op: in
+    value:
+    - asumimos_no_declaramos
+    - no_informamos
+  activates_branch: transparencia_ai_act
+- condition:
+    field: q7_4_plan_status
+    op: in
+    value:
+    - lo_decidiriamos
+    - no_pensado
+  activates_branch: gestion_riesgo_ia

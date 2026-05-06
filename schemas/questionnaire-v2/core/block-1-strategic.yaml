@@ -2,171 +2,171 @@ id: block-1-strategic
 layer: core
 order: 1
 estimated_minutes: 15
-title: "Bloque 1 — Estrategia IA"
-
+title: Bloque 1 — Estrategia IA
 questions:
-  - id: q1_1_objective
-    type: composite
+- id: q1_1_objective
+  type: composite
+  required: true
+  label: ¿Cuál es el resultado concreto que querés ver con IA?
+  helper_text: Describí el objetivo en términos de negocio, no de tecnología.
+  hint_didactic: 'Distinguí objetivo de iniciativa: ''implementar un chatbot'' es una iniciativa. ''Reducir el tiempo de respuesta
+    al cliente un 40% en 6 meses'' es un objetivo.'
+  hint_commercial: Si el cliente no puede articular un objetivo medible, el primer entregable es ayudarlo a definirlo. Eso
+    ya es valor.
+  sub_fields:
+  - id: q1_1_outcome
+    type: textarea
     required: true
-    label: "¿Cuál es el resultado concreto que querés ver con IA?"
-    helper_text: "Describí el objetivo en términos de negocio, no de tecnología."
-    hint_didactic: "Distinguí objetivo de iniciativa: 'implementar un chatbot' es una iniciativa. 'Reducir el tiempo de respuesta al cliente un 40% en 6 meses' es un objetivo."
-    hint_commercial: "Si el cliente no puede articular un objetivo medible, el primer entregable es ayudarlo a definirlo. Eso ya es valor."
-    sub_fields:
-      - id: q1_1_outcome
-        type: textarea
-        required: true
-        label: "Resultado esperado"
-        validations:
-          - type: max_length
-            value: 200
-            message: "Máximo 200 caracteres"
-      - id: q1_1_metric
-        type: text
-        required: true
-        label: "¿Cómo lo medirías?"
-        validations:
-          - type: max_length
-            value: 80
-            message: "Máximo 80 caracteres"
-      - id: q1_1_timeframe
-        type: single_choice
-        required: true
-        label: "Plazo esperado"
-        options:
-          - value: "3m"
-            label: "3 meses"
-          - value: "6m"
-            label: "6 meses"
-          - value: "12m"
-            label: "12 meses"
-          - value: "24m_plus"
-            label: "Más de 24 meses"
-
-  - id: q1_2_sponsor
+    label: Resultado esperado
+  - id: q1_1_metric
+    type: text
+    required: true
+    label: ¿Cómo lo medirías?
+  - id: q1_1_timeframe
     type: single_choice
     required: true
-    label: "¿Quién es el sponsor ejecutivo de esta iniciativa?"
-    helper_text: "Sponsor es quien tiene autoridad para aprobar presupuesto, resolver bloqueos y comunicar prioridad al equipo."
-    hint_didactic: "Sponsor ≠ usuario. La IA fracasa más por falta de respaldo organizacional que por limitaciones técnicas."
-    hint_commercial: "Sin sponsor = proyecto zombi. Es preferible postergar que arrancar sin respaldo."
+    label: Plazo esperado
     options:
-      - value: "ceo_total"
-        label: "CEO con decisión total"
-        score: 3
-      - value: "ceo_valida"
-        label: "CEO que necesita validar con directorio"
-        score: 2
-      - value: "director_cto"
-        label: "Director / CTO (no soy el CEO)"
-        score: 2
-      - value: "comite"
-        label: "Comité de dirección"
-        score: 1
-      - value: "sin_sponsor"
-        label: "No hay sponsor definido"
-        score: 0
-        deep_branches: ["governance_previo_ia"]
-
-  - id: q1_3_previous
+    - value: 3m
+      label: 3 meses
+    - value: 6m
+      label: 6 meses
+    - value: 12m
+      label: 12 meses
+    - value: 24m_plus
+      label: Más de 24 meses
+- id: q1_2_sponsor
+  type: single_choice
+  required: true
+  label: ¿Quién es el sponsor ejecutivo de esta iniciativa?
+  helper_text: Sponsor es quien tiene autoridad para aprobar presupuesto, resolver bloqueos y comunicar prioridad al equipo.
+  hint_didactic: Sponsor ≠ usuario. La IA fracasa más por falta de respaldo organizacional que por limitaciones técnicas.
+  hint_commercial: Sin sponsor = proyecto zombi. Es preferible postergar que arrancar sin respaldo.
+  options:
+  - value: ceo_total
+    label: CEO con decisión total
+    score: 3
+  - value: ceo_valida
+    label: CEO que necesita validar con directorio
+    score: 2
+  - value: director_cto
+    label: Director / CTO (no soy el CEO)
+    score: 2
+  - value: comite
+    label: Comité de dirección
+    score: 1
+  - value: sin_sponsor
+    label: No hay sponsor definido
+    score: 0
+    deep_branches:
+    - governance_previo_ia
+- id: q1_3_previous
+  type: single_choice
+  required: true
+  label: ¿Han intentado antes implementar IA o automatización en la empresa?
+  options:
+  - value: first_time
+    label: Primera vez
+    score: 1
+  - value: exitoso_produccion
+    label: Sí, exitoso en producción
+    score: 3
+  - value: piloto_activo
+    label: Tenemos un piloto activo
+    score: 2
+  - value: abandoned
+    label: Lo intentamos pero lo abandonamos
+    score: 0
+    deep_branches:
+    - post_mortem_proyecto
+  - value: failed_production
+    label: Fracasó en producción
+    score: 0
+    deep_branches:
+    - post_mortem_proyecto
+- id: q1_3b_failure_cause
+  type: multi_choice
+  required: false
+  label: ¿Cuál fue la causa principal del fracaso?
+  show_if:
+    field: q1_3_previous
+    op: in
+    value:
+    - abandoned
+    - failed_production
+  max_selections: 2
+  hint_didactic: Los patrones de fracaso más comunes son organizacionales (falta de sponsor, resistencia al cambio), no técnicos.
+  options:
+  - value: tecnico
+    label: Técnico (calidad datos, integración, rendimiento)
+  - value: economico
+    label: Económico (costes más altos de lo previsto)
+  - value: organizacional
+    label: Organizacional (cambio gestionado mal, resistencia)
+  - value: vendor
+    label: El proveedor no cumplió
+  - value: regulatorio
+    label: Restricciones regulatorias o legales
+  - value: estrategico
+    label: Cambio de prioridades estratégicas
+  - value: no_claro
+    label: No está claro
+- id: q1_4_appetite
+  type: composite
+  required: true
+  label: ¿Cuál es el apetito de riesgo y el horizonte de ROI esperado?
+  hint_didactic: 'ROI realista IA: pilotos 3-6 meses, transformación 12-24 meses. Apetito y horizonte deben alinear o hay
+    expectativas rotas.'
+  hint_commercial: 'Apetito agresivo + horizonte corto = señal de desalineación. Primer deliverable: calibrar expectativas.'
+  sub_fields:
+  - id: q1_4_risk
     type: single_choice
     required: true
-    label: "¿Han intentado antes implementar IA o automatización en la empresa?"
+    label: Apetito de riesgo
     options:
-      - value: "first_time"
-        label: "Primera vez"
-        score: 1
-      - value: "exitoso_produccion"
-        label: "Sí, exitoso en producción"
-        score: 3
-      - value: "piloto_activo"
-        label: "Tenemos un piloto activo"
-        score: 2
-      - value: "abandoned"
-        label: "Lo intentamos pero lo abandonamos"
-        score: 0
-        deep_branches: ["post_mortem_proyecto"]
-      - value: "failed_production"
-        label: "Fracasó en producción"
-        score: 0
-        deep_branches: ["post_mortem_proyecto"]
-
-  - id: q1_3b_failure_cause
-    type: multi_choice
-    required: false
-    label: "¿Cuál fue la causa principal del fracaso?"
-    show_if:
-      field: q1_3_previous
-      op: in
-      value: ["abandoned", "failed_production"]
-    max_selections: 2
-    hint_didactic: "Los patrones de fracaso más comunes son organizacionales (falta de sponsor, resistencia al cambio), no técnicos."
-    options:
-      - value: "tecnico"
-        label: "Técnico (calidad datos, integración, rendimiento)"
-      - value: "economico"
-        label: "Económico (costes más altos de lo previsto)"
-      - value: "organizacional"
-        label: "Organizacional (cambio gestionado mal, resistencia)"
-      - value: "vendor"
-        label: "El proveedor no cumplió"
-      - value: "regulatorio"
-        label: "Restricciones regulatorias o legales"
-      - value: "estrategico"
-        label: "Cambio de prioridades estratégicas"
-      - value: "no_claro"
-        label: "No está claro"
-
-  - id: q1_4_appetite
-    type: composite
+    - value: conservador
+      label: Conservador — empezamos con 1 piloto pequeño
+    - value: moderado
+      label: Moderado — varios pilotos en paralelo
+    - value: agresivo
+      label: Agresivo — transformación amplia
+  - id: q1_4_horizon
+    type: single_choice
     required: true
-    label: "¿Cuál es el apetito de riesgo y el horizonte de ROI esperado?"
-    hint_didactic: "ROI realista IA: pilotos 3-6 meses, transformación 12-24 meses. Apetito y horizonte deben alinear o hay expectativas rotas."
-    hint_commercial: "Apetito agresivo + horizonte corto = señal de desalineación. Primer deliverable: calibrar expectativas."
-    sub_fields:
-      - id: q1_4_risk
-        type: single_choice
-        required: true
-        label: "Apetito de riesgo"
-        options:
-          - value: "conservador"
-            label: "Conservador — empezamos con 1 piloto pequeño"
-          - value: "moderado"
-            label: "Moderado — varios pilotos en paralelo"
-          - value: "agresivo"
-            label: "Agresivo — transformación amplia"
-      - id: q1_4_horizon
-        type: single_choice
-        required: true
-        label: "Horizonte ROI esperado"
-        options:
-          - value: "3m"
-            label: "3 meses"
-          - value: "6m"
-            label: "6 meses"
-          - value: "12m"
-            label: "12 meses"
-          - value: "24m_plus"
-            label: "Más de 24 meses"
-
+    label: Horizonte ROI esperado
+    options:
+    - value: 3m
+      label: 3 meses
+    - value: 6m
+      label: 6 meses
+    - value: 12m
+      label: 12 meses
+    - value: 24m_plus
+      label: Más de 24 meses
 closing_analysis:
   trigger_event: block_completed
   llm_model: sonnet
   output_schema:
-    synthesis: "string"
-    contradictions: "list"
-    follow_ups: "list"
-    preliminary_hypothesis: "string"
-  filters: ["confidence", "dedup", "scope", "similarity", "length"]
-
+    synthesis: string
+    contradictions: list
+    follow_ups: list
+    preliminary_hypothesis: string
+  filters:
+  - confidence
+  - dedup
+  - scope
+  - similarity
+  - length
 deep_triggers:
-  - condition:
-      field: q1_3_previous
-      op: in
-      value: ["failed_production", "abandoned"]
-    activates_branch: "post_mortem_proyecto"
-  - condition:
-      field: q1_2_sponsor
-      op: eq
-      value: "sin_sponsor"
-    activates_branch: "governance_previo_ia"
+- condition:
+    field: q1_3_previous
+    op: in
+    value:
+    - failed_production
+    - abandoned
+  activates_branch: post_mortem_proyecto
+- condition:
+    field: q1_2_sponsor
+    op: eq
+    value: sin_sponsor
+  activates_branch: governance_previo_ia

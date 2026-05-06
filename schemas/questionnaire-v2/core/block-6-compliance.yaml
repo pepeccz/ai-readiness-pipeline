@@ -2,213 +2,223 @@ id: block-6-compliance
 layer: core
 order: 6
 estimated_minutes: 12
-title: "Bloque 6 — Compliance IA"
-
+title: Bloque 6 — Compliance IA
 questions:
-  - id: q6_1_dpia
-    type: composite
-    required: true
-    label: "Evaluación de impacto de protección de datos (DPIA) y base jurídica"
-    hint_didactic: "DPIA obligatoria Art.35 RGPD cuando hay datos sensibles, decisiones automatizadas, o tratamiento masivo. Mayoría de empresas lo desconoce."
-    sub_fields:
-      - id: q6_1_dpia_status
-        type: single_choice
-        required: true
-        label: "Estado de la DPIA"
-        options:
-          - value: "hecha_documentada"
-            label: "Hecha y documentada formalmente"
-          - value: "hecha_informal"
-            label: "Hecha informalmente"
-          - value: "no_hecha_sabe"
-            label: "No hecha, pero sabemos qué es"
-          - value: "no_hecha_no_sabe"
-            label: "No hecha, y no sabemos bien qué es"
-            deep_branches: ["dpia_inicial"]
-          - value: "no_aplica"
-            label: "No aplica (datos totalmente anónimos)"
-      - id: q6_1_base_juridica
-        type: single_choice
-        required: true
-        label: "Base jurídica para el tratamiento de datos"
-        options:
-          - value: "consentimiento_doc"
-            label: "Consentimiento documentado"
-          - value: "contractual_legitimado"
-            label: "Interés legítimo / contractual documentado"
-          - value: "asumido_no_doc"
-            label: "Asumido pero no documentado"
-            deep_branches: ["dpia_inicial"]
-          - value: "no_claro"
-            label: "No está claro"
-            deep_branches: ["dpia_inicial"]
-          - value: "no_aplica"
-            label: "No aplica"
-
-  - id: q6_2_automated_decisions
-    type: composite
-    required: true
-    label: "¿El proceso toma decisiones automatizadas con efecto significativo sobre personas?"
-    hint_didactic: "AI Act + Art.22 RGPD: derecho a intervención humana, explicación e impugnación cuando IA toma decisiones sobre personas."
-    sub_fields:
-      - id: q6_2_status
-        type: single_choice
-        required: true
-        label: "Situación actual"
-        options:
-          - value: "ninguna"
-            label: "Ninguna decisión automatizada"
-          - value: "reglas_no_ia"
-            label: "Sí, basadas en reglas (no IA)"
-          - value: "planeamos_ia"
-            label: "Planeamos usar IA para esto"
-          - value: "ya_con_ia"
-            label: "Ya usamos IA para decisiones"
-            deep_branches: ["regularizacion_art22"]
-          - value: "no_claro"
-            label: "No está claro"
-      - id: q6_2_examples
-        type: multi_choice
-        required: false
-        label: "Ejemplos si aplica"
-        show_if:
-          field: q6_2_status
-          op: in
-          value: ["planeamos_ia", "ya_con_ia"]
-        options:
-          - value: "scoring_credito"
-            label: "Scoring crediticio"
-          - value: "contratacion"
-            label: "Contratación / RRHH"
-          - value: "precios"
-            label: "Precios dinámicos"
-          - value: "denegacion_servicio"
-            label: "Denegación de servicio"
-          - value: "otro"
-            label: "Otro"
-
-  - id: q6_3_ai_act_category
-    type: composite
-    required: true
-    label: "¿En qué categoría del AI Act estimás que entra el uso de IA previsto?"
-    hint_didactic: "Multa hasta 35M€ o 7% facturación global. Capacitar al cliente en su caso de uso específico."
-    sub_fields:
-      - id: q6_3_category
-        type: single_choice
-        required: true
-        label: "Categoría estimada"
-        options:
-          - value: "inaceptable"
-            label: "Inaceptable / Prohibido (manipulación subliminal, vigilancia masiva)"
-          - value: "alto_riesgo"
-            label: "Alto riesgo (educación, empleo, sanidad, justicia, infra crítica)"
-            deep_branches: ["obligaciones_ai_act"]
-          - value: "limitado"
-            label: "Riesgo limitado (chatbot, generación de contenido)"
-          - value: "minimo"
-            label: "Riesgo mínimo (recomendación, filtros spam)"
-          - value: "no_lo_se"
-            label: "No lo sé"
-            deep_branches: ["capacitacion_ai_act"]
-      - id: q6_3_description
-        type: text
-        required: false
-        label: "Describí brevemente el caso de uso previsto"
-        validations:
-          - type: max_length
-            value: 200
-
-  - id: q6_4_arco
+- id: q6_1_dpia
+  type: composite
+  required: true
+  label: Evaluación de impacto de protección de datos (DPIA) y base jurídica
+  hint_didactic: DPIA obligatoria Art.35 RGPD cuando hay datos sensibles, decisiones automatizadas, o tratamiento masivo.
+    Mayoría de empresas lo desconoce.
+  sub_fields:
+  - id: q6_1_dpia_status
     type: single_choice
     required: true
-    label: "¿Tienen procedimiento para gestionar derechos ARCO de los afectados?"
-    hint_didactic: "ARCO + portabilidad + limitación + olvido. La empresa tiene 1 mes para responder."
+    label: Estado de la DPIA
     options:
-      - value: "procedimiento_doc"
-        label: "Procedimiento documentado y operativo"
-      - value: "sabemos_no_formal"
-        label: "Sabemos cómo hacerlo, no está formalizado"
-      - value: "caso_a_caso"
-        label: "Caso a caso sin procedimiento"
-      - value: "no_pensado"
-        label: "No se ha pensado"
-        deep_branches: ["procedimiento_arco"]
-      - value: "no_aplica"
-        label: "No aplica (no tratamos datos personales)"
-
-  - id: q6_5_incidents
-    type: composite
+    - value: hecha_documentada
+      label: Hecha y documentada formalmente
+    - value: hecha_informal
+      label: Hecha informalmente
+    - value: no_hecha_sabe
+      label: No hecha, pero sabemos qué es
+    - value: no_hecha_no_sabe
+      label: No hecha, y no sabemos bien qué es
+      deep_branches:
+      - dpia_inicial
+    - value: no_aplica
+      label: No aplica (datos totalmente anónimos)
+  - id: q6_1_base_juridica
+    type: single_choice
     required: true
-    label: "Incidentes de seguridad o brechas de datos"
-    hint_didactic: "'No tenemos forma de saber' es más sincero y más alarmante que 'ninguno'. Antes de IA, saber qué pasa con los datos hoy."
-    sub_fields:
-      - id: q6_5_status
-        type: single_choice
-        required: true
-        label: "¿Han tenido incidentes en los últimos 24 meses?"
-        options:
-          - value: "ninguno_24m"
-            label: "Ninguno en 24 meses"
-          - value: "menores_resueltos"
-            label: "Incidentes menores, resueltos internamente"
-          - value: "brecha_notificada"
-            label: "Brecha notificada a la AEPD"
-          - value: "sospechamos"
-            label: "Sospechamos pero no hemos investigado"
-            deep_branches: ["monitorizacion_log"]
-          - value: "no_forma_saber"
-            label: "No tenemos forma de saberlo"
-            deep_branches: ["monitorizacion_log"]
-      - id: q6_5_description
-        type: text
-        required: false
-        label: "Descripción breve si hubo incidente"
-        validations:
-          - type: max_length
-            value: 200
-
+    label: Base jurídica para el tratamiento de datos
+    options:
+    - value: consentimiento_doc
+      label: Consentimiento documentado
+    - value: contractual_legitimado
+      label: Interés legítimo / contractual documentado
+    - value: asumido_no_doc
+      label: Asumido pero no documentado
+      deep_branches:
+      - dpia_inicial
+    - value: no_claro
+      label: No está claro
+      deep_branches:
+      - dpia_inicial
+    - value: no_aplica
+      label: No aplica
+- id: q6_2_automated_decisions
+  type: composite
+  required: true
+  label: ¿El proceso toma decisiones automatizadas con efecto significativo sobre personas?
+  hint_didactic: 'AI Act + Art.22 RGPD: derecho a intervención humana, explicación e impugnación cuando IA toma decisiones
+    sobre personas.'
+  sub_fields:
+  - id: q6_2_status
+    type: single_choice
+    required: true
+    label: Situación actual
+    options:
+    - value: ninguna
+      label: Ninguna decisión automatizada
+    - value: reglas_no_ia
+      label: Sí, basadas en reglas (no IA)
+    - value: planeamos_ia
+      label: Planeamos usar IA para esto
+    - value: ya_con_ia
+      label: Ya usamos IA para decisiones
+      deep_branches:
+      - regularizacion_art22
+    - value: no_claro
+      label: No está claro
+  - id: q6_2_examples
+    type: multi_choice
+    required: false
+    label: Ejemplos si aplica
+    show_if:
+      field: q6_2_status
+      op: in
+      value:
+      - planeamos_ia
+      - ya_con_ia
+    options:
+    - value: scoring_credito
+      label: Scoring crediticio
+    - value: contratacion
+      label: Contratación / RRHH
+    - value: precios
+      label: Precios dinámicos
+    - value: denegacion_servicio
+      label: Denegación de servicio
+    - value: otro
+      label: Otro
+- id: q6_3_ai_act_category
+  type: composite
+  required: true
+  label: ¿En qué categoría del AI Act estimás que entra el uso de IA previsto?
+  hint_didactic: Multa hasta 35M€ o 7% facturación global. Capacitar al cliente en su caso de uso específico.
+  sub_fields:
+  - id: q6_3_category
+    type: single_choice
+    required: true
+    label: Categoría estimada
+    options:
+    - value: inaceptable
+      label: Inaceptable / Prohibido (manipulación subliminal, vigilancia masiva)
+    - value: alto_riesgo
+      label: Alto riesgo (educación, empleo, sanidad, justicia, infra crítica)
+      deep_branches:
+      - obligaciones_ai_act
+    - value: limitado
+      label: Riesgo limitado (chatbot, generación de contenido)
+    - value: minimo
+      label: Riesgo mínimo (recomendación, filtros spam)
+    - value: no_lo_se
+      label: No lo sé
+      deep_branches:
+      - capacitacion_ai_act
+  - id: q6_3_description
+    type: text
+    required: false
+    label: Describí brevemente el caso de uso previsto
+- id: q6_4_arco
+  type: single_choice
+  required: true
+  label: ¿Tienen procedimiento para gestionar derechos ARCO de los afectados?
+  hint_didactic: ARCO + portabilidad + limitación + olvido. La empresa tiene 1 mes para responder.
+  options:
+  - value: procedimiento_doc
+    label: Procedimiento documentado y operativo
+  - value: sabemos_no_formal
+    label: Sabemos cómo hacerlo, no está formalizado
+  - value: caso_a_caso
+    label: Caso a caso sin procedimiento
+  - value: no_pensado
+    label: No se ha pensado
+    deep_branches:
+    - procedimiento_arco
+  - value: no_aplica
+    label: No aplica (no tratamos datos personales)
+- id: q6_5_incidents
+  type: composite
+  required: true
+  label: Incidentes de seguridad o brechas de datos
+  hint_didactic: '''No tenemos forma de saber'' es más sincero y más alarmante que ''ninguno''. Antes de IA, saber qué pasa
+    con los datos hoy.'
+  sub_fields:
+  - id: q6_5_status
+    type: single_choice
+    required: true
+    label: ¿Han tenido incidentes en los últimos 24 meses?
+    options:
+    - value: ninguno_24m
+      label: Ninguno en 24 meses
+    - value: menores_resueltos
+      label: Incidentes menores, resueltos internamente
+    - value: brecha_notificada
+      label: Brecha notificada a la AEPD
+    - value: sospechamos
+      label: Sospechamos pero no hemos investigado
+      deep_branches:
+      - monitorizacion_log
+    - value: no_forma_saber
+      label: No tenemos forma de saberlo
+      deep_branches:
+      - monitorizacion_log
+  - id: q6_5_description
+    type: text
+    required: false
+    label: Descripción breve si hubo incidente
 closing_analysis:
   trigger_event: block_completed
   llm_model: sonnet
   output_schema:
-    synthesis: "string"
-    recommended_compliance_phase: "must_resolve_first|parallel_to_pilot|post_pilot"
+    synthesis: string
+    recommended_compliance_phase: must_resolve_first|parallel_to_pilot|post_pilot
     compliance_readiness:
-      score: "float 0-1"
-      level: "ready|limited|blocked"
-      ai_act_category_estimated: "string"
-      blocking_legal_risks: "list"
-    obligations_triggered: "list"
-  filters: ["confidence", "dedup", "scope", "similarity", "length"]
-
+      score: float 0-1
+      level: ready|limited|blocked
+      ai_act_category_estimated: string
+      blocking_legal_risks: list
+    obligations_triggered: list
+  filters:
+  - confidence
+  - dedup
+  - scope
+  - similarity
+  - length
 deep_triggers:
-  - condition:
-      field: q6_1_dpia_status
-      op: in
-      value: ["no_hecha_no_sabe", "no_hecha_sabe"]
-    activates_branch: "dpia_inicial"
-  - condition:
-      field: q6_2_status
-      op: eq
-      value: "ya_con_ia"
-    activates_branch: "regularizacion_art22"
-  - condition:
-      field: q6_3_category
-      op: eq
-      value: "alto_riesgo"
-    activates_branch: "obligaciones_ai_act"
-  - condition:
-      field: q6_3_category
-      op: eq
-      value: "no_lo_se"
-    activates_branch: "capacitacion_ai_act"
-  - condition:
-      field: q6_4_arco
-      op: eq
-      value: "no_pensado"
-    activates_branch: "procedimiento_arco"
-  - condition:
-      field: q6_5_status
-      op: in
-      value: ["sospechamos", "no_forma_saber"]
-    activates_branch: "monitorizacion_log"
+- condition:
+    field: q6_1_dpia_status
+    op: in
+    value:
+    - no_hecha_no_sabe
+    - no_hecha_sabe
+  activates_branch: dpia_inicial
+- condition:
+    field: q6_2_status
+    op: eq
+    value: ya_con_ia
+  activates_branch: regularizacion_art22
+- condition:
+    field: q6_3_category
+    op: eq
+    value: alto_riesgo
+  activates_branch: obligaciones_ai_act
+- condition:
+    field: q6_3_category
+    op: eq
+    value: no_lo_se
+  activates_branch: capacitacion_ai_act
+- condition:
+    field: q6_4_arco
+    op: eq
+    value: no_pensado
+  activates_branch: procedimiento_arco
+- condition:
+    field: q6_5_status
+    op: in
+    value:
+    - sospechamos
+    - no_forma_saber
+  activates_branch: monitorizacion_log

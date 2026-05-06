@@ -2,156 +2,148 @@ id: block-2-process-critical-cross-area
 layer: core
 order: 2
 estimated_minutes: 20
-title: "Bloque 2 — Flujo Cross-Area"
+title: Bloque 2 — Flujo Cross-Area
 area_instance: cross_area
-
 questions:
-  - id: areas_involved
-    type: multi_choice
+- id: areas_involved
+  type: multi_choice
+  required: true
+  label: ¿Qué áreas están involucradas en este flujo de comunicación?
+  helper_text: Seleccioná las 2-4 áreas principales afectadas por el problema transversal.
+  min_selections: 2
+  max_selections: 4
+  options:
+  - value: leadership
+    label: Dirección / Management
+  - value: marketing
+    label: Marketing
+  - value: sales
+    label: Ventas
+  - value: operations
+    label: Operaciones
+  - value: finance
+    label: Finanzas
+  - value: hr
+    label: Recursos Humanos
+  - value: attention
+    label: Atención al Cliente
+  - value: product
+    label: Producto
+  - value: tech_it
+    label: Tecnología / IT
+- id: q2x_1_flow
+  type: composite
+  required: true
+  label: ¿Qué información o datos se mueven entre estas áreas?
+  hint_didactic: 'El dolor cross-area casi nunca es IA. Primero diagnosticamos dónde está el cuello: datos, sistemas, o personas.'
+  sub_fields:
+  - id: q2x_1_info_type
+    type: textarea
     required: true
-    label: "¿Qué áreas están involucradas en este flujo de comunicación?"
-    helper_text: "Seleccioná las 2-4 áreas principales afectadas por el problema transversal."
-    min_selections: 2
-    max_selections: 4
-    options:
-      - value: "leadership"
-        label: "Dirección / Management"
-      - value: "marketing"
-        label: "Marketing"
-      - value: "sales"
-        label: "Ventas"
-      - value: "operations"
-        label: "Operaciones"
-      - value: "finance"
-        label: "Finanzas"
-      - value: "hr"
-        label: "Recursos Humanos"
-      - value: "attention"
-        label: "Atención al Cliente"
-      - value: "product"
-        label: "Producto"
-      - value: "tech_it"
-        label: "Tecnología / IT"
-
-  - id: q2x_1_flow
-    type: composite
-    required: true
-    label: "¿Qué información o datos se mueven entre estas áreas?"
-    hint_didactic: "El dolor cross-area casi nunca es IA. Primero diagnosticamos dónde está el cuello: datos, sistemas, o personas."
-    sub_fields:
-      - id: q2x_1_info_type
-        type: textarea
-        required: true
-        label: "Tipo de información que circula entre áreas"
-        validations:
-          - type: max_length
-            value: 200
-      - id: q2x_1_frequency
-        type: single_choice
-        required: true
-        label: "Frecuencia del flujo"
-        options:
-          - value: "continuo"
-            label: "Continuo"
-          - value: "diario"
-            label: "Diario"
-          - value: "semanal"
-            label: "Semanal"
-          - value: "mensual"
-            label: "Mensual"
-      - id: q2x_1_volume
-        type: text
-        required: false
-        label: "Volumen estimado"
-
-  - id: q2x_2_variability
+    label: Tipo de información que circula entre áreas
+  - id: q2x_1_frequency
     type: single_choice
     required: true
-    label: "¿Cómo es la variabilidad del flujo de información?"
+    label: Frecuencia del flujo
     options:
-      - value: "estable"
-        label: "Estable — siempre similar"
-      - value: "estacional"
-        label: "Estacional — picos predecibles"
-      - value: "variable"
-        label: "Variable — cambia bastante"
-      - value: "erratico"
-        label: "Errático — muy impredecible"
-
-  - id: q2x_3_measurement
+    - value: continuo
+      label: Continuo
+    - value: diario
+      label: Diario
+    - value: semanal
+      label: Semanal
+    - value: mensual
+      label: Mensual
+  - id: q2x_1_volume
+    type: text
+    required: false
+    label: Volumen estimado
+- id: q2x_2_variability
+  type: single_choice
+  required: true
+  label: ¿Cómo es la variabilidad del flujo de información?
+  options:
+  - value: estable
+    label: Estable — siempre similar
+  - value: estacional
+    label: Estacional — picos predecibles
+  - value: variable
+    label: Variable — cambia bastante
+  - value: erratico
+    label: Errático — muy impredecible
+- id: q2x_3_measurement
+  type: single_choice
+  required: true
+  label: ¿Se mide la latencia o calidad de la comunicación entre áreas?
+  helper_text: 'Ejemplo: tiempo desde que ventas pasa un lead hasta que atención lo contacta.'
+  options:
+  - value: si_formal
+    label: Sí, con métricas formales
+  - value: si_informal
+    label: Sí, de forma informal
+  - value: 'no'
+    label: No se mide
+    deep_branches:
+    - mapeo_flujo_kpis
+- id: q2x_4_failure_cost
+  type: composite
+  required: true
+  label: ¿Cuál es el coste cuando la comunicación falla entre estas áreas?
+  sub_fields:
+  - id: q2x_4_level
     type: single_choice
     required: true
-    label: "¿Se mide la latencia o calidad de la comunicación entre áreas?"
-    helper_text: "Ejemplo: tiempo desde que ventas pasa un lead hasta que atención lo contacta."
+    label: Nivel de impacto
     options:
-      - value: "si_formal"
-        label: "Sí, con métricas formales"
-      - value: "si_informal"
-        label: "Sí, de forma informal"
-      - value: "no"
-        label: "No se mide"
-        deep_branches: ["mapeo_flujo_kpis"]
-
-  - id: q2x_4_failure_cost
-    type: composite
-    required: true
-    label: "¿Cuál es el coste cuando la comunicación falla entre estas áreas?"
-    sub_fields:
-      - id: q2x_4_level
-        type: single_choice
-        required: true
-        label: "Nivel de impacto"
-        options:
-          - value: "bajo"
-            label: "Bajo — fricción interna"
-          - value: "medio"
-            label: "Medio — afecta eficiencia o experiencia cliente"
-          - value: "alto"
-            label: "Alto — pérdida de clientes o ingresos"
-          - value: "critico"
-            label: "Crítico — riesgo regulatorio o de negocio"
-      - id: q2x_4_example
-        type: text
-        required: false
-        label: "Ejemplo concreto"
-        validations:
-          - type: max_length
-            value: 200
-
-  - id: q2x_5_tools
-    type: multi_choice
-    required: true
-    label: "¿Qué herramientas y sistemas intervienen en este flujo?"
-    options:
-      - value: "crm"
-        label: "CRM (Salesforce, HubSpot, etc.)"
-      - value: "erp"
-        label: "ERP (SAP, Odoo, etc.)"
-      - value: "hojas"
-        label: "Hojas de cálculo (Excel, Sheets)"
-      - value: "email"
-        label: "Email"
-      - value: "slack_teams"
-        label: "Slack / Teams / WhatsApp"
-      - value: "herramienta_propia"
-        label: "Herramienta interna propia"
-      - value: "sin_sistema"
-        label: "Sin sistema — todo verbal o en papel"
-
+    - value: bajo
+      label: Bajo — fricción interna
+    - value: medio
+      label: Medio — afecta eficiencia o experiencia cliente
+    - value: alto
+      label: Alto — pérdida de clientes o ingresos
+    - value: critico
+      label: Crítico — riesgo regulatorio o de negocio
+  - id: q2x_4_example
+    type: text
+    required: false
+    label: Ejemplo concreto
+- id: q2x_5_tools
+  type: multi_choice
+  required: true
+  label: ¿Qué herramientas y sistemas intervienen en este flujo?
+  options:
+  - value: crm
+    label: CRM (Salesforce, HubSpot, etc.)
+  - value: erp
+    label: ERP (SAP, Odoo, etc.)
+  - value: hojas
+    label: Hojas de cálculo (Excel, Sheets)
+  - value: email
+    label: Email
+  - value: slack_teams
+    label: Slack / Teams / WhatsApp
+  - value: herramienta_propia
+    label: Herramienta interna propia
+  - value: sin_sistema
+    label: Sin sistema — todo verbal o en papel
 closing_analysis:
   trigger_event: block_completed
   llm_model: sonnet
   output_schema:
-    synthesis: "string"
-    recommended_approach: "single_source_of_truth|integration_layer|centralized_dashboard|process_redesign|governance_first|ai_assisted_routing"
-    approach_reasoning: "string"
-    contradictions: "list"
-    follow_ups: "list"
-  filters: ["confidence", "dedup", "scope", "similarity", "length"]
-
+    synthesis: string
+    recommended_approach: single_source_of_truth|integration_layer|centralized_dashboard|process_redesign|governance_first|ai_assisted_routing
+    approach_reasoning: string
+    contradictions: list
+    follow_ups: list
+  filters:
+  - confidence
+  - dedup
+  - scope
+  - similarity
+  - length
 deep_triggers:
-  - condition:
-      field: q2x_3_measurement
-      op: eq
-      value: "no"
-    activates_branch: "mapeo_flujo_kpis"
+- condition:
+    field: q2x_3_measurement
+    op: eq
+    value: 'no'
+  activates_branch: mapeo_flujo_kpis

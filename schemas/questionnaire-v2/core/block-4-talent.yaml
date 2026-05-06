@@ -2,174 +2,172 @@ id: block-4-talent
 layer: core
 order: 4
 estimated_minutes: 10
-title: "Bloque 4 — Talento & Cultura"
-
+title: Bloque 4 — Talento & Cultura
 questions:
-  - id: q4_1_team
-    type: composite
+- id: q4_1_team
+  type: composite
+  required: true
+  label: ¿Cómo está compuesto el equipo técnico?
+  hint_didactic: Developer ≠ ML engineer. Data analyst ≠ data scientist. Esta distinción define qué arquitectura puede sostener
+    el equipo.
+  sub_fields:
+  - id: q4_1_profiles
+    type: multi_choice
     required: true
-    label: "¿Cómo está compuesto el equipo técnico?"
-    hint_didactic: "Developer ≠ ML engineer. Data analyst ≠ data scientist. Esta distinción define qué arquitectura puede sostener el equipo."
-    sub_fields:
-      - id: q4_1_profiles
-        type: multi_choice
-        required: true
-        label: "Perfiles disponibles"
-        options:
-          - value: "ninguno"
-            label: "Sin perfiles técnicos internos"
-          - value: "it_generalista"
-            label: "IT generalista / Soporte"
-          - value: "dev_software"
-            label: "Desarrollador de software"
-          - value: "data_analyst"
-            label: "Data analyst / Business analyst"
-          - value: "data_engineer_ml"
-            label: "Data engineer / ML engineer"
-          - value: "data_scientist"
-            label: "Data scientist"
-          - value: "externalizado"
-            label: "Equipo externalizado / Agencia"
-      - id: q4_1_count
-        type: text
-        required: false
-        label: "Total personas técnicas (incluye externos)"
-        validations:
-          - type: max_length
-            value: 20
-
-  - id: q4_2_experience
-    type: composite
+    label: Perfiles disponibles
+    options:
+    - value: ninguno
+      label: Sin perfiles técnicos internos
+    - value: it_generalista
+      label: IT generalista / Soporte
+    - value: dev_software
+      label: Desarrollador de software
+    - value: data_analyst
+      label: Data analyst / Business analyst
+    - value: data_engineer_ml
+      label: Data engineer / ML engineer
+    - value: data_scientist
+      label: Data scientist
+    - value: externalizado
+      label: Equipo externalizado / Agencia
+  - id: q4_1_count
+    type: text
+    required: false
+    label: Total personas técnicas (incluye externos)
+- id: q4_2_experience
+  type: composite
+  required: true
+  label: ¿Qué experiencia real tiene el equipo con IA?
+  sub_fields:
+  - id: q4_2_level
+    type: single_choice
     required: true
-    label: "¿Qué experiencia real tiene el equipo con IA?"
-    sub_fields:
-      - id: q4_2_level
-        type: single_choice
-        required: true
-        label: "Nivel de experiencia"
-        options:
-          - value: "ninguna"
-            label: "Ninguna"
-          - value: "uso_individual"
-            label: "Uso individual de ChatGPT / Copilot"
-          - value: "prompts_elaborados"
-            label: "Prompts elaborados y sistemáticos"
-          - value: "integracion_apis"
-            label: "Integración de APIs de IA en productos"
-          - value: "fine_tuning"
-            label: "Fine-tuning / entrenamiento de modelos"
-          - value: "mlops_produccion"
-            label: "MLOps — modelos en producción con monitoreo"
-      - id: q4_2_areas
-        type: multi_choice
-        required: false
-        label: "¿En qué áreas aplicaron IA?"
-        show_if:
-          field: q4_2_level
-          op: neq
-          value: "ninguna"
-        options:
-          - value: "atencion"
-            label: "Atención al cliente"
-          - value: "contenido"
-            label: "Generación de contenido"
-          - value: "analisis"
-            label: "Análisis de datos"
-          - value: "automatizacion"
-            label: "Automatización de procesos"
-          - value: "software"
-            label: "Desarrollo de software"
-          - value: "otro"
-            label: "Otro"
-
-  - id: q4_3_training
-    type: composite
+    label: Nivel de experiencia
+    options:
+    - value: ninguna
+      label: Ninguna
+    - value: uso_individual
+      label: Uso individual de ChatGPT / Copilot
+    - value: prompts_elaborados
+      label: Prompts elaborados y sistemáticos
+    - value: integracion_apis
+      label: Integración de APIs de IA en productos
+    - value: fine_tuning
+      label: Fine-tuning / entrenamiento de modelos
+    - value: mlops_produccion
+      label: MLOps — modelos en producción con monitoreo
+  - id: q4_2_areas
+    type: multi_choice
+    required: false
+    label: ¿En qué áreas aplicaron IA?
+    show_if:
+      field: q4_2_level
+      op: neq
+      value: ninguna
+    options:
+    - value: atencion
+      label: Atención al cliente
+    - value: contenido
+      label: Generación de contenido
+    - value: analisis
+      label: Análisis de datos
+    - value: automatizacion
+      label: Automatización de procesos
+    - value: software
+      label: Desarrollo de software
+    - value: otro
+      label: Otro
+- id: q4_3_training
+  type: composite
+  required: true
+  label: Plan de formación IA y disposición del equipo
+  hint_didactic: Formación es parte del scope, no un extra. Comprar Ferrari sin enseñar a conducir.
+  sub_fields:
+  - id: q4_3_plan
+    type: single_choice
     required: true
-    label: "Plan de formación IA y disposición del equipo"
-    hint_didactic: "Formación es parte del scope, no un extra. Comprar Ferrari sin enseñar a conducir."
-    sub_fields:
-      - id: q4_3_plan
-        type: single_choice
-        required: true
-        label: "Plan de formación actual"
-        options:
-          - value: "presupuestado"
-            label: "Presupuestado y planificado"
-          - value: "planeado_sin_fecha"
-            label: "Planeado pero sin fecha"
-          - value: "hablado_no_formal"
-            label: "Se habló pero no es formal"
-          - value: "no_plan"
-            label: "No hay plan"
-            deep_branches: ["change_management"]
-      - id: q4_3_disposition
-        type: single_choice
-        required: true
-        label: "Disposición del equipo al cambio"
-        options:
-          - value: "motivado"
-            label: "Motivado — quieren aprender IA"
-          - value: "mixto"
-            label: "Mixto — algunos entusiastas, otros escépticos"
-          - value: "reacio"
-            label: "Reacio — resistencia significativa"
-            deep_branches: ["change_management"]
-          - value: "no_hablado"
-            label: "No se ha comunicado aún"
-
-  - id: q4_4_change_capacity
-    type: composite
+    label: Plan de formación actual
+    options:
+    - value: presupuestado
+      label: Presupuestado y planificado
+    - value: planeado_sin_fecha
+      label: Planeado pero sin fecha
+    - value: hablado_no_formal
+      label: Se habló pero no es formal
+    - value: no_plan
+      label: No hay plan
+      deep_branches:
+      - change_management
+  - id: q4_3_disposition
+    type: single_choice
     required: true
-    label: "¿Cuál es la capacidad del equipo para absorber cambios?"
-    hint_didactic: "Change management es variable real de éxito. 'En medio de otro cambio' → recomendar postergar."
-    sub_fields:
-      - id: q4_4_history
-        type: single_choice
-        required: true
-        label: "Historial de cambios organizacionales"
-        options:
-          - value: "exitosos"
-            label: "Cambios grandes han sido exitosos"
-          - value: "resistencia"
-            label: "Se intentó pero hubo resistencia significativa"
-            deep_branches: ["change_management"]
-          - value: "sin_cambios"
-            label: "Sin cambios recientes relevantes"
-          - value: "otro_cambio_activo"
-            label: "Estamos en medio de otro cambio importante"
-            deep_branches: ["evaluacion_timing"]
-      - id: q4_4_example
-        type: text
-        required: false
-        label: "Ejemplo de cambio reciente (opcional)"
-        validations:
-          - type: max_length
-            value: 150
-
+    label: Disposición del equipo al cambio
+    options:
+    - value: motivado
+      label: Motivado — quieren aprender IA
+    - value: mixto
+      label: Mixto — algunos entusiastas, otros escépticos
+    - value: reacio
+      label: Reacio — resistencia significativa
+      deep_branches:
+      - change_management
+    - value: no_hablado
+      label: No se ha comunicado aún
+- id: q4_4_change_capacity
+  type: composite
+  required: true
+  label: ¿Cuál es la capacidad del equipo para absorber cambios?
+  hint_didactic: Change management es variable real de éxito. 'En medio de otro cambio' → recomendar postergar.
+  sub_fields:
+  - id: q4_4_history
+    type: single_choice
+    required: true
+    label: Historial de cambios organizacionales
+    options:
+    - value: exitosos
+      label: Cambios grandes han sido exitosos
+    - value: resistencia
+      label: Se intentó pero hubo resistencia significativa
+      deep_branches:
+      - change_management
+    - value: sin_cambios
+      label: Sin cambios recientes relevantes
+    - value: otro_cambio_activo
+      label: Estamos en medio de otro cambio importante
+      deep_branches:
+      - evaluacion_timing
+  - id: q4_4_example
+    type: text
+    required: false
+    label: Ejemplo de cambio reciente (opcional)
 closing_analysis:
   trigger_event: block_completed
   llm_model: sonnet
   output_schema:
-    synthesis: "string"
-    execution_model_recommended: "saas_only|partner_managed|hybrid|in_house"
-    execution_model_reasoning: "string"
-    contradictions: "list"
-    follow_ups: "list"
-  filters: ["confidence", "dedup", "scope", "similarity", "length"]
-
+    synthesis: string
+    execution_model_recommended: saas_only|partner_managed|hybrid|in_house
+    execution_model_reasoning: string
+    contradictions: list
+    follow_ups: list
+  filters:
+  - confidence
+  - dedup
+  - scope
+  - similarity
+  - length
 deep_triggers:
-  - condition:
-      field: q4_3_plan
-      op: eq
-      value: "no_plan"
-    activates_branch: "change_management"
-  - condition:
-      field: q4_3_disposition
-      op: eq
-      value: "reacio"
-    activates_branch: "change_management"
-  - condition:
-      field: q4_4_history
-      op: eq
-      value: "otro_cambio_activo"
-    activates_branch: "evaluacion_timing"
+- condition:
+    field: q4_3_plan
+    op: eq
+    value: no_plan
+  activates_branch: change_management
+- condition:
+    field: q4_3_disposition
+    op: eq
+    value: reacio
+  activates_branch: change_management
+- condition:
+    field: q4_4_history
+    op: eq
+    value: otro_cambio_activo
+  activates_branch: evaluacion_timing

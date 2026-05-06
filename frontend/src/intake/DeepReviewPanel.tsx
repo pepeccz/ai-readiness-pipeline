@@ -216,7 +216,7 @@ export function DeepReviewPanel({ leadId }: DeepReviewPanelProps) {
     return (
       <div className="p-6 text-center">
         <p className="text-sm text-gray-500">
-          No hay ramas DEEP activadas para esta sesión. Las ramas se generan al cerrar la sesión 1.
+          No se activaron ramas DEEP (ningún trigger detectado en el diagnóstico). Si la sesión 1 aún no fue cerrada, las ramas se generarán al cerrarla.
         </p>
       </div>
     )

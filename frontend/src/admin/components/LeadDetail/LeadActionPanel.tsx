@@ -95,7 +95,7 @@ export function LeadActionPanel({ lead, onActionComplete }: LeadActionPanelProps
         </div>
       )}
 
-      {!showAcceptForm && !showRejectForm && (
+      {lead.status === 'pending_review' && !showAcceptForm && !showRejectForm && (
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setShowAcceptForm(true)}

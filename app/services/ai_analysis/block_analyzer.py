@@ -16,7 +16,6 @@ Structured log events:
 
 from __future__ import annotations
 
-import json
 import time
 from datetime import datetime, timezone
 
@@ -27,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.block_analysis import BlockAnalysis
 from app.models.suggestion import Suggestion
+from app.services.ai_analysis.json_extractor import JsonExtractionError, extract_json
 from app.services.ai_analysis.llm_filters import apply_all_filters
 from app.services.ai_analysis.output_schemas import BlockAnalysisOutput, get_output_schema
 from app.services.ai_analysis.prompt_builder import PromptBuilder
@@ -124,8 +124,16 @@ class BlockAnalyzer:
 
             raw_text = response.content[0].text
 
-            # Parse JSON output
-            llm_data = json.loads(raw_text)
+            # Parse JSON output — robust extraction with code-fence stripping
+            try:
+                llm_data = extract_json(raw_text)
+            except JsonExtractionError:
+                logger.error(
+                    "block_analysis_json_extraction_failed",
+                    block_analysis_id=block_analysis_id,
+                    raw_llm_output=raw_text,
+                )
+                raise
 
             # Validate with Pydantic schema
             output_schema_class = get_output_schema(block_id)

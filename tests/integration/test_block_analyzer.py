@@ -168,6 +168,74 @@ class TestBlockAnalyzerFailure:
         assert ba.error_message is not None
 
 
+class TestBlockAnalyzerJsonExtraction:
+    """A-2 — extract_json adopted; malformed LLM JSON → status=failed, raw logged."""
+
+    async def test_code_fenced_json_parses_correctly(self, test_db):
+        """extract_json can handle code-fenced responses; status=ready."""
+        lead, session, ba = await _make_lead_and_session(test_db)
+        fenced = f"```json\n{VALID_LLM_RESPONSE}\n```"
+
+        mock_message = MagicMock()
+        mock_message.content = [MagicMock(text=fenced)]
+
+        with patch("app.services.ai_analysis.block_analyzer.anthropic") as mock_anthropic:
+            mock_client = MagicMock()
+            mock_anthropic.AsyncAnthropic.return_value = mock_client
+            mock_client.messages.create = AsyncMock(return_value=mock_message)
+
+            analyzer = BlockAnalyzer(db=test_db)
+            await analyzer.analyze(block_analysis_id=ba.id, block_id="block-1-strategic")
+
+        await test_db.refresh(ba)
+        assert ba.status == "ready"
+
+    async def test_malformed_llm_json_sets_status_failed(self, test_db):
+        """A-2: when LLM returns unparseable text, status=failed (no JSONDecodeError escape)."""
+        lead, session, ba = await _make_lead_and_session(test_db)
+
+        mock_message = MagicMock()
+        mock_message.content = [MagicMock(text="I'm sorry, I cannot produce JSON today.")]
+
+        with patch("app.services.ai_analysis.block_analyzer.anthropic") as mock_anthropic:
+            mock_client = MagicMock()
+            mock_anthropic.AsyncAnthropic.return_value = mock_client
+            mock_client.messages.create = AsyncMock(return_value=mock_message)
+
+            analyzer = BlockAnalyzer(db=test_db)
+            # Must NOT raise — must degrade gracefully
+            await analyzer.analyze(block_analysis_id=ba.id, block_id="block-1-strategic")
+
+        await test_db.refresh(ba)
+        assert ba.status == "failed"
+
+    async def test_malformed_llm_json_logs_raw_payload(self, test_db):
+        """A-2: raw LLM payload is logged at ERROR level on extraction failure."""
+        import structlog.testing
+
+        lead, session, ba = await _make_lead_and_session(test_db)
+        bad_raw = "No JSON here, only sadness."
+
+        mock_message = MagicMock()
+        mock_message.content = [MagicMock(text=bad_raw)]
+
+        with structlog.testing.capture_logs() as captured:
+            with patch("app.services.ai_analysis.block_analyzer.anthropic") as mock_anthropic:
+                mock_client = MagicMock()
+                mock_anthropic.AsyncAnthropic.return_value = mock_client
+                mock_client.messages.create = AsyncMock(return_value=mock_message)
+
+                analyzer = BlockAnalyzer(db=test_db)
+                await analyzer.analyze(block_analysis_id=ba.id, block_id="block-1-strategic")
+
+        error_events = [e for e in captured if e.get("log_level") == "error"]
+        raw_logged = any(
+            bad_raw in str(e.get("raw_llm_output", ""))
+            for e in error_events
+        )
+        assert raw_logged, f"Expected raw payload in error log. Got: {error_events}"
+
+
 class TestBlockAnalyzerModelSelection:
     """T6.5 — correct model selected per BLOCK_LLM_MODEL map."""
 

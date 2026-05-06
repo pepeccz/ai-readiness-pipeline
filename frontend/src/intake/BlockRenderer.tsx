@@ -155,7 +155,7 @@ function BlockForm({
     const payload = form.buildPayload()
     try {
       setLocalError(null)
-      const result = await submitMutation.mutateAsync(payload)
+      const result = await submitMutation.mutateAsync({ payload })
       // Clear localStorage draft on success
       localStorage.removeItem(`draft_${leadId}_${schema.id}`)
       // TA.12 / ADR-3: form.reset() intentionally removed — formKey in parent advances
@@ -164,6 +164,20 @@ function BlockForm({
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al guardar. Intentá de nuevo.'
       console.error('[BlockRenderer] submit error:', err)
+      setLocalError(message)
+    }
+  }
+
+  async function handleSkipAnalysis() {
+    const payload = form.buildPayload()
+    try {
+      setLocalError(null)
+      const result = await submitMutation.mutateAsync({ payload, skipAnalysis: true })
+      localStorage.removeItem(`draft_${leadId}_${schema.id}`)
+      onSubmitSuccess?.(result.block_analysis_id)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error al guardar. Intentá de nuevo.'
+      console.error('[BlockRenderer] skip submit error:', err)
       setLocalError(message)
     }
   }
@@ -271,14 +285,25 @@ function BlockForm({
         {!isReadOnly && (
           <div className="flex justify-end pt-4 border-t">
             <div className="flex flex-col items-end gap-1">
-              <button
-                type="submit"
-                disabled={submitMutation.isPending}
-                aria-label="Cerrar bloque y generar análisis IA"
-                className="px-6 py-2.5 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {submitMutation.isPending ? 'Guardando...' : 'Cerrar bloque'}
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleSkipAnalysis}
+                  disabled={submitMutation.isPending}
+                  title="Marca el bloque como completado sin generar análisis IA"
+                  className="px-4 py-2 border border-teal-500 text-teal-600 rounded-lg text-xs font-medium hover:bg-teal-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Cerrar sin análisis IA
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitMutation.isPending}
+                  aria-label="Cerrar bloque y generar análisis IA"
+                  className="px-6 py-2.5 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {submitMutation.isPending ? 'Guardando...' : 'Cerrar bloque'}
+                </button>
+              </div>
               <p className="text-xs text-neutral-500">Genera análisis IA y habilita cierre de sesión</p>
             </div>
           </div>

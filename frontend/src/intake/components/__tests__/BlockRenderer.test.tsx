@@ -454,6 +454,69 @@ describe('BlockRenderer — TA.9: error copy mapping by errorKind (REQ-4)', () =
 })
 
 // ---------------------------------------------------------------------------
+// B-2 — REQ-2: "Cerrar sin análisis IA" secondary button
+// ---------------------------------------------------------------------------
+
+describe('BlockRenderer — B-2: skip analysis button', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+    mockMutateAsync.mockResolvedValue({ block_analysis_id: 'ba-skip', status: 'skipped' })
+  })
+
+  it('B-2: renders "Cerrar sin análisis IA" button alongside primary submit', () => {
+    const schema = makeSimpleSchema('block-skip-btn')
+    render(<BlockRenderer leadId="lead-1" schema={schema} />)
+    expect(screen.getByRole('button', { name: /cerrar sin análisis ia/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /cerrar bloque/i })).toBeInTheDocument()
+  })
+
+  it('B-2: skip button is visually subordinate (outlined style, not primary)', () => {
+    const schema = makeSimpleSchema('block-skip-style')
+    render(<BlockRenderer leadId="lead-1" schema={schema} />)
+    const skipBtn = screen.getByRole('button', { name: /cerrar sin análisis ia/i })
+    // Must NOT have bg-teal-600 (primary fill); must have outline/border variant
+    expect(skipBtn.className).not.toMatch(/bg-teal-600/)
+    expect(skipBtn.className).toMatch(/border/)
+  })
+
+  it('B-2: skip button calls mutateAsync with skipAnalysis:true', async () => {
+    const schema = makeSimpleSchema('block-skip-call')
+    render(<BlockRenderer leadId="lead-1" schema={schema} />)
+
+    const skipBtn = screen.getByRole('button', { name: /cerrar sin análisis ia/i })
+    await act(async () => {
+      fireEvent.click(skipBtn)
+      await new Promise((r) => setTimeout(r, 50))
+    })
+
+    expect(mockMutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ skipAnalysis: true }),
+    )
+  })
+
+  it('B-2: primary submit calls mutateAsync without skipAnalysis or skipAnalysis:false', async () => {
+    const schema = makeSimpleSchema('block-primary-call')
+    render(<BlockRenderer leadId="lead-1" schema={schema} />)
+
+    const primaryBtn = screen.getByRole('button', { name: /cerrar bloque y generar/i })
+    await act(async () => {
+      fireEvent.click(primaryBtn)
+      await new Promise((r) => setTimeout(r, 50))
+    })
+
+    const call = mockMutateAsync.mock.calls[0][0]
+    expect(call?.skipAnalysis).not.toBe(true)
+  })
+
+  it('B-2: skip button is hidden when block is in read-only mode', () => {
+    const schema = makeSimpleSchema('block-skip-readonly')
+    render(<BlockRenderer leadId="lead-1" schema={schema} source="submitted" />)
+    expect(screen.queryByRole('button', { name: /cerrar sin análisis ia/i })).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
 // TA.11 — REQ-3: BlockRenderer formKey remount — no form.reset()
 // ---------------------------------------------------------------------------
 

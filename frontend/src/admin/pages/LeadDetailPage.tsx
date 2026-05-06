@@ -122,22 +122,36 @@ export function LeadDetailPage() {
             />
           </div>
 
-          {lead.status === 'accepted' &&
-            (intakeState?.state == null ||
-              ['not_started', 'in_progress'].includes(intakeState.state)) && (
-            <div className="mt-4 flex items-center justify-between bg-teal-50 border border-teal-200 rounded-md px-4 py-3">
-              <div>
-                <p className="text-sm font-medium text-teal-900">Lead aceptado</p>
-                <p className="text-xs text-teal-700 mt-0.5">Lista para arrancar la sesión 1 de diagnóstico (CORE).</p>
+          {lead.status === 'accepted' && (() => {
+            const s = intakeState?.state
+            const isStart = s == null || ['not_started', 'in_progress'].includes(s)
+            const isClosed = s === 'closed'
+            const title = isStart
+              ? 'Lead aceptado'
+              : isClosed
+                ? 'Sesión 1 cerrada'
+                : 'Sesión 1 en curso'
+            const subtitle = isStart
+              ? 'Lista para arrancar la sesión 1 de diagnóstico (CORE).'
+              : isClosed
+                ? 'Próximo paso: sesión 2 (entrega formal — pendiente de implementación).'
+                : 'Podés revisar las respuestas y el análisis por bloque.'
+            const buttonLabel = isStart ? 'Iniciar sesión 1 →' : 'Ver respuestas sesión 1 →'
+            return (
+              <div className="mt-4 flex items-center justify-between bg-teal-50 border border-teal-200 rounded-md px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-teal-900">{title}</p>
+                  <p className="text-xs text-teal-700 mt-0.5">{subtitle}</p>
+                </div>
+                <button
+                  onClick={() => navigate(`/intake/${lead.id}`)}
+                  className="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-md hover:bg-teal-700 transition-colors"
+                >
+                  {buttonLabel}
+                </button>
               </div>
-              <button
-                onClick={() => navigate(`/intake/${lead.id}`)}
-                className="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-md hover:bg-teal-700 transition-colors"
-              >
-                Iniciar sesión 1 →
-              </button>
-            </div>
-          )}
+            )
+          })()}
 
           {lead.rejected_reason && (
             <div className="mt-4 bg-red-50 border border-red-200 rounded-md px-4 py-3 text-sm text-red-700">

@@ -357,6 +357,7 @@ class BlockSubmitRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     payload: dict
+    skip_analysis: bool = False
 
 
 class BlockSubmitResponse(BaseModel):
@@ -624,7 +625,47 @@ async def submit_block(
         await db.delete(existing)
         await db.flush()
 
-    # Create new BlockAnalysis (status=pending_analysis, LLM will fill it)
+    if body.skip_analysis:
+        # REQ-2: skip_analysis path — create skipped row, no LLM call
+        block_analysis = BlockAnalysis(
+            intake_session_id=session.id,
+            block_id=block_id,
+            payload=body.payload,
+            status="skipped",
+            llm_output=None,
+            llm_model_used=None,
+        )
+        db.add(block_analysis)
+
+        # Mark block as completed (always increments, skip or not)
+        session.blocks_completed = mark_block_completed(
+            session.blocks_completed or [], block_id
+        )
+
+        await db.commit()
+
+        # Best-effort draft cleanup
+        try:
+            await _delete_draft(db, lead_id, block_id)
+            await db.commit()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("delete_draft_failed", lead_id=lead_id, block_id=block_id, error=str(exc))
+
+        import json as _json  # noqa: PLC0415
+        logger.info(
+            "block_submitted_skipped",
+            lead_id=lead_id,
+            block_id=block_id,
+            block_analysis_id=block_analysis.id,
+            payload_size=len(_json.dumps(body.payload)),
+        )
+
+        return BlockSubmitResponse(
+            block_analysis_id=block_analysis.id,
+            status="skipped",
+        )
+
+    # Default path: schedule LLM analysis
     block_analysis = BlockAnalysis(
         intake_session_id=session.id,
         block_id=block_id,

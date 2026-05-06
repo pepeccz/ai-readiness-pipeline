@@ -7,36 +7,62 @@
  *  - document.visibilitychange === 'hidden'
  *
  * On network failure: writes to localStorage as offline fallback.
- * Returns { savedAt, status }
+ *
+ * TA.8 / ADR-2: accepts buildPayload() callable instead of raw values so the
+ * wire shape is identical to the submit payload (nested composite).
+ *
+ * TA.8 / ADR-4: exposes errorKind discrimination per failure class.
+ *
+ * Returns { savedAt, status, errorKind, errorMessage }
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { fetchJson } from '../../admin/api/client'
+import { fetchJson, ApiError } from '../../admin/api/client'
+import type { FormValues } from '../types/schema'
 
 export type DraftStatus = 'idle' | 'saving' | 'saved' | 'error'
+export type ErrorKind = 'network' | 'http_client' | 'http_server' | 'unknown'
 
 export interface DraftAutosaveResult {
   savedAt: Date | null
   status: DraftStatus
+  errorKind: ErrorKind | null
+  errorMessage: string | null
 }
 
 const LS_KEY = (leadId: string, blockId: string) => `draft_${leadId}_${blockId}`
 
+/**
+ * Classify a caught error per ADR-4.
+ */
+function classifyError(err: unknown): ErrorKind {
+  if (err instanceof TypeError && /fetch|network|failed to fetch/i.test((err as TypeError).message)) {
+    return 'network'
+  }
+  if (err instanceof ApiError) {
+    if (err.status >= 400 && err.status < 500) return 'http_client'
+    if (err.status >= 500) return 'http_server'
+  }
+  return 'unknown'
+}
+
 export function useDraftAutosave(
   leadId: string,
   blockId: string,
-  values: Record<string, unknown>,
+  buildPayload: () => FormValues,
   isDirty: boolean,
   enabled: boolean,
 ): DraftAutosaveResult {
   const [status, setStatus] = useState<DraftStatus>('idle')
   const [savedAt, setSavedAt] = useState<Date | null>(null)
+  const [errorKind, setErrorKind] = useState<ErrorKind | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  // Keep a ref to latest values/isDirty for flush calls (avoids stale closures)
-  const valuesRef = useRef(values)
+  // Keep refs to avoid stale closures in flush callbacks
+  const buildPayloadRef = useRef(buildPayload)
   const isDirtyRef = useRef(isDirty)
   const enabledRef = useRef(enabled)
-  valuesRef.current = values
+  buildPayloadRef.current = buildPayload
   isDirtyRef.current = isDirty
   enabledRef.current = enabled
 
@@ -45,7 +71,8 @@ export function useDraftAutosave(
   const save = useCallback(async () => {
     if (!enabledRef.current || !isDirtyRef.current) return
 
-    const payload = valuesRef.current
+    // Call buildPayload at flush time — wire shape = submit shape (ADR-2)
+    const payload = buildPayloadRef.current()
     // Write localStorage fallback unconditionally
     localStorage.setItem(LS_KEY(leadId, blockId), JSON.stringify(payload))
 
@@ -57,13 +84,18 @@ export function useDraftAutosave(
       })
       setStatus('saved')
       setSavedAt(new Date())
-    } catch {
+      setErrorKind(null)
+      setErrorMessage(null)
+    } catch (err) {
+      const kind = classifyError(err)
       setStatus('error')
+      setErrorKind(kind)
+      setErrorMessage(err instanceof Error ? err.message : String(err))
       // localStorage fallback already written above
     }
   }, [leadId, blockId])
 
-  // Debounce: reset timer on every values/isDirty change
+  // Debounce: reset timer on every isDirty/enabled change
   useEffect(() => {
     if (!enabled || !isDirty) return
 
@@ -75,7 +107,7 @@ export function useDraftAutosave(
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current)
     }
-  }, [values, isDirty, enabled, save])
+  }, [isDirty, enabled, save])
 
   // Flush on unmount — only if dirty and enabled
   useEffect(() => {
@@ -100,5 +132,5 @@ export function useDraftAutosave(
     return () => document.removeEventListener('visibilitychange', handleVisibility)
   }, [save])
 
-  return { savedAt, status }
+  return { savedAt, status, errorKind, errorMessage }
 }

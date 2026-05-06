@@ -53,8 +53,16 @@ def _build_system_prompt() -> str:
         Los siguientes son los servicios que Zanovix puede recomendar al cliente.
         Cuando una recomendación se alinee con uno de estos servicios, usa su clave en el campo
         related_service. Valores válidos: diagnostico_profundo, desarrollo_acompanamiento,
-        formacion_personalizada. Usa null cuando ningún servicio aplique.
+        formacion_personalizada, otro. Usa null cuando la recomendación no requiera acción
+        externa identificable.
         Prefiere formacion_personalizada cuando aplique (mejor relación coste/impacto).
+
+        Usa "otro" cuando la recomendación implique una acción que NO encaja en los servicios
+        Zanovix (derivación a un proveedor externo especializado, acción interna del cliente
+        sin acompañamiento, herramienta SaaS específica, partner de terceros, etc.). Cuando
+        uses "otro", añade `custom_service_label` con una etiqueta corta (≤80 caracteres)
+        describiendo la acción externa (ej: "Derivar a partner CRM", "Acción interna cliente",
+        "Contratar herramienta X"). Si no aplica etiqueta, deja `custom_service_label` en null.
 
 {catalog_block}
 
@@ -64,7 +72,8 @@ def _build_system_prompt() -> str:
         - key_insights: lista de 3 a 5 insights clave, cada uno una oración concisa.
         - recommendations: lista de 2 a 4 recomendaciones accionables, en orden de prioridad.
           Cada recomendación tiene: text (string), impact (alto/medio/bajo o null),
-          effort (alto/medio/bajo o null), related_service (clave del servicio Zanovix o null).
+          effort (alto/medio/bajo o null), related_service (clave del servicio Zanovix, "otro", o null),
+          custom_service_label (string ≤80 chars o null, requerido solo si related_service="otro").
         - roadmap: objeto con claves d30, d60, d90. Cada una es una lista de strings.
         - next_steps: lista de 2 a 4 próximos pasos concretos.
         - hypothesis: hipótesis principal del consultor sobre el caso, en primera persona.
@@ -80,7 +89,8 @@ def _build_system_prompt() -> str:
               "text": "recomendación",
               "impact": "alto|medio|bajo|null",
               "effort": "alto|medio|bajo|null",
-              "related_service": "clave_servicio|null"
+              "related_service": "clave_servicio|otro|null",
+              "custom_service_label": "string|null"
             }}
           ],
           "roadmap": {{"d30": ["..."], "d60": ["..."], "d90": ["..."]}},

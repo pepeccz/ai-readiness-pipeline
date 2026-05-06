@@ -30,12 +30,14 @@ RelatedServiceLiteral = Literal[
     "diagnostico_profundo",
     "desarrollo_acompanamiento",
     "formacion_personalizada",
+    "otro",
 ]
 
 _VALID_RELATED_SERVICES = {
     "diagnostico_profundo",
     "desarrollo_acompanamiento",
     "formacion_personalizada",
+    "otro",
 }
 
 _VALID_IMPACT_EFFORT = {"alto", "medio", "bajo"}
@@ -52,6 +54,7 @@ class RecommendationItem(BaseModel):
     impact: Optional[Literal["alto", "medio", "bajo"]] = None
     effort: Optional[Literal["alto", "medio", "bajo"]] = None
     related_service: Optional[RelatedServiceLiteral] = None
+    custom_service_label: Optional[str] = None
 
     @model_validator(mode="before")
     @classmethod

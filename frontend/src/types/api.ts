@@ -87,12 +87,14 @@ export type RelatedServiceKey =
   | 'diagnostico_profundo'
   | 'desarrollo_acompanamiento'
   | 'formacion_personalizada'
+  | 'otro'
 
 export interface RecommendationItem {
   text: string
   impact: ImpactLevel | null
   effort: EffortLevel | null
   related_service: RelatedServiceKey | null
+  custom_service_label?: string | null
 }
 
 export interface RoadmapBuckets {

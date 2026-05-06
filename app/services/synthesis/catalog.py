@@ -91,7 +91,9 @@ def validate_catalog_keys_match_literal() -> None:
     from app.services.sessions.synthesis_schema import RelatedServiceLiteral
 
     yaml_keys = {s.key for s in _CATALOG}
-    literal_keys = set(typing.get_args(RelatedServiceLiteral))
+    # 'otro' is a sentinel for non-Zanovix recommendations (custom/external action),
+    # NOT a real catalog entry. Exclude from drift comparison.
+    literal_keys = set(typing.get_args(RelatedServiceLiteral)) - {"otro"}
     assert yaml_keys == literal_keys, (
         f"Catalog keys {yaml_keys} do not match RelatedServiceLiteral {literal_keys}. "
         "Update synthesis_schema.py when adding/removing services."

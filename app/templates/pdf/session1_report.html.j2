@@ -136,6 +136,7 @@
     .badge-esfuerzo-medio { background: #EF6C00; color: white; opacity: 0.85; }
     .badge-esfuerzo-bajo  { background: #2E7D32; color: white; opacity: 0.85; }
     .badge-servicio { background: var(--color-primary); color: white; }
+    .badge-externo  { background: #6B7280; color: white; }
 
     /* ── Roadmap ─────────────────────────────────────────────────────────── */
     .roadmap-grid {
@@ -248,6 +249,8 @@
         {% endif %}
         {% if rec.related_service and rec.related_service in catalog_by_key %}
         <span class="badge badge-servicio">{{ catalog_by_key[rec.related_service].nombre }}</span>
+        {% elif rec.related_service == 'otro' %}
+        <span class="badge badge-externo">{{ rec.custom_service_label or 'Acción externa' }}</span>
         {% endif %}
       </div>
     </div>

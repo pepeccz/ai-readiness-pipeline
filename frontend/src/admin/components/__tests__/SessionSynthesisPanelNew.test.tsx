@@ -138,7 +138,7 @@ describe('SessionSynthesisPanel — new dual-mode', () => {
     expect(screen.getByDisplayValue('Implementar RPA')).toBeInTheDocument()
   })
 
-  it('F.2 — related_service select has 4 options (3 services + ninguno)', () => {
+  it('F.2 — related_service select has 5 options (3 services + ninguno + otro)', () => {
     render(
       React.createElement(SessionSynthesisPanel, {
         leadId: 'lead-1',
@@ -150,10 +150,9 @@ describe('SessionSynthesisPanel — new dual-mode', () => {
     )
 
     const selects = screen.getAllByRole('combobox')
-    // Find a related_service select — should have 4 options
     const serviceSelect = selects.find((s) => {
       const options = s.querySelectorAll('option')
-      return options.length === 4
+      return options.length === 5
     })
     expect(serviceSelect).toBeDefined()
   })

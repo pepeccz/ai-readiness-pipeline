@@ -36,6 +36,7 @@ interface FormValues {
     impact: string
     effort: string
     related_service: string
+    custom_service_label: string
   }>
   roadmap_d30: Array<{ value: string }>
   roadmap_d60: Array<{ value: string }>
@@ -67,6 +68,7 @@ function toRecsForm(recs: RecommendationItem[] | undefined) {
     impact: r.impact ?? '',
     effort: r.effort ?? '',
     related_service: r.related_service ?? '',
+    custom_service_label: r.custom_service_label ?? '',
   }))
 }
 
@@ -148,6 +150,10 @@ export function SessionSynthesisPanel({
         impact: r.impact || null,
         effort: r.effort || null,
         related_service: r.related_service || null,
+        custom_service_label:
+          r.related_service === 'otro' && r.custom_service_label.trim()
+            ? r.custom_service_label.trim()
+            : null,
       })),
       roadmap: {
         d30: fromFieldArray(data.roadmap_d30),
@@ -291,10 +297,26 @@ export function SessionSynthesisPanel({
                             {svc.nombre}
                           </option>
                         ))}
+                        <option value="otro">Otro / Externo</option>
                       </select>
                     </div>
                   </div>
                 )}
+                {!isReadOnly &&
+                  watch(`recommendations.${i}.related_service`) === 'otro' && (
+                    <div className="mt-2">
+                      <label className="text-xs text-gray-500">
+                        Etiqueta personalizada (ej: Derivar a partner X)
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={80}
+                        placeholder="Acción externa o partner derivado"
+                        {...register(`recommendations.${i}.custom_service_label`)}
+                        className="w-full text-sm border border-gray-200 rounded px-2 py-1"
+                      />
+                    </div>
+                  )}
               </div>
             ))}
           </div>

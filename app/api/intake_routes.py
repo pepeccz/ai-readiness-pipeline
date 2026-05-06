@@ -1944,9 +1944,17 @@ async def export_session1_pdf(
         raise HTTPException(status_code=503, detail=f"PDF rendering unavailable: {exc}") from exc
 
     catalog = get_catalog()
+    from config import settings  # noqa: PLC0415
+    consultor_email = settings.consultant_email or "hola@zanovix.com"
+    consultor_name = getattr(settings, "consultant_name", None) or "Equipo Zanovix"
     import time  # noqa: PLC0415
     t0 = time.monotonic()
-    pdf_bytes = render_session1_pdf(effective, lead, catalog)
+    pdf_bytes = render_session1_pdf(
+        effective, lead, catalog,
+        session=session,
+        consultor_name=consultor_name,
+        consultor_email=consultor_email,
+    )
     duration_ms = int((time.monotonic() - t0) * 1000)
 
     # 7. Post-render side effects

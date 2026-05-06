@@ -2,230 +2,798 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Diagnóstico AI Readiness — Sesión 1</title>
+  <title>Diagnóstico AI Readiness — Sesión 1 · {{ lead.company_name }}</title>
   <style>
-    /* Color palette: primary #1E2A44, accent #E8A33D, alert #B23A48 */
+    /* ─────────────────────────────────────────────────────────────────────
+       PALETA
+       Primary  navy   #1E2A44
+       Accent   ochre  #E8A33D
+       Teal     accent #0D9488
+       Alert    red    #B23A48
+       Body     #2A2F3A
+       Mute     #6B7280
+       Bg-soft  #F8F9FB
+       Bg-card  #FFFFFF
+       Border   #E5E7EB
+       ───────────────────────────────────────────────────────────────────── */
     :root {
-      --color-primary: #1E2A44;
-      --color-accent: #E8A33D;
-      --color-alert: #B23A48;
-      --color-text: #333333;
-      --color-bg-light: #F8F9FB;
+      --primary: #1E2A44;
+      --primary-2: #2C3958;
+      --accent: #E8A33D;
+      --teal: #0D9488;
+      --teal-soft: #CCFBF1;
+      --alert: #B23A48;
+      --text: #2A2F3A;
+      --mute: #6B7280;
+      --bg-soft: #F8F9FB;
+      --bg-card: #FFFFFF;
+      --border: #E5E7EB;
     }
 
+    /* ── Page setup ──────────────────────────────────────────────────────── */
     @page {
-      margin: 2cm 2.5cm;
+      size: A4;
+      margin: 2.2cm 2cm 2cm 2cm;
+
+      @top-left {
+        content: element(runHeaderL);
+      }
+      @top-right {
+        content: element(runHeaderR);
+      }
+      @bottom-left {
+        content: "Diagnóstico AI Readiness · Sesión 1";
+        font-family: Helvetica, Arial, sans-serif;
+        font-size: 8pt;
+        color: #6B7280;
+      }
       @bottom-center {
-        content: "Página " counter(page) " de " counter(pages);
-        font-size: 10px;
-        color: #888;
+        content: "Documento confidencial";
+        font-family: Helvetica, Arial, sans-serif;
+        font-size: 8pt;
+        color: #6B7280;
+      }
+      @bottom-right {
+        content: counter(page) " / " counter(pages);
+        font-family: Helvetica, Arial, sans-serif;
+        font-size: 8pt;
+        color: #6B7280;
       }
     }
 
+    @page :first {
+      margin: 0;
+      @top-left { content: none; }
+      @top-right { content: none; }
+      @bottom-left { content: none; }
+      @bottom-center { content: none; }
+      @bottom-right { content: none; }
+    }
+
+    .run-header-l {
+      position: running(runHeaderL);
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 8pt;
+      color: #6B7280;
+    }
+    .run-header-l img {
+      height: 14px;
+      vertical-align: middle;
+    }
+
+    .run-header-r {
+      position: running(runHeaderR);
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 8pt;
+      color: #6B7280;
+      text-align: right;
+    }
+
+    /* ── Base typography ────────────────────────────────────────────────── */
+    html, body {
+      margin: 0;
+      padding: 0;
+    }
     body {
       font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-      font-size: 11pt;
-      color: var(--color-text);
+      font-size: 10.5pt;
+      color: var(--text);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    p { margin: 0 0 0.45cm; orphans: 3; widows: 3; }
+
+    h1, h2, h3, h4 { font-family: Georgia, "Times New Roman", serif; }
+
+    /* ── COVER ───────────────────────────────────────────────────────────── */
+    .cover {
+      page-break-after: always;
+      height: 297mm;
+      width: 210mm;
+      box-sizing: border-box;
+      padding: 2.5cm 2.2cm 2cm;
+      background: linear-gradient(180deg, #1E2A44 0%, #2C3958 60%, #1E2A44 100%);
+      color: white;
+      position: relative;
+    }
+
+    .cover-logo {
+      position: absolute;
+      top: 1.8cm;
+      right: 2.2cm;
+    }
+    .cover-logo img {
+      height: 38px;
+      filter: brightness(0) invert(1);
+    }
+
+    .cover-eyebrow {
+      margin-top: 8.5cm;
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 9.5pt;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+
+    .cover h1 {
+      font-family: Georgia, serif;
+      font-size: 38pt;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      line-height: 1.05;
+      margin: 0.4cm 0 0.6cm;
+      max-width: 14cm;
+      color: white;
+    }
+
+    .cover-subtitle {
+      font-style: italic;
+      font-size: 13pt;
+      font-weight: 300;
+      max-width: 13cm;
+      color: rgba(255,255,255,0.78);
+      margin: 0 0 1.6cm;
       line-height: 1.5;
     }
 
-    /* ── Portada ─────────────────────────────────────────────────────────── */
-    .portada {
-      text-align: center;
-      padding: 4cm 0 3cm;
-      page-break-after: always;
-      background-color: var(--color-primary);
+    .cover-meta {
+      border-top: 1px solid rgba(255,255,255,0.22);
+      padding-top: 0.6cm;
+      margin-top: 1.2cm;
+      max-width: 14cm;
+      display: table;
+      width: 100%;
+    }
+    .cover-meta-row { display: table-row; }
+    .cover-meta-label {
+      display: table-cell;
+      width: 4.5cm;
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 8.5pt;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.55);
+      padding: 0.18cm 0;
+      vertical-align: top;
+    }
+    .cover-meta-value {
+      display: table-cell;
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 10.5pt;
       color: white;
-      margin: -2cm -2.5cm 0;
-      padding: 4cm 2.5cm 3cm;
+      padding: 0.18cm 0;
     }
 
-    .portada .logo {
-      max-height: 80px;
-      margin-bottom: 2cm;
+    .cover-footer {
+      position: absolute;
+      bottom: 1.6cm;
+      left: 2.2cm;
+      right: 2.2cm;
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 8.5pt;
+      color: rgba(255,255,255,0.55);
+      display: table;
+      width: calc(100% - 4.4cm);
     }
+    .cover-footer-l { display: table-cell; }
+    .cover-footer-r { display: table-cell; text-align: right; }
 
-    .portada h1 {
-      font-size: 24pt;
+    /* ── Section structure ───────────────────────────────────────────────── */
+    .section {
+      margin-bottom: 1.1cm;
+    }
+    .section-num {
+      display: block;
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 9pt;
       font-weight: 700;
-      margin: 0 0 0.5cm;
-      letter-spacing: -0.02em;
+      letter-spacing: 0.18em;
+      color: var(--teal);
+      text-transform: uppercase;
+      margin-bottom: 0.15cm;
     }
-
-    .portada .company-name {
-      font-size: 18pt;
-      font-weight: 400;
-      color: var(--color-accent);
-      margin: 0 0 0.3cm;
-    }
-
-    .portada .fecha {
-      font-size: 11pt;
-      opacity: 0.7;
-      margin: 0;
-    }
-
-    /* ── Secciones ────────────────────────────────────────────────────────── */
-    .seccion {
-      margin-bottom: 1.5cm;
-    }
-
     h2 {
-      font-size: 16pt;
+      font-size: 22pt;
       font-weight: 700;
-      color: var(--color-primary);
-      border-bottom: 3px solid var(--color-accent);
-      padding-bottom: 0.3cm;
-      margin-top: 1cm;
-      margin-bottom: 0.5cm;
+      color: var(--primary);
+      margin: 0 0 0.55cm;
+      letter-spacing: -0.01em;
+      line-height: 1.15;
     }
-
+    h2::after {
+      content: "";
+      display: block;
+      width: 1.8cm;
+      height: 3px;
+      background: var(--accent);
+      margin-top: 0.25cm;
+    }
     h3 {
-      font-size: 13pt;
-      font-weight: 600;
-      color: var(--color-primary);
-      margin: 0.8cm 0 0.3cm;
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 11pt;
+      font-weight: 700;
+      color: var(--primary);
+      margin: 0.6cm 0 0.25cm;
+      letter-spacing: 0.02em;
     }
 
-    p {
-      margin: 0 0 0.5cm;
+    /* ── Identification card ─────────────────────────────────────────────── */
+    .id-card {
+      background: var(--bg-soft);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
+      padding: 0.6cm 0.8cm;
+      margin-bottom: 1cm;
+      page-break-inside: avoid;
     }
-
-    ul, ol {
-      margin: 0 0 0.5cm 1.2cm;
-      padding: 0;
-    }
-
-    li {
+    .id-card-title {
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 8.5pt;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      color: var(--mute);
+      text-transform: uppercase;
       margin-bottom: 0.3cm;
     }
-
-    /* ── Tarjetas de recomendación ────────────────────────────────────────── */
-    .rec-card {
-      background: var(--color-bg-light);
-      border-left: 4px solid var(--color-accent);
-      padding: 0.5cm 0.7cm;
-      margin-bottom: 0.6cm;
-      border-radius: 3px;
-    }
-
-    .rec-card .rec-text {
-      font-size: 11pt;
-      font-weight: 500;
-      margin: 0 0 0.3cm;
-    }
-
-    .rec-badges {
-      display: flex;
-      gap: 0.4cm;
-      flex-wrap: wrap;
-    }
-
-    .badge {
-      font-size: 9pt;
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 3px;
-      display: inline-block;
-    }
-
-    .badge-impacto-alto  { background: #D32F2F; color: white; }
-    .badge-impacto-medio { background: #F57C00; color: white; }
-    .badge-impacto-bajo  { background: #388E3C; color: white; }
-    .badge-esfuerzo-alto  { background: #C62828; color: white; opacity: 0.85; }
-    .badge-esfuerzo-medio { background: #EF6C00; color: white; opacity: 0.85; }
-    .badge-esfuerzo-bajo  { background: #2E7D32; color: white; opacity: 0.85; }
-    .badge-servicio { background: var(--color-primary); color: white; }
-    .badge-externo  { background: #6B7280; color: white; }
-
-    /* ── Roadmap ─────────────────────────────────────────────────────────── */
-    .roadmap-grid {
+    .id-grid {
       display: table;
       width: 100%;
       border-collapse: collapse;
     }
+    .id-row { display: table-row; }
+    .id-cell {
+      display: table-cell;
+      width: 50%;
+      padding: 0.18cm 0.5cm 0.18cm 0;
+      vertical-align: top;
+      font-size: 10pt;
+    }
+    .id-cell-label {
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 8.5pt;
+      color: var(--mute);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 0.06cm;
+    }
+    .id-cell-value {
+      font-size: 10.5pt;
+      color: var(--primary);
+      font-weight: 600;
+    }
 
-    .roadmap-col {
+    /* ── TOC ─────────────────────────────────────────────────────────────── */
+    .toc {
+      page-break-inside: avoid;
+    }
+    .toc h3 {
+      margin-top: 0.2cm;
+    }
+    .toc ol {
+      list-style: none;
+      padding: 0;
+      margin: 0.3cm 0 0;
+    }
+    .toc li {
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 10.5pt;
+      padding: 0.18cm 0;
+      border-bottom: 1px dotted var(--border);
+      color: var(--text);
+    }
+    .toc-num {
+      display: inline-block;
+      width: 0.9cm;
+      color: var(--teal);
+      font-weight: 700;
+    }
+
+    /* ── Executive summary ──────────────────────────────────────────────── */
+    .summary-block {
+      font-size: 11pt;
+      line-height: 1.65;
+      color: var(--text);
+    }
+    .summary-block .lead-paragraph::first-letter {
+      font-family: Georgia, serif;
+      font-size: 28pt;
+      font-weight: 700;
+      color: var(--primary);
+      float: left;
+      line-height: 0.95;
+      margin: 0.05cm 0.18cm 0 0;
+    }
+
+    /* ── Key insights ────────────────────────────────────────────────────── */
+    .insights-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      counter-reset: insights;
+    }
+    .insights-list li {
+      counter-increment: insights;
+      position: relative;
+      padding: 0.3cm 0 0.3cm 1.4cm;
+      border-bottom: 1px solid var(--border);
+      page-break-inside: avoid;
+      font-size: 10.5pt;
+      line-height: 1.55;
+    }
+    .insights-list li:last-child { border-bottom: none; }
+    .insights-list li::before {
+      content: counter(insights, decimal-leading-zero);
+      position: absolute;
+      left: 0;
+      top: 0.32cm;
+      font-family: Georgia, serif;
+      font-size: 14pt;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    /* ── Recommendations ─────────────────────────────────────────────────── */
+    .recs {
+      counter-reset: recs;
+    }
+    .rec-card {
+      counter-increment: recs;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.5cm 0.6cm 0.5cm 1.7cm;
+      margin-bottom: 0.4cm;
+      position: relative;
+      page-break-inside: avoid;
+    }
+    .rec-card::before {
+      content: counter(recs, decimal-leading-zero);
+      position: absolute;
+      left: 0.5cm;
+      top: 0.5cm;
+      font-family: Georgia, serif;
+      font-size: 14pt;
+      font-weight: 700;
+      color: var(--teal);
+    }
+    .rec-text {
+      font-size: 10.5pt;
+      line-height: 1.5;
+      color: var(--text);
+      margin: 0 0 0.3cm;
+      font-weight: 500;
+    }
+    .rec-meta {
+      display: table;
+      width: 100%;
+      border-top: 1px dashed var(--border);
+      padding-top: 0.25cm;
+      margin-top: 0.15cm;
+    }
+    .rec-meta-badges { display: table-cell; vertical-align: middle; }
+    .rec-meta-svc { display: table-cell; vertical-align: middle; text-align: right; }
+
+    .badge {
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 8pt;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 3px;
+      display: inline-block;
+      margin-right: 4px;
+    }
+    .badge-impact-alto   { background: #FEE2E2; color: #991B1B; }
+    .badge-impact-medio  { background: #FEF3C7; color: #92400E; }
+    .badge-impact-bajo   { background: #D1FAE5; color: #065F46; }
+    .badge-effort-alto   { background: #F3F4F6; color: #374151; border: 1px solid #D1D5DB; }
+    .badge-effort-medio  { background: #F3F4F6; color: #374151; border: 1px solid #D1D5DB; }
+    .badge-effort-bajo   { background: #F3F4F6; color: #374151; border: 1px solid #D1D5DB; }
+
+    .svc-tag {
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 8.5pt;
+      color: var(--primary);
+      font-weight: 600;
+    }
+    .svc-tag-label {
+      font-size: 7.5pt;
+      color: var(--mute);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-right: 4px;
+    }
+    .svc-tag-extern {
+      color: var(--mute);
+      font-style: italic;
+    }
+
+    /* ── Quick-wins matrix ──────────────────────────────────────────────── */
+    .matrix {
+      margin: 0.4cm 0 0.7cm;
+      page-break-inside: avoid;
+    }
+    .matrix-grid {
+      display: table;
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .matrix-row { display: table-row; }
+    .matrix-cell {
+      display: table-cell;
+      width: 50%;
+      border: 1px solid var(--border);
+      padding: 0.35cm;
+      vertical-align: top;
+      background: var(--bg-card);
+      font-size: 9pt;
+      min-height: 1.6cm;
+    }
+    .matrix-quad-label {
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 7.5pt;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--mute);
+      margin-bottom: 0.15cm;
+    }
+    .matrix-quad-quick {
+      background: #ECFDF5;
+      border-color: #A7F3D0;
+    }
+    .matrix-quad-quick .matrix-quad-label {
+      color: #047857;
+      font-weight: 700;
+    }
+    .matrix-item {
+      display: block;
+      font-size: 9pt;
+      color: var(--text);
+      padding: 0.08cm 0;
+    }
+
+    /* ── Roadmap timeline ───────────────────────────────────────────────── */
+    .timeline {
+      display: table;
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.3cm 0 0.4cm;
+    }
+    .timeline-col {
+      display: table-cell;
+      width: 33.33%;
+      vertical-align: top;
+      padding: 0 0.25cm;
+    }
+    .timeline-head {
+      background: var(--primary);
+      color: white;
+      padding: 0.32cm 0.4cm;
+      border-radius: 3px 3px 0 0;
+      text-align: center;
+    }
+    .timeline-head-num {
+      font-family: Georgia, serif;
+      font-size: 18pt;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+    }
+    .timeline-head-label {
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 8.5pt;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: white;
+      margin-top: 0.1cm;
+    }
+    .timeline-body {
+      background: var(--bg-soft);
+      border: 1px solid var(--border);
+      border-top: none;
+      padding: 0.35cm 0.4cm;
+      border-radius: 0 0 3px 3px;
+      min-height: 4cm;
+    }
+    .timeline-body ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .timeline-body li {
+      font-size: 9.5pt;
+      line-height: 1.45;
+      padding: 0.12cm 0;
+      border-bottom: 1px dotted var(--border);
+      color: var(--text);
+    }
+    .timeline-body li:last-child { border-bottom: none; }
+    .timeline-body li::before {
+      content: "▸";
+      color: var(--teal);
+      margin-right: 0.18cm;
+      font-weight: 700;
+    }
+    .timeline-empty {
+      font-style: italic;
+      font-size: 9pt;
+      color: var(--mute);
+    }
+
+    /* ── Next steps ─────────────────────────────────────────────────────── */
+    .next-steps {
+      counter-reset: nextsteps;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .next-steps li {
+      counter-increment: nextsteps;
+      position: relative;
+      padding: 0.3cm 0.3cm 0.3cm 1.4cm;
+      border-bottom: 1px solid var(--border);
+      font-size: 10.5pt;
+      page-break-inside: avoid;
+    }
+    .next-steps li:last-child { border-bottom: none; }
+    .next-steps li::before {
+      content: counter(nextsteps);
+      position: absolute;
+      left: 0;
+      top: 0.32cm;
+      width: 1cm;
+      height: 1cm;
+      background: var(--teal);
+      color: white;
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 11pt;
+      font-weight: 700;
+      text-align: center;
+      line-height: 1cm;
+      border-radius: 50%;
+    }
+
+    /* ── Services menu (catalog footer) ─────────────────────────────────── */
+    .svc-menu {
+      page-break-before: auto;
+      page-break-inside: avoid;
+      margin-top: 0.6cm;
+    }
+    .svc-menu-intro {
+      font-style: italic;
+      color: var(--mute);
+      font-size: 10pt;
+      margin-bottom: 0.5cm;
+    }
+    .svc-grid {
+      display: table;
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0.2cm 0;
+    }
+    .svc-card {
       display: table-cell;
       width: 33%;
       vertical-align: top;
-      padding: 0.3cm 0.5cm;
-      border: 1px solid #DDD;
-    }
-
-    .roadmap-col h3 {
-      font-size: 11pt;
-      font-weight: 700;
-      color: var(--color-accent);
-      margin: 0 0 0.4cm;
-      text-align: center;
-      background: var(--color-primary);
-      padding: 0.2cm;
+      background: var(--bg-soft);
+      border-top: 4px solid var(--accent);
+      padding: 0.45cm 0.4cm;
       border-radius: 2px;
     }
-
-    /* ── Catálogo de servicios (footer section) ────────────────────────────── */
-    .catalogo {
-      margin-top: 1.5cm;
-      border-top: 2px solid var(--color-primary);
-      padding-top: 0.5cm;
-    }
-
-    .catalogo h2 {
-      font-size: 14pt;
-    }
-
-    .servicio-item {
-      margin-bottom: 0.8cm;
-    }
-
-    .servicio-nombre {
-      font-weight: 700;
-      color: var(--color-primary);
+    .svc-card h4 {
+      font-family: Georgia, serif;
       font-size: 11pt;
+      color: var(--primary);
+      margin: 0 0 0.2cm;
+      line-height: 1.25;
+    }
+    .svc-card p {
+      font-size: 9pt;
+      line-height: 1.45;
+      color: var(--text);
+      margin: 0;
     }
 
-    .servicio-desc {
+    /* ── Closing block ──────────────────────────────────────────────────── */
+    .closing {
+      margin-top: 1.2cm;
+      padding-top: 0.7cm;
+      border-top: 2px solid var(--primary);
+      page-break-inside: avoid;
+    }
+    .closing-title {
+      font-family: Georgia, serif;
+      font-size: 14pt;
+      font-weight: 700;
+      color: var(--primary);
+      margin: 0 0 0.3cm;
+    }
+    .closing p {
       font-size: 10pt;
-      color: #555;
-      margin-top: 0.1cm;
+      color: var(--text);
+      margin: 0 0 0.3cm;
     }
+    .closing-contact {
+      font-size: 10.5pt;
+      color: var(--primary);
+    }
+    .closing-contact strong { color: var(--teal); }
 
-    /* ── Utilidades ──────────────────────────────────────────────────────── */
-    .placeholder-text {
-      color: #AAA;
+    .empty-section {
+      color: var(--mute);
       font-style: italic;
       font-size: 10pt;
     }
-
-    .page-break { page-break-before: always; }
   </style>
 </head>
 <body>
 
-  {# ── 1. Portada ────────────────────────────────────────────────────────── #}
-  <div class="portada">
-    <img class="logo" src="{{ logo_path }}" alt="Zanovix" />
-    <h1>Diagnóstico AI Readiness — Sesión 1</h1>
-    {% if company_name %}
-    <p class="company-name">{{ company_name }}</p>
-    {% endif %}
-    <p class="fecha">{{ fecha }}</p>
+  {# ── Running header (pages 2+) ────────────────────────────────────────── #}
+  <div class="run-header-l">
+    {% if logo_path %}<img src="{{ logo_path }}" alt="Zanovix">{% endif %}
+    &nbsp;Zanovix
+  </div>
+  <div class="run-header-r">
+    {{ lead.company_name }} &nbsp;·&nbsp; {{ fecha }}
   </div>
 
-  {# ── 2. Resumen ejecutivo ───────────────────────────────────────────────── #}
+  {# ═══════════════════════════════════════════════════════════════════════
+     PORTADA
+     ═══════════════════════════════════════════════════════════════════════ #}
+  <div class="cover">
+    <div class="cover-logo">
+      {% if logo_path %}<img src="{{ logo_path }}" alt="Zanovix">{% endif %}
+    </div>
+
+    <div class="cover-eyebrow">Diagnóstico AI Readiness · Sesión 1</div>
+    <h1>{{ lead.company_name }}</h1>
+    <p class="cover-subtitle">
+      Síntesis estratégica de hallazgos, oportunidades priorizadas
+      y hoja de ruta para la adopción responsable de IA.
+    </p>
+
+    <div class="cover-meta">
+      {% if lead.contact_name %}
+      <div class="cover-meta-row">
+        <div class="cover-meta-label">Contacto</div>
+        <div class="cover-meta-value">{{ lead.contact_name }}{% if lead.contact_email %} — {{ lead.contact_email }}{% endif %}</div>
+      </div>
+      {% endif %}
+      {% if lead.sector %}
+      <div class="cover-meta-row">
+        <div class="cover-meta-label">Sector</div>
+        <div class="cover-meta-value">{{ lead.sector }}</div>
+      </div>
+      {% endif %}
+      <div class="cover-meta-row">
+        <div class="cover-meta-label">Fecha de emisión</div>
+        <div class="cover-meta-value">{{ fecha }}</div>
+      </div>
+      {% if lead.lead_id_short %}
+      <div class="cover-meta-row">
+        <div class="cover-meta-label">Referencia</div>
+        <div class="cover-meta-value">AIR-{{ lead.lead_id_short }}</div>
+      </div>
+      {% endif %}
+      <div class="cover-meta-row">
+        <div class="cover-meta-label">Elaborado por</div>
+        <div class="cover-meta-value">{{ consultor_name }} · zanovix.com</div>
+      </div>
+    </div>
+
+    <div class="cover-footer">
+      <div class="cover-footer-l">Documento confidencial — uso exclusivo de {{ lead.company_name }}</div>
+      <div class="cover-footer-r">zanovix.com</div>
+    </div>
+  </div>
+
+  {# ═══════════════════════════════════════════════════════════════════════
+     PÁGINA 2 — Identificación + TOC
+     ═══════════════════════════════════════════════════════════════════════ #}
+  <div class="section">
+    <span class="section-num">Información del cliente</span>
+    <h2>Contexto del diagnóstico</h2>
+
+    <div class="id-card">
+      <div class="id-card-title">Cliente analizado</div>
+      <div class="id-grid">
+        <div class="id-row">
+          <div class="id-cell">
+            <div class="id-cell-label">Empresa</div>
+            <div class="id-cell-value">{{ lead.company_name }}</div>
+          </div>
+          <div class="id-cell">
+            <div class="id-cell-label">Sector</div>
+            <div class="id-cell-value">{{ lead.sector or "—" }}</div>
+          </div>
+        </div>
+        {% if lead.contact_name %}
+        <div class="id-row">
+          <div class="id-cell">
+            <div class="id-cell-label">Persona de contacto</div>
+            <div class="id-cell-value">{{ lead.contact_name }}</div>
+          </div>
+          <div class="id-cell">
+            <div class="id-cell-label">Email</div>
+            <div class="id-cell-value">{{ lead.contact_email or "—" }}</div>
+          </div>
+        </div>
+        {% endif %}
+        <div class="id-row">
+          {% if lead.company_size %}
+          <div class="id-cell">
+            <div class="id-cell-label">Tamaño del equipo</div>
+            <div class="id-cell-value">{{ lead.company_size }}</div>
+          </div>
+          {% endif %}
+          {% if primary_area %}
+          <div class="id-cell">
+            <div class="id-cell-label">Área principal evaluada</div>
+            <div class="id-cell-value">{{ primary_area }}{% if secondary_area %} · {{ secondary_area }}{% endif %}</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="toc">
+      <h3>Contenido del informe</h3>
+      <ol>
+        {% if synthesis.summary %}<li><span class="toc-num">01</span>Resumen ejecutivo</li>{% endif %}
+        {% if synthesis.key_insights %}<li><span class="toc-num">02</span>Hallazgos clave</li>{% endif %}
+        {% if synthesis.recommendations %}<li><span class="toc-num">03</span>Recomendaciones priorizadas</li>{% endif %}
+        {% if synthesis.roadmap %}<li><span class="toc-num">04</span>Hoja de ruta · 30 / 60 / 90 días</li>{% endif %}
+        {% if synthesis.next_steps %}<li><span class="toc-num">05</span>Próximos pasos</li>{% endif %}
+        <li><span class="toc-num">06</span>Servicios complementarios Zanovix</li>
+      </ol>
+    </div>
+  </div>
+
+  {# ═══════════════════════════════════════════════════════════════════════
+     01 · Resumen ejecutivo
+     ═══════════════════════════════════════════════════════════════════════ #}
   {% if synthesis.summary %}
-  <div class="seccion">
-    <h2>Resumen ejecutivo</h2>
-    <p>{{ synthesis.summary }}</p>
+  <div class="section" style="page-break-before: always;">
+    <span class="section-num">01 · Resumen ejecutivo</span>
+    <h2>Visión global del diagnóstico</h2>
+    <div class="summary-block">
+      <p class="lead-paragraph">{{ synthesis.summary }}</p>
+    </div>
   </div>
   {% endif %}
 
-  {# ── 3. Hallazgos clave ────────────────────────────────────────────────── #}
+  {# ═══════════════════════════════════════════════════════════════════════
+     02 · Hallazgos clave
+     ═══════════════════════════════════════════════════════════════════════ #}
   {% if synthesis.key_insights %}
-  <div class="seccion">
-    <h2>Hallazgos clave</h2>
-    <ul>
+  <div class="section">
+    <span class="section-num">02 · Hallazgos clave</span>
+    <h2>Lo que revela la sesión</h2>
+    <ul class="insights-list">
       {% for insight in synthesis.key_insights %}
       <li>{{ insight }}</li>
       {% endfor %}
@@ -233,97 +801,162 @@
   </div>
   {% endif %}
 
-  {# ── 4. Recomendaciones ────────────────────────────────────────────────── #}
+  {# ═══════════════════════════════════════════════════════════════════════
+     03 · Recomendaciones priorizadas
+     ═══════════════════════════════════════════════════════════════════════ #}
   {% if synthesis.recommendations %}
-  <div class="seccion">
-    <h2>Recomendaciones</h2>
-    {% for rec in synthesis.recommendations %}
-    <div class="rec-card">
-      <p class="rec-text">{{ rec.text }}</p>
-      <div class="rec-badges">
-        {% if rec.impact %}
-        <span class="badge badge-impacto-{{ rec.impact }}">Impacto: {{ rec.impact | capitalize }}</span>
-        {% endif %}
-        {% if rec.effort %}
-        <span class="badge badge-esfuerzo-{{ rec.effort }}">Esfuerzo: {{ rec.effort | capitalize }}</span>
-        {% endif %}
-        {% if rec.related_service and rec.related_service in catalog_by_key %}
-        <span class="badge badge-servicio">{{ catalog_by_key[rec.related_service].nombre }}</span>
-        {% elif rec.related_service == 'otro' %}
-        <span class="badge badge-externo">{{ rec.custom_service_label or 'Acción externa' }}</span>
-        {% endif %}
+  <div class="section" style="page-break-before: always;">
+    <span class="section-num">03 · Recomendaciones priorizadas</span>
+    <h2>Acciones con mayor impacto</h2>
+
+    {# Quick-wins matrix — only show if any rec has both impact and effort #}
+    {% set has_matrix = synthesis.recommendations | selectattr("impact") | selectattr("effort") | list | length > 0 %}
+    {% if has_matrix %}
+    <div class="matrix">
+      <h3>Matriz de priorización</h3>
+      <p style="font-size:9.5pt;color:var(--mute);margin:0 0 0.3cm;">Cada recomendación se clasifica por impacto y esfuerzo. El cuadrante verde representa <strong>quick-wins</strong> — alto impacto con bajo esfuerzo.</p>
+      <div class="matrix-grid">
+        <div class="matrix-row">
+          <div class="matrix-cell matrix-quad-quick">
+            <div class="matrix-quad-label">Impacto Alto · Esfuerzo Bajo (Quick-wins)</div>
+            {% for rec in synthesis.recommendations %}{% if rec.impact == 'alto' and rec.effort == 'bajo' %}<span class="matrix-item">▸ {{ rec.text | truncate(110) }}</span>{% endif %}{% endfor %}
+          </div>
+          <div class="matrix-cell">
+            <div class="matrix-quad-label">Impacto Alto · Esfuerzo Alto/Medio</div>
+            {% for rec in synthesis.recommendations %}{% if rec.impact == 'alto' and rec.effort != 'bajo' %}<span class="matrix-item">▸ {{ rec.text | truncate(110) }}</span>{% endif %}{% endfor %}
+          </div>
+        </div>
+        <div class="matrix-row">
+          <div class="matrix-cell">
+            <div class="matrix-quad-label">Impacto Medio/Bajo · Esfuerzo Bajo</div>
+            {% for rec in synthesis.recommendations %}{% if rec.impact != 'alto' and rec.effort == 'bajo' %}<span class="matrix-item">▸ {{ rec.text | truncate(110) }}</span>{% endif %}{% endfor %}
+          </div>
+          <div class="matrix-cell">
+            <div class="matrix-quad-label">Impacto Medio/Bajo · Esfuerzo Alto/Medio</div>
+            {% for rec in synthesis.recommendations %}{% if rec.impact != 'alto' and rec.effort != 'bajo' %}<span class="matrix-item">▸ {{ rec.text | truncate(110) }}</span>{% endif %}{% endfor %}
+          </div>
+        </div>
       </div>
     </div>
-    {% endfor %}
-  </div>
-  {% endif %}
+    {% endif %}
 
-  {# ── 5. Roadmap 30/60/90 ───────────────────────────────────────────────── #}
-  {% if synthesis.roadmap %}
-  <div class="seccion">
-    <h2>Hoja de ruta</h2>
-    <div class="roadmap-grid">
-      <div class="roadmap-col">
-        <h3>30 días</h3>
-        {% if synthesis.roadmap.d30 %}
-        <ul>
-          {% for item in synthesis.roadmap.d30 %}
-          <li>{{ item }}</li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <p class="placeholder-text">Sin elementos definidos.</p>
-        {% endif %}
+    <h3>Detalle de recomendaciones</h3>
+    <div class="recs">
+      {% for rec in synthesis.recommendations %}
+      <div class="rec-card">
+        <p class="rec-text">{{ rec.text }}</p>
+        <div class="rec-meta">
+          <div class="rec-meta-badges">
+            {% if rec.impact %}<span class="badge badge-impact-{{ rec.impact }}">Impacto {{ rec.impact }}</span>{% endif %}
+            {% if rec.effort %}<span class="badge badge-effort-{{ rec.effort }}">Esfuerzo {{ rec.effort }}</span>{% endif %}
+          </div>
+          <div class="rec-meta-svc">
+            {% if rec.related_service and rec.related_service in catalog_by_key %}
+              <span class="svc-tag-label">Servicio Zanovix</span>
+              <span class="svc-tag">{{ catalog_by_key[rec.related_service].nombre }}</span>
+            {% elif rec.related_service == 'otro' %}
+              <span class="svc-tag-label">Acción externa</span>
+              <span class="svc-tag svc-tag-extern">{{ rec.custom_service_label or 'Acción externa al alcance Zanovix' }}</span>
+            {% endif %}
+          </div>
+        </div>
       </div>
-      <div class="roadmap-col">
-        <h3>60 días</h3>
-        {% if synthesis.roadmap.d60 %}
-        <ul>
-          {% for item in synthesis.roadmap.d60 %}
-          <li>{{ item }}</li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <p class="placeholder-text">Sin elementos definidos.</p>
-        {% endif %}
-      </div>
-      <div class="roadmap-col">
-        <h3>90 días</h3>
-        {% if synthesis.roadmap.d90 %}
-        <ul>
-          {% for item in synthesis.roadmap.d90 %}
-          <li>{{ item }}</li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <p class="placeholder-text">Sin elementos definidos.</p>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
-  {# ── 6. Próximos pasos ─────────────────────────────────────────────────── #}
-  {% if synthesis.next_steps %}
-  <div class="seccion">
-    <h2>Próximos pasos</h2>
-    <ol>
-      {% for step in synthesis.next_steps %}
-      <li>{{ step }}</li>
       {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ═══════════════════════════════════════════════════════════════════════
+     04 · Hoja de ruta
+     ═══════════════════════════════════════════════════════════════════════ #}
+  {% if synthesis.roadmap %}
+  <div class="section" style="page-break-before: always;">
+    <span class="section-num">04 · Hoja de ruta</span>
+    <h2>30 · 60 · 90 días</h2>
+
+    <div class="timeline">
+      <div class="timeline-col">
+        <div class="timeline-head">
+          <div class="timeline-head-num">30</div>
+          <div class="timeline-head-label">días</div>
+        </div>
+        <div class="timeline-body">
+          {% if synthesis.roadmap.d30 %}
+          <ul>{% for item in synthesis.roadmap.d30 %}<li>{{ item }}</li>{% endfor %}</ul>
+          {% else %}<p class="timeline-empty">Sin acciones definidas.</p>{% endif %}
+        </div>
+      </div>
+      <div class="timeline-col">
+        <div class="timeline-head">
+          <div class="timeline-head-num">60</div>
+          <div class="timeline-head-label">días</div>
+        </div>
+        <div class="timeline-body">
+          {% if synthesis.roadmap.d60 %}
+          <ul>{% for item in synthesis.roadmap.d60 %}<li>{{ item }}</li>{% endfor %}</ul>
+          {% else %}<p class="timeline-empty">Sin acciones definidas.</p>{% endif %}
+        </div>
+      </div>
+      <div class="timeline-col">
+        <div class="timeline-head">
+          <div class="timeline-head-num">90</div>
+          <div class="timeline-head-label">días</div>
+        </div>
+        <div class="timeline-body">
+          {% if synthesis.roadmap.d90 %}
+          <ul>{% for item in synthesis.roadmap.d90 %}<li>{{ item }}</li>{% endfor %}</ul>
+          {% else %}<p class="timeline-empty">Sin acciones definidas.</p>{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ═══════════════════════════════════════════════════════════════════════
+     05 · Próximos pasos
+     ═══════════════════════════════════════════════════════════════════════ #}
+  {% if synthesis.next_steps %}
+  <div class="section">
+    <span class="section-num">05 · Próximos pasos</span>
+    <h2>Por dónde continuar</h2>
+    <ol class="next-steps">
+      {% for step in synthesis.next_steps %}<li>{{ step }}</li>{% endfor %}
     </ol>
   </div>
   {% endif %}
 
-  {# ── 7. Catálogo de servicios Zanovix (footer) ─────────────────────────── #}
-  <div class="catalogo">
-    <h2>Servicios Zanovix</h2>
-    {% for svc in catalog %}
-    <div class="servicio-item">
-      <div class="servicio-nombre">{{ svc.nombre }}</div>
-      <div class="servicio-desc">{{ svc.descripcion }}</div>
+  {# ═══════════════════════════════════════════════════════════════════════
+     06 · Servicios complementarios Zanovix
+     ═══════════════════════════════════════════════════════════════════════ #}
+  <div class="section svc-menu">
+    <span class="section-num">06 · Servicios complementarios Zanovix</span>
+    <h2>Cómo seguimos acompañándote</h2>
+    <p class="svc-menu-intro">
+      Más allá de esta sesión, Zanovix ofrece un conjunto de servicios diseñados
+      para llevar las recomendaciones de la mano hasta su implementación.
+    </p>
+    <div class="svc-grid">
+      {% for svc in catalog %}
+      <div class="svc-card">
+        <h4>{{ svc.nombre }}</h4>
+        <p>{{ svc.descripcion | truncate(280) }}</p>
+      </div>
+      {% endfor %}
     </div>
-    {% endfor %}
+  </div>
+
+  {# ═══════════════════════════════════════════════════════════════════════
+     Cierre + contacto
+     ═══════════════════════════════════════════════════════════════════════ #}
+  <div class="closing">
+    <p class="closing-title">¿Quieres profundizar?</p>
+    <p>
+      Este informe es la base de la conversación. Si quieres revisarlo en detalle,
+      ajustar prioridades o coordinar la siguiente sesión, contacta con nosotros:
+    </p>
+    <p class="closing-contact">
+      <strong>{{ consultor_name }}</strong> &nbsp;·&nbsp; {{ consultor_email }} &nbsp;·&nbsp; zanovix.com
+    </p>
   </div>
 
 </body>

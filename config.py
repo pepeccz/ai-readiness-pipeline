@@ -70,6 +70,9 @@ class Settings(BaseSettings):
     # Consultant notification email — receives auto_accept + new lead alerts.
     consultant_email: str = ""
 
+    # Consultant display name shown on PDF deliverables (cover + closing page).
+    consultant_name: str = "Equipo Zanovix"
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

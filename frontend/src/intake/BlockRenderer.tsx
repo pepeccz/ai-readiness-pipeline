@@ -15,10 +15,10 @@
  * canonical React idiom for "this is a different form instance".
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { BlockSchema } from './types/schema'
 import { FieldRenderer } from './FieldRenderer'
-import { useSchemaForm, getAnsweredQuestions } from './hooks/useSchemaForm'
+import { useSchemaForm, getAnsweredQuestions, expandCompositePayload } from './hooks/useSchemaForm'
 import { useBlockSubmit } from './api/intake'
 import { useDraftAutosave } from './hooks/useDraftAutosave'
 
@@ -51,9 +51,22 @@ export function BlockRenderer({
   source,
   onSubmitSuccess,
 }: BlockRendererProps) {
+  // TA.12 / ADR-3: lastSubmittedAt makes formKey advance after each submit even when
+  // the payload fingerprint hasn't changed (e.g. identical re-submit within the same second).
+  // This is the fallback token that guarantees monotonic remount per submit.
+  const [lastSubmittedAt, setLastSubmittedAt] = useState<number | null>(null)
+
   const formKey = useMemo(
-    () => `${schema.id}:${payloadFingerprint(initialPayload)}`,
-    [schema.id, initialPayload],
+    () => `${schema.id}:${payloadFingerprint(initialPayload)}:${lastSubmittedAt ?? 'initial'}`,
+    [schema.id, initialPayload, lastSubmittedAt],
+  )
+
+  const handleSubmitSuccess = useCallback(
+    (blockAnalysisId: string) => {
+      setLastSubmittedAt(Date.now())
+      onSubmitSuccess?.(blockAnalysisId)
+    },
+    [onSubmitSuccess],
   )
 
   return (
@@ -63,7 +76,7 @@ export function BlockRenderer({
       schema={schema}
       initialPayload={initialPayload}
       source={source}
-      onSubmitSuccess={onSubmitSuccess}
+      onSubmitSuccess={handleSubmitSuccess}
     />
   )
 }
@@ -89,18 +102,23 @@ function BlockForm({
   const [isReadOnly, setIsReadOnly] = useState(source === 'submitted')
 
   // REQ-5: autosave — enabled only when form is dirty and not in read-only mode
+  // TA.8: accept buildPayload callable so autosave wire shape matches submit shape (ADR-2)
   const autosave = useDraftAutosave(
     leadId,
     schema.id,
-    form.values,
+    form.buildPayload,
     form.isDirty,
     !isReadOnly,
   )
 
-  // Restore initial payload on mount
+  // Restore initial payload on mount (TA.6 / ADR-1)
+  // Two-pass composite expansion:
+  //   Pass 1: expand nested composite objects into flat sub-field keys
+  //   Pass 2: overlay remaining root-level keys (incl. _other_text siblings, which win)
   useEffect(() => {
     if (initialPayload) {
-      Object.entries(initialPayload).forEach(([k, v]) => form.setValue(k, v))
+      const expanded = expandCompositePayload(initialPayload, schema.questions)
+      Object.entries(expanded).forEach(([k, v]) => form.setValue(k, v))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schema.id])
@@ -120,7 +138,8 @@ function BlockForm({
       const result = await submitMutation.mutateAsync(payload)
       // Clear localStorage draft on success
       localStorage.removeItem(`draft_${leadId}_${schema.id}`)
-      form.reset()
+      // TA.12 / ADR-3: form.reset() intentionally removed — formKey in parent advances
+      // via lastSubmittedAt (set in BlockRenderer.handleSubmitSuccess) → remount clears dirty state
       onSubmitSuccess?.(result.block_analysis_id)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al guardar. Intentá de nuevo.'
@@ -168,7 +187,12 @@ function BlockForm({
             <span className="text-neutral-400">Guardando...</span>
           )}
           {autosave.status === 'error' && (
-            <span className="text-amber-500">Sin conexión — borrador local</span>
+            <span className="text-amber-500">
+              {autosave.errorKind === 'network' && 'Sin conexión — borrador en local'}
+              {autosave.errorKind === 'http_client' && 'Error al guardar (verificá datos)'}
+              {autosave.errorKind === 'http_server' && 'Error del servidor — reintentando'}
+              {(autosave.errorKind === 'unknown' || !autosave.errorKind) && 'Error al guardar borrador'}
+            </span>
           )}
         </div>
         {/* Progress bar */}

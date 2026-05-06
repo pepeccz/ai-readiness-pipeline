@@ -1,9 +1,12 @@
 /**
  * T3.1 — BlockRenderer remounts form on block/payload change (REQ-5)
  * TB.6 — REQ-4: BlockRenderer error banner on submit failure
+ * TA.5 — REQ-1: BlockRenderer rehydration with composite expansion
+ * TA.9 — REQ-4: BlockRenderer error copy mapping by errorKind
+ * TA.11 — REQ-3: BlockRenderer formKey remount — no form.reset()
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, act, fireEvent } from '@testing-library/react'
+import { render, screen, act, fireEvent, waitFor } from '@testing-library/react'
 import { BlockRenderer } from '../../BlockRenderer'
 import type { BlockSchema } from '../../types/schema'
 
@@ -17,6 +20,21 @@ vi.mock('../../api/intake', () => ({
     isPending: false,
     isError: false,
   }),
+}))
+
+// ---------------------------------------------------------------------------
+// Mock useDraftAutosave — controlled per test via mockAutosaveReturn
+// ---------------------------------------------------------------------------
+type ErrorKind = 'network' | 'http_client' | 'http_server' | 'unknown'
+let mockAutosaveReturn: {
+  savedAt: Date | null
+  status: string
+  errorKind?: ErrorKind
+  errorMessage?: string
+} = { savedAt: null, status: 'idle' }
+
+vi.mock('../../hooks/useDraftAutosave', () => ({
+  useDraftAutosave: () => mockAutosaveReturn,
 }))
 
 function makeSchemaWithRequired(id: string): BlockSchema {
@@ -223,5 +241,164 @@ describe('BlockRenderer — REQ-5 remount behaviour', () => {
     if (inputAfter) {
       expect(inputAfter.value).toBe('updated payload')
     }
+  })
+})
+
+// ---------------------------------------------------------------------------
+// TA.5 — REQ-1: BlockRenderer rehydration effect with composite expansion
+// ---------------------------------------------------------------------------
+
+function makeCompositeSchema(id: string): BlockSchema {
+  return {
+    id,
+    layer: 'core',
+    order: 1,
+    estimated_minutes: 5,
+    title: 'Composite block',
+    questions: [
+      {
+        id: 'comp1',
+        type: 'composite',
+        label: 'Composite question',
+        sub_fields: [
+          { id: 'comp1_objective', type: 'text', label: 'Objective' },
+          { id: 'comp1_effort', type: 'text', label: 'Effort' },
+        ],
+      } as BlockSchema['questions'][0],
+    ],
+  }
+}
+
+describe('BlockRenderer — TA.5: rehydration with composite expansion (REQ-1)', () => {
+  beforeEach(() => {
+    mockAutosaveReturn = { savedAt: null, status: 'idle' }
+    vi.clearAllMocks()
+    localStorage.clear()
+  })
+
+  it('applies flat sub-field values when initialPayload is nested composite', () => {
+    const schema = makeCompositeSchema('block-composite')
+    // Nested composite payload: comp1 is an object with sub-keys
+    render(
+      <BlockRenderer
+        leadId="lead-1"
+        schema={schema}
+        initialPayload={{ comp1: { comp1_objective: 'A', comp1_effort: 'B' } }}
+      />
+    )
+    // Both sub-fields should be rendered and have their values
+    const inputs = document.querySelectorAll('input, textarea')
+    const values = Array.from(inputs).map((i) => (i as HTMLInputElement).value)
+    expect(values).toContain('A')
+    expect(values).toContain('B')
+  })
+
+  it('is idempotent: already-flat payload passes through unchanged', () => {
+    const schema = makeCompositeSchema('block-composite-flat')
+    render(
+      <BlockRenderer
+        leadId="lead-1"
+        schema={schema}
+        initialPayload={{ comp1_objective: 'X', comp1_effort: 'Y' }}
+      />
+    )
+    const inputs = document.querySelectorAll('input, textarea')
+    const values = Array.from(inputs).map((i) => (i as HTMLInputElement).value)
+    expect(values).toContain('X')
+    expect(values).toContain('Y')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// TA.9 — REQ-4: BlockRenderer error copy mapping by errorKind
+// ---------------------------------------------------------------------------
+
+function makeSimpleSchema(id: string): BlockSchema {
+  return {
+    id,
+    layer: 'core',
+    order: 1,
+    estimated_minutes: 5,
+    title: 'Simple block',
+    questions: [{ id: 'q1', type: 'text', label: 'Q1', required: false }],
+  }
+}
+
+describe('BlockRenderer — TA.9: error copy mapping by errorKind (REQ-4)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+  })
+
+  it('renders "Sin conexión — borrador en local" for errorKind=network', () => {
+    mockAutosaveReturn = { savedAt: null, status: 'error', errorKind: 'network' }
+    render(<BlockRenderer leadId="lead-1" schema={makeSimpleSchema('block-ek-net')} />)
+    expect(screen.getByText(/Sin conexión — borrador en local/i)).toBeInTheDocument()
+  })
+
+  it('renders "Error al guardar (verificá datos)" for errorKind=http_client', () => {
+    mockAutosaveReturn = { savedAt: null, status: 'error', errorKind: 'http_client' }
+    render(<BlockRenderer leadId="lead-1" schema={makeSimpleSchema('block-ek-4xx')} />)
+    expect(screen.getByText(/Error al guardar \(verificá datos\)/i)).toBeInTheDocument()
+  })
+
+  it('renders "Error del servidor — reintentando" for errorKind=http_server', () => {
+    mockAutosaveReturn = { savedAt: null, status: 'error', errorKind: 'http_server' }
+    render(<BlockRenderer leadId="lead-1" schema={makeSimpleSchema('block-ek-5xx')} />)
+    expect(screen.getByText(/Error del servidor — reintentando/i)).toBeInTheDocument()
+  })
+
+  it('renders "Error al guardar borrador" for errorKind=unknown', () => {
+    mockAutosaveReturn = { savedAt: null, status: 'error', errorKind: 'unknown' }
+    render(<BlockRenderer leadId="lead-1" schema={makeSimpleSchema('block-ek-unk')} />)
+    expect(screen.getByText(/Error al guardar borrador/i)).toBeInTheDocument()
+  })
+
+  it('does not render network copy for http_client kind', () => {
+    mockAutosaveReturn = { savedAt: null, status: 'error', errorKind: 'http_client' }
+    render(<BlockRenderer leadId="lead-1" schema={makeSimpleSchema('block-ek-no-bleed')} />)
+    expect(screen.queryByText(/Sin conexión/i)).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// TA.11 — REQ-3: BlockRenderer formKey remount — no form.reset()
+// ---------------------------------------------------------------------------
+
+describe('BlockRenderer — TA.11: formKey remount, no form.reset() (REQ-3)', () => {
+  beforeEach(() => {
+    mockAutosaveReturn = { savedAt: null, status: 'idle' }
+    vi.clearAllMocks()
+    localStorage.clear()
+  })
+
+  it('formKey flips when initialPayload changes (monotonic advance)', () => {
+    const schema = makeSimpleSchema('block-fk')
+    const { rerender } = render(
+      <BlockRenderer leadId="lead-1" schema={schema} initialPayload={{ q1: 'v1' }} />
+    )
+    const inputBefore = document.querySelector('input, textarea') as HTMLInputElement | null
+    const valueBefore = inputBefore?.value
+
+    rerender(
+      <BlockRenderer leadId="lead-1" schema={schema} initialPayload={{ q1: 'v2' }} />
+    )
+    const inputAfter = document.querySelector('input, textarea') as HTMLInputElement | null
+    expect(inputAfter?.value).toBe('v2')
+    expect(inputAfter?.value).not.toBe(valueBefore)
+  })
+
+  it('submit success does not crash (form.reset() removed)', async () => {
+    mockMutateAsync.mockResolvedValue({ block_analysis_id: 'ba-1' })
+    const schema = makeSimpleSchema('block-noreset')
+    render(<BlockRenderer leadId="lead-1" schema={schema} />)
+
+    const submitBtn = screen.getByRole('button', { name: /guardar bloque/i })
+    await act(async () => {
+      fireEvent.click(submitBtn)
+      await new Promise((r) => setTimeout(r, 50))
+    })
+    // Should not throw; no form.reset() is called
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 })

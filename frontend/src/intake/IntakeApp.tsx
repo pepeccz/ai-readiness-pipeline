@@ -39,9 +39,10 @@ export function IntakeApp({ leadId }: IntakeAppProps) {
   const [lastSubmittedBlock, setLastSubmittedBlock] = useState<string | null>(null)
 
   // Load block payload for auto-save restoration
+  // TA.14 / ADR-6: pass undefined (not '') when no block is selected — matches hook type contract
   const { data: blockPayload } = useBlockPayload(
     leadId,
-    currentBlockId ?? '',
+    currentBlockId ?? undefined,
   )
 
   if (sessionLoading || schemaLoading) {

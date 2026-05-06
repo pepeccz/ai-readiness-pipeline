@@ -26,7 +26,7 @@ interface SuggestionCardProps {
 }
 
 // C-4: debounce delay for note saves
-const NOTE_DEBOUNCE_MS = 1500
+const NOTE_DEBOUNCE_MS = 600
 
 function SuggestionCard({ suggestion, leadId, onAction, isLoading }: SuggestionCardProps) {
   const priorityColor = {

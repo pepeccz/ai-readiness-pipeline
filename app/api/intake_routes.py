@@ -935,6 +935,11 @@ class SuggestionResponse(BaseModel):
     confidence: float
     priority: str
     consultant_action: str
+    consultant_note_text: str | None = None
+
+
+class SuggestionNoteRequest(BaseModel):
+    note: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -1121,6 +1126,73 @@ async def suggestion_action(
         confidence=suggestion.confidence,
         priority=suggestion.priority,
         consultant_action=suggestion.consultant_action,
+        consultant_note_text=suggestion.consultant_note_text,
+    )
+
+
+# ---------------------------------------------------------------------------
+# PATCH /api/intake/{lead_id}/suggestions/{suggestion_id}/note  — C-2 (REQ-4)
+# ---------------------------------------------------------------------------
+
+@router.patch("/intake/{lead_id}/suggestions/{suggestion_id}/note")
+async def update_suggestion_note(
+    lead_id: str,
+    suggestion_id: str,
+    body: SuggestionNoteRequest,
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> SuggestionResponse:
+    """
+    Update consultant_note_text on a Suggestion.
+
+    Only updates consultant_note_text — ignores any other field to avoid
+    corrupting consultant_action or other state.
+    Accepts note=null to clear the annotation.
+    """
+    await _get_accepted_lead(db, lead_id)
+
+    session_stmt = select(IntakeSession).where(IntakeSession.lead_id == lead_id)
+    session_result = await db.execute(session_stmt)
+    session = session_result.scalar_one_or_none()
+    if session is None:
+        raise HTTPException(status_code=404, detail="No intake session found for this lead.")
+
+    sug_stmt = (
+        select(Suggestion)
+        .join(BlockAnalysis, Suggestion.block_analysis_id == BlockAnalysis.id)
+        .where(
+            Suggestion.id == suggestion_id,
+            BlockAnalysis.intake_session_id == session.id,
+        )
+    )
+    sug_result = await db.execute(sug_stmt)
+    suggestion = sug_result.scalar_one_or_none()
+
+    if suggestion is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Suggestion {suggestion_id} not found for this lead.",
+        )
+
+    suggestion.consultant_note_text = body.note
+    await db.commit()
+
+    logger.info(
+        "suggestion_note_updated",
+        lead_id=lead_id,
+        suggestion_id=suggestion_id,
+        has_note=body.note is not None,
+    )
+
+    return SuggestionResponse(
+        id=suggestion.id,
+        type=suggestion.type,
+        text=suggestion.text,
+        rationale=suggestion.rationale,
+        confidence=suggestion.confidence,
+        priority=suggestion.priority,
+        consultant_action=suggestion.consultant_action,
+        consultant_note_text=suggestion.consultant_note_text,
     )
 
 

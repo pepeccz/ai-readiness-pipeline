@@ -9,9 +9,9 @@
  *   - failed → error message
  */
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useBlockAnalysisPolling } from '../shared/hooks/useBlockAnalysisPolling'
-import { useSuggestionAction, type Suggestion } from './api/intake'
+import { useSuggestionAction, useUpdateSuggestionNote, type Suggestion } from './api/intake'
 
 interface AnalysisPanelProps {
   leadId: string
@@ -25,7 +25,10 @@ interface SuggestionCardProps {
   isLoading: boolean
 }
 
-function SuggestionCard({ suggestion, onAction, isLoading }: SuggestionCardProps) {
+// C-4: debounce delay for note saves
+const NOTE_DEBOUNCE_MS = 1500
+
+function SuggestionCard({ suggestion, leadId, onAction, isLoading }: SuggestionCardProps) {
   const priorityColor = {
     high: 'border-red-300 bg-red-50',
     med: 'border-amber-300 bg-amber-50',
@@ -33,6 +36,55 @@ function SuggestionCard({ suggestion, onAction, isLoading }: SuggestionCardProps
   }[suggestion.priority] ?? 'border-gray-200 bg-gray-50'
 
   const isDone = suggestion.consultant_action !== 'pending'
+
+  // C-4: local note state — optimistic, never cleared by in-flight
+  const [noteValue, setNoteValue] = useState(suggestion.consultant_note_text ?? '')
+  const [savedAt, setSavedAt] = useState<string | null>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const noteMutation = useUpdateSuggestionNote(leadId, suggestion.id)
+
+  function saveNote(value: string) {
+    noteMutation.mutate(
+      { note: value === '' ? null : value },
+      {
+        onSuccess: () => {
+          const now = new Date()
+          setSavedAt(now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }))
+        },
+      },
+    )
+  }
+
+  function handleNoteChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    const value = e.target.value
+    setNoteValue(value)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      saveNote(value)
+    }, NOTE_DEBOUNCE_MS)
+  }
+
+  function handleNoteBlur() {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    saveNote(noteValue)
+  }
+
+  // Save on beforeunload (data-loss mitigation)
+  useEffect(() => {
+    function beforeUnloadHandler() {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current)
+        saveNote(noteValue)
+      }
+    }
+    window.addEventListener('beforeunload', beforeUnloadHandler)
+    return () => {
+      window.removeEventListener('beforeunload', beforeUnloadHandler)
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noteValue])
 
   return (
     <div
@@ -68,6 +120,21 @@ function SuggestionCard({ suggestion, onAction, isLoading }: SuggestionCardProps
         >
           Irrelevante
         </button>
+      </div>
+
+      {/* C-4: consultant note textarea */}
+      <div className="mt-3">
+        <textarea
+          placeholder="Anotar respuesta del cliente"
+          value={noteValue}
+          onChange={handleNoteChange}
+          onBlur={handleNoteBlur}
+          rows={2}
+          className="w-full text-xs border border-gray-200 rounded p-2 resize-none text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-teal-400"
+        />
+        {savedAt && (
+          <p className="text-xs text-gray-400 mt-0.5">Guardado {savedAt}</p>
+        )}
       </div>
     </div>
   )

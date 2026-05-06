@@ -70,6 +70,7 @@ export interface Suggestion {
   confidence: number
   priority: string
   consultant_action: string
+  consultant_note_text?: string | null
 }
 
 export interface BlockAnalysis {
@@ -206,6 +207,26 @@ export function useSession1Close(leadId: string) {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: intakeKeys.state(leadId) })
+    },
+  })
+}
+
+// ---------------------------------------------------------------------------
+// C-3 — REQ-4: useUpdateSuggestionNote
+// ---------------------------------------------------------------------------
+
+export function useUpdateSuggestionNote(leadId: string, suggestionId: string, blockId?: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ note }: { note: string | null }) =>
+      fetchJson<Suggestion>(`/intake/${leadId}/suggestions/${suggestionId}/note`, {
+        method: 'PATCH',
+        body: JSON.stringify({ note }),
+      }),
+    onSuccess: () => {
+      if (blockId) {
+        queryClient.invalidateQueries({ queryKey: intakeKeys.blockAnalysis(leadId, blockId) })
+      }
     },
   })
 }

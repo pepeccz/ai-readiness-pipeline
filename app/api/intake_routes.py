@@ -392,6 +392,10 @@ class IntakeStateResponse(BaseModel):
     session1_synthesis: dict | None = None
     session1_synthesis_status: str = "not_started"
     deep_branches_count: int = 0
+    synthesis_edited_json: dict | None = None
+    synthesis_edited_at: str | None = None
+    synthesis_last_exported_at: str | None = None
+    synthesis_export_count: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -588,6 +592,10 @@ async def get_intake_state(
         session1_synthesis=session.session1_synthesis,
         session1_synthesis_status=compute_synthesis_status(session),
         deep_branches_count=deep_branches_count,
+        synthesis_edited_json=session.synthesis_edited_json,
+        synthesis_edited_at=session.synthesis_edited_at.isoformat() if session.synthesis_edited_at else None,
+        synthesis_last_exported_at=session.synthesis_last_exported_at.isoformat() if session.synthesis_last_exported_at else None,
+        synthesis_export_count=session.synthesis_export_count or 0,
     )
 
 
@@ -1276,6 +1284,10 @@ async def close_intake(
         session1_synthesis=session.session1_synthesis,
         session1_synthesis_status=compute_synthesis_status(session),
         deep_branches_count=deep_branches_count,
+        synthesis_edited_json=session.synthesis_edited_json,
+        synthesis_edited_at=session.synthesis_edited_at.isoformat() if session.synthesis_edited_at else None,
+        synthesis_last_exported_at=session.synthesis_last_exported_at.isoformat() if session.synthesis_last_exported_at else None,
+        synthesis_export_count=session.synthesis_export_count or 0,
     )
 
 

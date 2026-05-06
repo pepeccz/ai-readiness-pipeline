@@ -31,6 +31,10 @@ export interface IntakeState {
   deep_branches_count: number
   session1_synthesis: Session1Synthesis | null
   session1_synthesis_status: SynthesisStatus
+  synthesis_edited_json: Session1Synthesis | null
+  synthesis_edited_at: string | null
+  synthesis_last_exported_at: string | null
+  synthesis_export_count: number
 }
 
 export interface FinalClosePayload {

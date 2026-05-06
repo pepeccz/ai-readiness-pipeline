@@ -13,7 +13,7 @@
 
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { getLead } from '../api/leads'
 import { BucketBadge } from '../components/LeadDetail/BucketBadge'
 import { LeadActionPanel } from '../components/LeadDetail/LeadActionPanel'
@@ -35,7 +35,6 @@ const SYNTHESIS_ACTIVE_STATES = new Set(['deep_received', 'closed'])
 export function LeadDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const [showPayload, setShowPayload] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
 

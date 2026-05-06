@@ -17,7 +17,7 @@
  */
 
 import { useEffect } from 'react'
-import { useForm, useFieldArray, Controller } from 'react-hook-form'
+import { useForm, useFieldArray } from 'react-hook-form'
 import type { Session1Synthesis, RecommendationItem } from '../../types/api'
 import { useServiceCatalog } from '../hooks/useCatalog'
 
@@ -25,7 +25,6 @@ import { useServiceCatalog } from '../hooks/useCatalog'
 
 const EDIT_STATES = new Set(['deep_received', 'closed'])
 const VIEW_STATES = new Set(['deep_pending'])
-const HIDDEN_STATES = new Set(['not_started', 'in_progress', 'blocks_completed'])
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

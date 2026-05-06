@@ -92,7 +92,8 @@ export function IntakeApp({ leadId }: IntakeAppProps) {
         </span>
       </header>
       <div className="flex gap-6">
-      {/* Sidebar */}
+      {/* Sidebar — sticky so nav stays visible while block content scrolls */}
+      <div className="sticky top-4 self-start max-h-[calc(100vh-2rem)] overflow-y-auto">
       <BlockNav
         blocksOrder={blocksOrder}
         blocksCompleted={session?.blocks_completed ?? []}
@@ -102,6 +103,7 @@ export function IntakeApp({ leadId }: IntakeAppProps) {
           setLastSubmittedBlock(null)
         }}
       />
+      </div>
 
       {/* Main content */}
       <div className="flex-1 min-w-0">

@@ -46,13 +46,13 @@ export function RadioGroup({
 
   return (
     <div>
-      <div className={`grid ${gridCols} gap-2`}>
+      <div className={`grid ${gridCols} gap-1.5`}>
         {options.map(opt => {
           const isSelected = value === opt.value
           return (
             <label
               key={opt.value}
-              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg border cursor-pointer transition-all select-none ${
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all select-none ${
                 isSelected
                   ? 'border-teal-500 bg-teal-50 text-teal-800'
                   : 'border-gray-200 bg-white text-gray-700 hover:border-teal-300 hover:bg-teal-50/40'

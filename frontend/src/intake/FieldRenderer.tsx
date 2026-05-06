@@ -123,7 +123,7 @@ export function FieldRenderer({ question, values, errors, onChange }: FieldRende
       return (
         <fieldset
           data-error={dataError}
-          className="border border-neutral-200 rounded-lg p-4 space-y-4"
+          className="border border-neutral-200 rounded-lg p-3 space-y-3"
         >
           <legend className="text-sm font-semibold text-neutral-800 px-2">{question.label}</legend>
           {question.helper_text && (

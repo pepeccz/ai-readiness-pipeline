@@ -178,9 +178,9 @@ function BlockForm({
     : null
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="border-b pb-4">
+      <div className="border-b pb-3">
         <div className="flex items-start justify-between">
           <h2 className="text-lg font-semibold text-neutral-900">{schema.title}</h2>
           {/* REQ-6: unlock button for submitted blocks */}
@@ -194,7 +194,7 @@ function BlockForm({
             </button>
           )}
         </div>
-        <div className="flex items-center gap-4 mt-2 text-xs text-neutral-500">
+        <div className="flex items-center gap-4 mt-1.5 text-xs text-neutral-500">
           <span>~{schema.estimated_minutes} min</span>
           <span>
             {answeredCount} / {visibleQuestions.length} preguntas respondidas

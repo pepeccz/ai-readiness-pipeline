@@ -16,6 +16,8 @@ import textwrap
 
 import structlog
 
+from app.services.ai_analysis.json_extractor import JsonExtractionError, extract_json
+
 logger = structlog.get_logger(__name__)
 
 _SYSTEM_PROMPT = textwrap.dedent("""
@@ -72,9 +74,13 @@ class SessionClosingService:
         raw_text = response.content[0].text.strip()
 
         try:
-            data = json.loads(raw_text)
-        except json.JSONDecodeError as exc:
-            logger.error("session_closing_llm_invalid_json", error=str(exc), raw=raw_text[:200])
+            data = extract_json(raw_text)
+        except JsonExtractionError as exc:
+            logger.error(
+                "session_closing_llm_invalid_json",
+                error=str(exc),
+                raw_llm_output=raw_text,
+            )
             raise ValueError(f"LLM returned invalid JSON: {exc}") from exc
 
         # Validate required fields

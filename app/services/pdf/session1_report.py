@@ -62,6 +62,8 @@ def render_html(
     catalog_by_key = {svc.key: svc for svc in catalog}
     logo_path = _STATIC_DIR / "zanovix-logo.png"
     logo_uri = logo_path.as_uri() if logo_path.exists() else ""
+    logo_white = _STATIC_DIR / "zanovix-logo-white.png"
+    logo_white_uri = logo_white.as_uri() if logo_white.exists() else logo_uri
 
     now = datetime.now(tz=timezone.utc)
     fecha = _format_fecha_es(now)
@@ -101,6 +103,7 @@ def render_html(
         catalog=catalog,
         catalog_by_key=catalog_by_key,
         logo_path=logo_uri,
+        logo_white_path=logo_white_uri,
         consultor_name=consultor_name,
         consultor_email=consultor_email,
     )

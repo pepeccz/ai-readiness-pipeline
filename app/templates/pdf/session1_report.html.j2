@@ -72,12 +72,9 @@
 
     .run-header-l {
       position: running(runHeaderL);
-      font-family: Helvetica, Arial, sans-serif;
-      font-size: 8pt;
-      color: #6B7280;
     }
     .run-header-l img {
-      height: 14px;
+      height: 16px;
       vertical-align: middle;
     }
 
@@ -100,9 +97,11 @@
       color: var(--text);
       line-height: 1.55;
       -webkit-font-smoothing: antialiased;
+      orphans: 4;
+      widows: 4;
     }
 
-    p { margin: 0 0 0.45cm; orphans: 3; widows: 3; }
+    p { margin: 0 0 0.45cm; orphans: 4; widows: 4; }
 
     h1, h2, h3, h4 { font-family: Georgia, "Times New Roman", serif; }
 
@@ -124,12 +123,11 @@
       right: 2.2cm;
     }
     .cover-logo img {
-      height: 38px;
-      filter: brightness(0) invert(1);
+      height: 42px;
     }
 
     .cover-eyebrow {
-      margin-top: 8.5cm;
+      margin-top: 5cm;
       font-family: Helvetica, Arial, sans-serif;
       font-size: 9.5pt;
       font-weight: 700;
@@ -388,8 +386,10 @@
       padding-top: 0.25cm;
       margin-top: 0.15cm;
     }
-    .rec-meta-badges { display: table-cell; vertical-align: middle; }
-    .rec-meta-svc { display: table-cell; vertical-align: middle; text-align: right; }
+    .rec-meta-badges { display: table-cell; vertical-align: middle; width: 55%; }
+    .rec-meta-svc { display: table-cell; vertical-align: middle; text-align: right; width: 45%; }
+    .rec-meta-svc .svc-tag-label { display: block; margin-bottom: 0.1cm; margin-right: 0; }
+    .rec-meta-svc .svc-tag { display: block; line-height: 1.3; }
 
     .badge {
       font-family: Helvetica, Arial, sans-serif;
@@ -485,19 +485,22 @@
       padding: 0 0.25cm;
     }
     .timeline-head {
-      background: var(--primary);
       color: white;
       padding: 0.32cm 0.4cm;
       border-radius: 3px 3px 0 0;
       text-align: center;
     }
+    .timeline-head-30 { background: var(--teal); }
+    .timeline-head-60 { background: var(--accent); }
+    .timeline-head-90 { background: var(--primary); }
     .timeline-head-num {
       font-family: Georgia, serif;
-      font-size: 18pt;
+      font-size: 22pt;
       font-weight: 700;
-      color: var(--accent);
+      color: white;
       line-height: 1;
     }
+    .timeline-head-60 .timeline-head-num { color: var(--primary); }
     .timeline-head-label {
       font-family: Helvetica, Arial, sans-serif;
       font-size: 8.5pt;
@@ -506,6 +509,7 @@
       color: white;
       margin-top: 0.1cm;
     }
+    .timeline-head-60 .timeline-head-label { color: var(--primary); opacity: 0.7; }
     .timeline-body {
       background: var(--bg-soft);
       border: 1px solid var(--border);
@@ -599,6 +603,9 @@
       padding: 0.45cm 0.4cm;
       border-radius: 2px;
     }
+    .svc-card-1 { border-top-color: var(--teal); }
+    .svc-card-2 { border-top-color: var(--accent); }
+    .svc-card-3 { border-top-color: var(--primary); }
     .svc-card h4 {
       font-family: Georgia, serif;
       font-size: 11pt;
@@ -650,7 +657,6 @@
   {# ── Running header (pages 2+) ────────────────────────────────────────── #}
   <div class="run-header-l">
     {% if logo_path %}<img src="{{ logo_path }}" alt="Zanovix">{% endif %}
-    &nbsp;Zanovix
   </div>
   <div class="run-header-r">
     {{ lead.company_name }} &nbsp;·&nbsp; {{ fecha }}
@@ -661,7 +667,7 @@
      ═══════════════════════════════════════════════════════════════════════ #}
   <div class="cover">
     <div class="cover-logo">
-      {% if logo_path %}<img src="{{ logo_path }}" alt="Zanovix">{% endif %}
+      {% if logo_white_path %}<img src="{{ logo_white_path }}" alt="Zanovix">{% endif %}
     </div>
 
     <div class="cover-eyebrow">Diagnóstico AI Readiness · Sesión 1</div>
@@ -702,7 +708,7 @@
 
     <div class="cover-footer">
       <div class="cover-footer-l">Documento confidencial — uso exclusivo de {{ lead.company_name }}</div>
-      <div class="cover-footer-r">zanovix.com</div>
+      <div class="cover-footer-r">Diagnóstico estratégico de adopción IA</div>
     </div>
   </div>
 
@@ -814,21 +820,21 @@
         <div class="matrix-row">
           <div class="matrix-cell matrix-quad-quick">
             <div class="matrix-quad-label">Impacto Alto · Esfuerzo Bajo (Quick-wins)</div>
-            {% for rec in synthesis.recommendations %}{% if rec.impact == 'alto' and rec.effort == 'bajo' %}<span class="matrix-item">▸ {{ rec.text | truncate(110) }}</span>{% endif %}{% endfor %}
+            {% for rec in synthesis.recommendations %}{% if rec.impact == 'alto' and rec.effort == 'bajo' %}<span class="matrix-item">▸ {{ rec.text | truncate(180) }}</span>{% endif %}{% endfor %}
           </div>
           <div class="matrix-cell">
             <div class="matrix-quad-label">Impacto Alto · Esfuerzo Alto/Medio</div>
-            {% for rec in synthesis.recommendations %}{% if rec.impact == 'alto' and rec.effort != 'bajo' %}<span class="matrix-item">▸ {{ rec.text | truncate(110) }}</span>{% endif %}{% endfor %}
+            {% for rec in synthesis.recommendations %}{% if rec.impact == 'alto' and rec.effort != 'bajo' %}<span class="matrix-item">▸ {{ rec.text | truncate(180) }}</span>{% endif %}{% endfor %}
           </div>
         </div>
         <div class="matrix-row">
           <div class="matrix-cell">
             <div class="matrix-quad-label">Impacto Medio/Bajo · Esfuerzo Bajo</div>
-            {% for rec in synthesis.recommendations %}{% if rec.impact != 'alto' and rec.effort == 'bajo' %}<span class="matrix-item">▸ {{ rec.text | truncate(110) }}</span>{% endif %}{% endfor %}
+            {% for rec in synthesis.recommendations %}{% if rec.impact != 'alto' and rec.effort == 'bajo' %}<span class="matrix-item">▸ {{ rec.text | truncate(180) }}</span>{% endif %}{% endfor %}
           </div>
           <div class="matrix-cell">
             <div class="matrix-quad-label">Impacto Medio/Bajo · Esfuerzo Alto/Medio</div>
-            {% for rec in synthesis.recommendations %}{% if rec.impact != 'alto' and rec.effort != 'bajo' %}<span class="matrix-item">▸ {{ rec.text | truncate(110) }}</span>{% endif %}{% endfor %}
+            {% for rec in synthesis.recommendations %}{% if rec.impact != 'alto' and rec.effort != 'bajo' %}<span class="matrix-item">▸ {{ rec.text | truncate(180) }}</span>{% endif %}{% endfor %}
           </div>
         </div>
       </div>
@@ -871,7 +877,7 @@
 
     <div class="timeline">
       <div class="timeline-col">
-        <div class="timeline-head">
+        <div class="timeline-head timeline-head-30">
           <div class="timeline-head-num">30</div>
           <div class="timeline-head-label">días</div>
         </div>
@@ -882,7 +888,7 @@
         </div>
       </div>
       <div class="timeline-col">
-        <div class="timeline-head">
+        <div class="timeline-head timeline-head-60">
           <div class="timeline-head-num">60</div>
           <div class="timeline-head-label">días</div>
         </div>
@@ -893,7 +899,7 @@
         </div>
       </div>
       <div class="timeline-col">
-        <div class="timeline-head">
+        <div class="timeline-head timeline-head-90">
           <div class="timeline-head-num">90</div>
           <div class="timeline-head-label">días</div>
         </div>
@@ -932,9 +938,9 @@
     </p>
     <div class="svc-grid">
       {% for svc in catalog %}
-      <div class="svc-card">
+      <div class="svc-card svc-card-{{ loop.index }}">
         <h4>{{ svc.nombre }}</h4>
-        <p>{{ svc.descripcion | truncate(280) }}</p>
+        <p>{{ svc.descripcion | truncate(420) }}</p>
       </div>
       {% endfor %}
     </div>

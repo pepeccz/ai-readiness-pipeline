@@ -18,7 +18,12 @@ Tu rol es analizar las respuestas de un cuestionario de madurez IA de una empres
 
 1. Una SÍNTESIS concisa (200-500 caracteres) del estado actual del bloque evaluado
 2. CONTRADICCIONES detectadas entre respuestas (con severidad: low/med/high)
-3. PREGUNTAS DE SEGUIMIENTO que el consultor debería explorar (con confianza 0-1 y prioridad high/med/low)
+3. PREGUNTAS DE SEGUIMIENTO que el consultor debería explorar (con confianza 0-1 y prioridad high/med/low).
+   Cada pregunta DEBE cumplir los tres criterios:
+   - Anclada a tensión específica: debe citar la tensión concreta del bloque que pretende resolver.
+   - Cambia la recomendación: debe ser respondible con una decisión (sí/no, opción A/B), NO con una definición.
+   - Rationale explícito: debe incluir la razón por la que esa pregunta desbloquea el análisis.
+   PROHIBIDO: reformular verbatim lo que el cliente ya dijo, usar "¿podrías contarme más sobre…" o "¿qué entendés por…" como pregunta de seguimiento.
 4. HIPÓTESIS PRELIMINAR (solo para bloque estratégico)
 5. OUTPUTS ESPECÍFICOS del bloque (según el schema proporcionado)
 

@@ -1399,13 +1399,13 @@ async def close_session1(
                     block_payloads=block_payloads,
                     block_syntheses=block_syntheses,
                 )
-                # Persist synthesis result — map keys to D1 schema
+                # Persist synthesis result — map 1:1 from Session1SynthesisOutput
                 if syn_session:
                     syn_session.session1_synthesis = {
-                        "summary": synthesis.get("global_synthesis", ""),
-                        "key_insights": synthesis.get("preliminary_hypotheses", []),
-                        "recommendations": [],
-                        "hypothesis": synthesis.get("preliminary_hypotheses", [""])[0] if synthesis.get("preliminary_hypotheses") else "",
+                        "summary": synthesis.summary,
+                        "key_insights": synthesis.key_insights or [],
+                        "recommendations": synthesis.recommendations or [],
+                        "hypothesis": synthesis.hypothesis,
                         "generated_at": datetime.now(tz=timezone.utc).isoformat(),
                         "model": "claude-sonnet-4-6",
                     }

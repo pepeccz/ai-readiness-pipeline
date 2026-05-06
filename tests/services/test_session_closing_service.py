@@ -17,9 +17,10 @@ from app.services.sessions.session_closing import SessionClosingService
 
 
 _SUCCESS_OUTPUT = """{
-    "global_synthesis": "La empresa está en fase exploratoria.",
-    "preliminary_hypotheses": ["H1", "H2", "H3"],
-    "activated_branches": ["governance_previo_ia"]
+    "summary": "La empresa está en fase exploratoria.",
+    "key_insights": ["Insight 1", "Insight 2", "Insight 3"],
+    "recommendations": ["Recomendación 1"],
+    "hypothesis": "La empresa necesita una hoja de ruta clara."
 }"""
 
 
@@ -49,9 +50,11 @@ async def test_generate_synthesis_returns_required_fields(monkeypatch):
         block_syntheses={},
     )
 
-    assert "global_synthesis" in result
-    assert "preliminary_hypotheses" in result
-    assert "activated_branches" in result
+    from app.services.sessions.session_closing import Session1SynthesisOutput
+    assert isinstance(result, Session1SynthesisOutput)
+    assert result.summary is not None
+    assert isinstance(result.key_insights, list)
+    assert isinstance(result.recommendations, list)
 
 
 @pytest.mark.asyncio
@@ -67,7 +70,7 @@ async def test_generate_synthesis_handles_code_fenced_response(monkeypatch):
         block_syntheses={},
     )
 
-    assert result["global_synthesis"] == "La empresa está en fase exploratoria."
+    assert result.summary == "La empresa está en fase exploratoria."
 
 
 @pytest.mark.asyncio

@@ -145,9 +145,9 @@ export function useFinalClose(leadId: string) {
   })
 }
 
-export function useBlockPayload(leadId: string, blockId: string) {
+export function useBlockPayload(leadId: string, blockId: string | undefined) {
   return useQuery({
-    queryKey: intakeKeys.blockPayload(leadId, blockId),
+    queryKey: intakeKeys.blockPayload(leadId, blockId ?? ''),
     queryFn: () => fetchJson<BlockPayloadResponse>(`/intake/${leadId}/blocks/${blockId}/payload`),
     enabled: Boolean(leadId) && Boolean(blockId),
     retry: false,

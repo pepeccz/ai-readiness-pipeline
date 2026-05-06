@@ -32,7 +32,7 @@ class IntakeSession(Base):
         unique=True,
     )
 
-    primary_area: Mapped[str] = mapped_column(String(50), nullable=False)
+    primary_area: Mapped[str] = mapped_column(String(50), nullable=False, server_default="not_set")
     secondary_area: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     # JSON array of area strings for cross-area sessions

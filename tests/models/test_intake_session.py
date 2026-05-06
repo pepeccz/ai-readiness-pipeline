@@ -103,3 +103,57 @@ async def test_session1_synthesis_persists_dict(test_db: AsyncSession):
 
     assert session.session1_synthesis == synth_data
     assert session.session1_synthesis["summary"] == "Global synthesis text"
+
+
+# ---------------------------------------------------------------------------
+# TA.3 — REQ-5: primary_area must have DB-level server_default='not_set'
+# ---------------------------------------------------------------------------
+
+async def test_primary_area_server_default_at_db_level(test_db: AsyncSession):
+    """
+    TA.3: Row inserted via raw SQL without primary_area gets 'not_set' from DB server_default.
+
+    Bypasses SQLAlchemy ORM defaults to verify the server_default constraint.
+    """
+    from sqlalchemy import text
+    from app.models.lead import Lead
+
+    lead = Lead(
+        full_name="Default Tester",
+        email="default_area@example.com",
+        company_name="DefaultCo",
+        sector="tecnologia",
+        company_size="1_10",
+        respondent_role="ceo_fundador",
+        ai_maturity="exploracion",
+        ai_goals=["automatizar_procesos"],
+        urgency="media",
+        commitment="agendar",
+        triage_payload={},
+        triage_score=50,
+        triage_bucket="review",
+        status="accepted",
+    )
+    test_db.add(lead)
+    await test_db.flush()
+
+    # Insert via raw SQL without specifying primary_area — DB must supply 'not_set'
+    await test_db.execute(
+        text(
+            "INSERT INTO intake_sessions (id, lead_id, state, blocks_completed, areas_involved, created_at) "
+            "VALUES (:id, :lead_id, 'in_progress', '[]', '[]', datetime('now'))"
+        ),
+        {"id": "test-server-default-id-001", "lead_id": lead.id},
+    )
+    await test_db.commit()
+
+    result = await test_db.execute(
+        text("SELECT primary_area FROM intake_sessions WHERE id = :id"),
+        {"id": "test-server-default-id-001"},
+    )
+    row = result.fetchone()
+    assert row is not None
+    assert row[0] == "not_set", (
+        f"Expected DB server_default 'not_set' for primary_area, got {row[0]!r}. "
+        "Add server_default='not_set' to the IntakeSession.primary_area column + Alembic migration."
+    )

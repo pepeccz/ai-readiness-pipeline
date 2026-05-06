@@ -106,6 +106,63 @@ function validateQuestion(q: Question, value: unknown): string | null {
 }
 
 // ---------------------------------------------------------------------------
+// expandCompositePayload — REQ-1 / ADR-1
+// ---------------------------------------------------------------------------
+//
+// Expands a persisted payload (which may have composite keys stored as nested
+// objects) into a flat map suitable for form state initialisation.
+//
+// Algorithm (two-pass per ADR-1):
+//   Pass 1 — for each key K in payload:
+//     if questions has q with id===K AND q.type==='composite' AND payload[K] is
+//     a plain non-null object → spread its entries into result (omit parent key)
+//     else → result[K] = payload[K]   (flat path — idempotent for already-flat)
+//   Pass 2 — overlay any remaining root-level keys NOT handled in pass 1
+//     (covers _other_text siblings that must win over nested duplicates)
+//
+// Returns the merged flat result.
+//
+export function expandCompositePayload(
+  payload: FormValues,
+  questions: Question[],
+): FormValues {
+  const result: FormValues = {}
+
+  // Track which keys were consumed as composite parents (to skip in pass 2)
+  const compositeParentKeys = new Set<string>()
+
+  // Pass 1: composite expansion
+  for (const [k, v] of Object.entries(payload)) {
+    const q = questions.find((q) => q.id === k)
+    if (
+      q?.type === 'composite' &&
+      v !== null &&
+      v !== undefined &&
+      typeof v === 'object' &&
+      !Array.isArray(v)
+    ) {
+      // Expand sub-fields into result (flat)
+      for (const [subKey, subVal] of Object.entries(v as Record<string, unknown>)) {
+        result[subKey] = subVal
+      }
+      compositeParentKeys.add(k)
+    } else {
+      result[k] = v
+    }
+  }
+
+  // Pass 2: overlay remaining root-level keys from payload that weren't composite parents
+  // This ensures _other_text siblings and any non-composite keys win over expansion results
+  for (const [k, v] of Object.entries(payload)) {
+    if (!compositeParentKeys.has(k)) {
+      result[k] = v
+    }
+  }
+
+  return result
+}
+
+// ---------------------------------------------------------------------------
 // getAnsweredQuestions — REQ-1
 // ---------------------------------------------------------------------------
 //

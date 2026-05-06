@@ -1,6 +1,7 @@
 /**
  * TB.3 — REQ-2: useBlockSubmit optimistic update, rollback, and invalidation
  * T2.1 — REQ-2: useBlockSubmit.onSuccess invalidates intakeKeys.blockAnalysis(leadId, blockId)
+ * B-1  — REQ-2: useBlockSubmit skipAnalysis flag forwarded in POST body
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -54,7 +55,7 @@ describe('useBlockSubmit — REQ-2: optimistic update + rollback + invalidation'
     })
 
     await act(async () => {
-      result.current.mutate({ answer: 'yes' })
+      result.current.mutate({ payload: { answer: 'yes' } })
       await new Promise((r) => setTimeout(r, 10))
     })
 
@@ -76,7 +77,7 @@ describe('useBlockSubmit — REQ-2: optimistic update + rollback + invalidation'
     })
 
     await act(async () => {
-      result.current.mutate({ answer: 'yes' })
+      result.current.mutate({ payload: { answer: 'yes' } })
       await new Promise((r) => setTimeout(r, 10))
     })
 
@@ -93,7 +94,7 @@ describe('useBlockSubmit — REQ-2: optimistic update + rollback + invalidation'
     })
 
     await act(async () => {
-      result.current.mutate({ answer: 'yes' })
+      result.current.mutate({ payload: { answer: 'yes' } })
       await new Promise((r) => setTimeout(r, 100))
     })
 
@@ -111,7 +112,7 @@ describe('useBlockSubmit — REQ-2: optimistic update + rollback + invalidation'
     })
 
     await act(async () => {
-      result.current.mutate({ answer: 'yes' })
+      result.current.mutate({ payload: { answer: 'yes' } })
       await new Promise((r) => setTimeout(r, 50))
     })
 
@@ -119,6 +120,43 @@ describe('useBlockSubmit — REQ-2: optimistic update + rollback + invalidation'
       expect.objectContaining({
         queryKey: intakeKeys.state('lead-1'),
       })
+    )
+  })
+
+  // B-1: skipAnalysis forwarded as skip_analysis in POST body
+  it('B-1: mutate with skipAnalysis=true sends skip_analysis:true in POST body', async () => {
+    const { result } = renderHook(() => useBlockSubmit('lead-1', 'block-a'), {
+      wrapper: makeWrapper(queryClient),
+    })
+
+    await act(async () => {
+      result.current.mutate({ payload: { answer: 'yes' }, skipAnalysis: true })
+      await new Promise((r) => setTimeout(r, 50))
+    })
+
+    expect(mockFetchJson).toHaveBeenCalledWith(
+      expect.stringContaining('/submit'),
+      expect.objectContaining({
+        body: expect.stringContaining('"skip_analysis":true'),
+      }),
+    )
+  })
+
+  it('B-1: mutate without skipAnalysis sends skip_analysis:false in POST body', async () => {
+    const { result } = renderHook(() => useBlockSubmit('lead-1', 'block-a'), {
+      wrapper: makeWrapper(queryClient),
+    })
+
+    await act(async () => {
+      result.current.mutate({ payload: { answer: 'yes' } })
+      await new Promise((r) => setTimeout(r, 50))
+    })
+
+    expect(mockFetchJson).toHaveBeenCalledWith(
+      expect.stringContaining('/submit'),
+      expect.objectContaining({
+        body: expect.stringContaining('"skip_analysis":false'),
+      }),
     )
   })
 
@@ -130,7 +168,7 @@ describe('useBlockSubmit — REQ-2: optimistic update + rollback + invalidation'
     })
 
     await act(async () => {
-      result.current.mutate({ answer: 'yes' })
+      result.current.mutate({ payload: { answer: 'yes' } })
       await new Promise((r) => setTimeout(r, 50))
     })
 

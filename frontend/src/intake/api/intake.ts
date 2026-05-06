@@ -45,6 +45,7 @@ export interface AreaSelectionPayload {
 
 export interface BlockSubmitPayload {
   payload: FormValues
+  skipAnalysis?: boolean
 }
 
 export interface BlockSubmitResponse {
@@ -212,10 +213,10 @@ export function useSession1Close(leadId: string) {
 export function useBlockSubmit(leadId: string, blockId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (payload: FormValues) =>
+    mutationFn: ({ payload, skipAnalysis }: BlockSubmitPayload) =>
       fetchJson<BlockSubmitResponse>(`/intake/${leadId}/blocks/${blockId}/submit`, {
         method: 'POST',
-        body: JSON.stringify({ payload }),
+        body: JSON.stringify({ payload, skip_analysis: skipAnalysis ?? false }),
       }),
     onMutate: async () => {
       // Cancel in-flight queries to avoid overwriting optimistic update

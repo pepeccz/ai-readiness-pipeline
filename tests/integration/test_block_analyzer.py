@@ -190,12 +190,13 @@ class TestBlockAnalyzerJsonExtraction:
         await test_db.refresh(ba)
         assert ba.status == "ready"
 
-    async def test_malformed_llm_json_sets_status_failed(self, test_db):
-        """A-2: when LLM returns unparseable text, status=failed (no JSONDecodeError escape)."""
+    async def test_malformed_llm_json_sets_status_ready(self, test_db):
+        """REQ-2: when LLM returns unparseable text, status=ready (not failed) — partial output preserved."""
         lead, session, ba = await _make_lead_and_session(test_db)
 
+        raw_text = "I'm sorry, I cannot produce JSON today."
         mock_message = MagicMock()
-        mock_message.content = [MagicMock(text="I'm sorry, I cannot produce JSON today.")]
+        mock_message.content = [MagicMock(text=raw_text)]
 
         with patch("app.services.ai_analysis.block_analyzer.anthropic") as mock_anthropic:
             mock_client = MagicMock()
@@ -207,10 +208,12 @@ class TestBlockAnalyzerJsonExtraction:
             await analyzer.analyze(block_analysis_id=ba.id, block_id="block-1-strategic")
 
         await test_db.refresh(ba)
-        assert ba.status == "failed"
+        assert ba.status == "ready"
+        assert ba.llm_output is not None
+        assert "raw" in ba.llm_output
 
     async def test_malformed_llm_json_logs_raw_payload(self, test_db):
-        """A-2: raw LLM payload is logged at ERROR level on extraction failure."""
+        """REQ-2: raw LLM payload is logged at WARNING level on extraction failure."""
         import structlog.testing
 
         lead, session, ba = await _make_lead_and_session(test_db)
@@ -228,12 +231,12 @@ class TestBlockAnalyzerJsonExtraction:
                 analyzer = BlockAnalyzer(db=test_db)
                 await analyzer.analyze(block_analysis_id=ba.id, block_id="block-1-strategic")
 
-        error_events = [e for e in captured if e.get("log_level") == "error"]
+        warning_events = [e for e in captured if e.get("log_level") in ("warning", "warn")]
         raw_logged = any(
-            bad_raw in str(e.get("raw_llm_output", ""))
-            for e in error_events
+            bad_raw in str(e.get("raw_text", ""))
+            for e in warning_events
         )
-        assert raw_logged, f"Expected raw payload in error log. Got: {error_events}"
+        assert raw_logged, f"Expected raw payload in warning log. Got: {captured}"
 
 
 class TestBlockAnalyzerModelSelection:

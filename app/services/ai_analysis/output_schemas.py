@@ -4,14 +4,15 @@ app/services/ai_analysis/output_schemas — Pydantic v2 output schemas for LLM r
 Common schema (all blocks):
   synthesis, contradictions, follow_ups, preliminary_hypothesis, block_specific_outputs
 
-Block-specific schemas add additional validated fields.
+Block-specific schemas add additional validated fields — ALL domain fields are Optional
+so that partial LLM responses do not fail the pipeline (REQ-2 / ADR-2).
 """
 
 from __future__ import annotations
 
 from typing import Annotated, Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 # ---------------------------------------------------------------------------
@@ -35,9 +36,14 @@ class FollowUp(BaseModel):
 # ---------------------------------------------------------------------------
 
 class BlockAnalysisOutput(BaseModel):
-    """Common output schema for all block analyses."""
+    """Common output schema for all block analyses.
 
-    synthesis: str = Field(..., min_length=10)
+    extra='allow' keeps unexpected LLM keys rather than rejecting them (ADR-2).
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    synthesis: Optional[str] = None
     contradictions: list[Contradiction] = Field(default_factory=list)
     follow_ups: list[FollowUp] = Field(default_factory=list)
     preliminary_hypothesis: Optional[str] = None
@@ -70,8 +76,8 @@ ProcessApproach = Literal[
 class ProcessFullOutput(BlockAnalysisOutput):
     """Block-2 process (full variant) output."""
 
-    recommended_approach: ProcessApproach
-    ia_fit_score: Annotated[int, Field(ge=0, le=100)]
+    recommended_approach: Optional[ProcessApproach] = None
+    ia_fit_score: Optional[int] = None
 
 
 # ---------------------------------------------------------------------------
@@ -81,8 +87,8 @@ class ProcessFullOutput(BlockAnalysisOutput):
 class ProcessReducedOutput(BlockAnalysisOutput):
     """Block-2 process (reduced variant) output — same as full."""
 
-    recommended_approach: ProcessApproach
-    ia_fit_score: Annotated[int, Field(ge=0, le=100)]
+    recommended_approach: Optional[ProcessApproach] = None
+    ia_fit_score: Optional[int] = None
 
 
 # ---------------------------------------------------------------------------
@@ -102,7 +108,7 @@ CrossAreaApproach = Literal[
 class ProcessCrossAreaOutput(BlockAnalysisOutput):
     """Block-2 cross-area output."""
 
-    recommended_approach: CrossAreaApproach
+    recommended_approach: Optional[CrossAreaApproach] = None
 
 
 # ---------------------------------------------------------------------------
@@ -117,7 +123,7 @@ class DataReadiness(BaseModel):
 class DataOutput(BlockAnalysisOutput):
     """Block-3 data output."""
 
-    data_readiness: DataReadiness | dict
+    data_readiness: Optional[DataReadiness | dict] = None
     compliance_flags: list[str] = Field(default_factory=list)
 
 
@@ -131,7 +137,7 @@ ExecutionModel = Literal["saas_only", "partner_managed", "hybrid", "in_house"]
 class TalentOutput(BlockAnalysisOutput):
     """Block-4 talent output."""
 
-    execution_model_recommended: ExecutionModel
+    execution_model_recommended: Optional[ExecutionModel] = None
 
 
 # ---------------------------------------------------------------------------
@@ -155,7 +161,7 @@ CompliancePhase = Literal["must_resolve_first", "parallel_to_pilot", "post_pilot
 class ComplianceOutput(BlockAnalysisOutput):
     """Block-6 compliance output."""
 
-    recommended_compliance_phase: CompliancePhase
+    recommended_compliance_phase: Optional[CompliancePhase] = None
     obligations_triggered: list[str] = Field(default_factory=list)
 
 
@@ -166,7 +172,7 @@ class ComplianceOutput(BlockAnalysisOutput):
 class GovernanceOutput(BlockAnalysisOutput):
     """Block-7 governance output."""
 
-    shadow_ai_risk: Literal["low", "medium", "high"]
+    shadow_ai_risk: Optional[Literal["low", "medium", "high"]] = None
     first_governance_deliverables: list[str] = Field(default_factory=list)
 
 

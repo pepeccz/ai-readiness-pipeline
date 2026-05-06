@@ -5,10 +5,12 @@ app/services/ai_analysis/block_analyzer — Orchestrates LLM analysis per block.
   1. Load BlockAnalysis + payload from DB
   2. Build prompt with prompt_builder (cached system + schema)
   3. Call Anthropic SDK with correct model per BLOCK_LLM_MODEL
-  4. Parse JSON output → validate with Pydantic output schema
-  5. Apply 5-layer llm_filters
-  6. Persist BlockAnalysis(status=ready, llm_output) + Suggestion rows (max 3)
-  7. On LLM error → status=failed + structlog
+  4. Parse JSON output → validate with Pydantic output schema (extra='allow', all fields Optional)
+  5. Track declared fields missing from LLM response → emit llm_output_field_missing counter + warning
+  6. Apply 5-layer llm_filters
+  7. Persist BlockAnalysis(status=ready, llm_output) + Suggestion rows (max 3)
+  8. On catastrophic parse failure → status=ready, llm_output={"raw": text}, llm_output_unparseable++
+  9. On LLM SDK error → status=failed + structlog
 
 Structured log events:
   block_analysis_started, block_analysis_ready, block_analysis_failed
@@ -21,9 +23,11 @@ from datetime import datetime, timezone
 
 import anthropic
 import structlog
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import app.observability as obs
 from app.models.block_analysis import BlockAnalysis
 from app.models.suggestion import Suggestion
 from app.services.ai_analysis.json_extractor import JsonExtractionError, extract_json
@@ -54,6 +58,9 @@ DEFAULT_MODEL = "claude-haiku-4-5"
 MAX_TOKENS = 1500
 LLM_TIMEOUT = 15.0  # seconds
 
+# Fields that are part of the base schema and are NOT domain-specific
+_BASE_FIELD_NAMES = frozenset(BlockAnalysisOutput.model_fields.keys())
+
 
 def _get_block_schema_for_id(block_id: str) -> dict:
     """Load block schema from YAML or return minimal dict."""
@@ -74,6 +81,34 @@ def _get_block_schema_for_id(block_id: str) -> dict:
     return {"id": block_id, "title": block_id, "questions": []}
 
 
+def _domain_fields_for_schema(schema_class: type[BlockAnalysisOutput]) -> frozenset[str]:
+    """Return field names declared on a subclass that are NOT part of the base schema."""
+    return frozenset(schema_class.model_fields.keys()) - _BASE_FIELD_NAMES
+
+
+def _emit_missing_field_counters(
+    block_id: str,
+    schema_class: type[BlockAnalysisOutput],
+    llm_data: dict,
+) -> None:
+    """
+    For each declared domain field absent from llm_data, emit a warning log and
+    increment the llm_output_field_missing counter.
+    """
+    domain_fields = _domain_fields_for_schema(schema_class)
+    for field_name in sorted(domain_fields):
+        if field_name not in llm_data:
+            logger.warning(
+                "llm_output_field_missing",
+                block_id=block_id,
+                field=field_name,
+            )
+            obs.increment(
+                "llm_output_field_missing",
+                tags={"block_id": block_id, "field": field_name},
+            )
+
+
 class BlockAnalyzer:
     """Orchestrates LLM block analysis."""
 
@@ -85,7 +120,8 @@ class BlockAnalyzer:
         """
         Run LLM analysis for a block and persist results.
 
-        Updates BlockAnalysis.status to "ready" or "failed".
+        Updates BlockAnalysis.status to "ready" (always, even on partial output).
+        Only falls back to "failed" on LLM SDK errors (network, auth, etc.).
         """
         start_ts = time.monotonic()
 
@@ -124,22 +160,60 @@ class BlockAnalyzer:
 
             raw_text = response.content[0].text
 
-            # Parse JSON output — robust extraction with code-fence stripping
+            # ----------------------------------------------------------------
+            # Parse JSON — handle extraction failure gracefully (REQ-2)
+            # ----------------------------------------------------------------
             try:
                 llm_data = extract_json(raw_text)
-            except JsonExtractionError:
-                logger.error(
-                    "block_analysis_json_extraction_failed",
+            except (JsonExtractionError, Exception) as exc:
+                # Catastrophic: LLM returned non-JSON text
+                logger.warning(
+                    "llm_output_unparseable",
                     block_analysis_id=block_analysis_id,
-                    raw_llm_output=raw_text,
+                    block_id=block_id,
+                    raw_text=raw_text,
+                    error=str(exc),
+                    exc_info=True,
                 )
-                raise
+                obs.increment("llm_output_unparseable")
+                ba.llm_output = {"raw": raw_text}
+                ba.llm_model_used = model
+                ba.status = "ready"
+                ba.generated_at = datetime.now(tz=timezone.utc)
+                await self.db.commit()
+                return
 
-            # Validate with Pydantic schema
+            # ----------------------------------------------------------------
+            # Validate with Pydantic schema (all fields Optional → rarely fails)
+            # ----------------------------------------------------------------
             output_schema_class = get_output_schema(block_id)
-            validated: BlockAnalysisOutput = output_schema_class(**llm_data)
+            try:
+                validated: BlockAnalysisOutput = output_schema_class.model_validate(llm_data)
+            except ValidationError as exc:
+                # Very rare: hard type mismatch even with Optional fields
+                logger.warning(
+                    "llm_output_validation_error",
+                    block_analysis_id=block_analysis_id,
+                    block_id=block_id,
+                    error=str(exc),
+                    exc_info=True,
+                )
+                obs.increment("llm_output_unparseable")
+                ba.llm_output = {"raw": raw_text}
+                ba.llm_model_used = model
+                ba.status = "ready"
+                ba.generated_at = datetime.now(tz=timezone.utc)
+                await self.db.commit()
+                return
 
+            # ----------------------------------------------------------------
+            # Emit per-field missing counters (domain fields only)
+            # ----------------------------------------------------------------
+            _emit_missing_field_counters(block_id, output_schema_class, llm_data)
+
+            # ----------------------------------------------------------------
             # Extract follow_ups for filtering
+            # ----------------------------------------------------------------
             follow_ups_raw = [
                 {
                     "text": fu.text,
@@ -147,7 +221,7 @@ class BlockAnalyzer:
                     "priority": fu.priority,
                     "confidence": fu.confidence,
                 }
-                for fu in validated.follow_ups
+                for fu in (validated.follow_ups or [])
             ]
 
             # Apply 5-layer filters
@@ -157,13 +231,15 @@ class BlockAnalyzer:
             }
             filtered_follow_ups = apply_all_filters(follow_ups_raw, context=context)
 
+            # ----------------------------------------------------------------
             # Persist BlockAnalysis
+            # ----------------------------------------------------------------
             ba.llm_output = {
                 "synthesis": validated.synthesis,
-                "contradictions": [c.model_dump() for c in validated.contradictions],
+                "contradictions": [c.model_dump() for c in (validated.contradictions or [])],
                 "follow_ups": [
                     {"text": fu.text, "rationale": fu.rationale, "priority": fu.priority, "confidence": fu.confidence}
-                    for fu in validated.follow_ups
+                    for fu in (validated.follow_ups or [])
                 ],
                 "preliminary_hypothesis": validated.preliminary_hypothesis,
                 "block_specific_outputs": validated.block_specific_outputs,

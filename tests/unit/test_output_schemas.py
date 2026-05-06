@@ -40,11 +40,12 @@ class TestBaseBlockAnalysisOutput:
         obj = BlockAnalysisOutput(**VALID_BASE)
         assert obj.synthesis.startswith("La empresa")
 
-    def test_missing_synthesis_raises(self):
+    def test_missing_synthesis_is_none(self):
+        """REQ-2: synthesis is now Optional — missing it yields None, not ValidationError."""
         data = {**VALID_BASE}
         del data["synthesis"]
-        with pytest.raises(ValidationError):
-            BlockAnalysisOutput(**data)
+        obj = BlockAnalysisOutput(**data)
+        assert obj.synthesis is None
 
     def test_follow_up_confidence_range(self):
         data = {**VALID_BASE, "follow_ups": [
@@ -81,14 +82,15 @@ class TestProcessFullOutput:
         with pytest.raises(ValidationError):
             ProcessFullOutput(**data)
 
-    def test_ia_fit_score_out_of_range(self):
+    def test_ia_fit_score_out_of_range_accepted(self):
+        """REQ-2: ia_fit_score is now Optional[int] without range constraint — relaxed for partial LLM tolerance."""
         data = {
             **VALID_BASE,
             "recommended_approach": "ai_full",
             "ia_fit_score": 150,
         }
-        with pytest.raises(ValidationError):
-            ProcessFullOutput(**data)
+        obj = ProcessFullOutput(**data)
+        assert obj.ia_fit_score == 150
 
 
 class TestDataOutput:

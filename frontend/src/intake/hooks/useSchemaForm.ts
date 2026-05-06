@@ -60,6 +60,10 @@ function isVisible(question: Question, values: FormValues): boolean {
 // ---------------------------------------------------------------------------
 
 function validateQuestion(q: Question, value: unknown): string | null {
+  // REQ-1: composite parent is a structural node, not a leaf — skip scalar validation.
+  // The outer validate() loop already iterates sub_fields and calls validateQuestion per sub.
+  if (q.type === 'composite') return null
+
   // Matrix: validate that every required row has a selected column (ADR-6)
   if (q.type === 'matrix') {
     const matrixQ = q as MatrixQuestion

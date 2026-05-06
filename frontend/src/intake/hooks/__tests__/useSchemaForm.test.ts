@@ -35,6 +35,73 @@ function makeMatrixSchema(): BlockSchema {
   }
 }
 
+// ---------------------------------------------------------------------------
+// T1 — REQ-1: validateQuestion returns null for composite parent
+// Strict TDD — RED before IMPL
+// ---------------------------------------------------------------------------
+
+describe('useSchemaForm — composite parent validation (REQ-1)', () => {
+  function makeCompositeValidationSchema(): BlockSchema {
+    return {
+      id: 'block-composite-val',
+      layer: 'core',
+      order: 1,
+      estimated_minutes: 5,
+      title: 'Composite val block',
+      questions: [
+        {
+          id: 'q1_1_objective',
+          type: 'composite',
+          label: 'Objetivo estratégico',
+          required: true,
+          sub_fields: [
+            { id: 'q1_1_outcome', type: 'text', label: 'Resultado', required: true },
+            { id: 'q1_1_metric', type: 'text', label: 'Métrica', required: true },
+            { id: 'q1_1_horizon', type: 'text', label: 'Horizonte', required: true },
+          ],
+        } as any,
+      ],
+    }
+  }
+
+  it('validate() returns true when composite parent is required:true AND all sub-fields are filled', () => {
+    const { result } = renderHook(() => useSchemaForm(makeCompositeValidationSchema()))
+
+    act(() => {
+      result.current.setValue('q1_1_outcome', 'Aumentar ingresos')
+      result.current.setValue('q1_1_metric', 'Revenue ARR')
+      result.current.setValue('q1_1_horizon', '12 meses')
+    })
+
+    let valid: boolean
+    act(() => {
+      valid = result.current.validate()
+    })
+
+    expect(valid!).toBe(true)
+    expect(result.current.errors['q1_1_objective']).toBeFalsy()
+  })
+
+  it('validate() returns false when composite sub-fields are missing', () => {
+    const { result } = renderHook(() => useSchemaForm(makeCompositeValidationSchema()))
+    // Only one sub-field filled
+
+    act(() => {
+      result.current.setValue('q1_1_outcome', 'Aumentar ingresos')
+    })
+
+    let valid: boolean
+    act(() => {
+      valid = result.current.validate()
+    })
+
+    expect(valid!).toBe(false)
+    expect(result.current.errors['q1_1_objective']).toBeFalsy() // parent key has no error
+    expect(result.current.errors['q1_1_metric']).toBeTruthy()    // sub-field error
+    expect(result.current.errors['q1_1_horizon']).toBeTruthy()   // sub-field error
+  })
+})
+
 describe('useSchemaForm — matrix question type (REQ-9)', () => {
   it('validate() returns valid when all required rows have a selection', () => {
     const { result } = renderHook(() => useSchemaForm(makeMatrixSchema()))

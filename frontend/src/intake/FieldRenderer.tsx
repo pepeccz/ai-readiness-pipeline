@@ -11,6 +11,9 @@
  *
  * show_if evaluation is handled by the parent (getVisibleQuestions).
  * This component always renders what it receives.
+ *
+ * REQ-2: each field wrapper carries data-error="true" when the field has an error,
+ * so BlockRenderer can scroll to the first errored field via querySelector.
  */
 
 import type { Question, FormValues, FormErrors, TextQuestion } from './types/schema'
@@ -30,87 +33,98 @@ interface FieldRendererProps {
 export function FieldRenderer({ question, values, errors, onChange }: FieldRendererProps) {
   const error = errors[question.id]
   const value = values[question.id]
+  // REQ-2: data-error attribute for scroll-to-first-error
+  const dataError = error ? ('true' as const) : undefined
 
   switch (question.type) {
     case 'single_choice':
       return (
-        <FormField
-          label={question.label}
-          error={error}
-          required={question.required}
-        >
-          {/* REQ-3: pass otherValue/onOtherChange; companion key is ${q.id}_other_text.
-              Switching away from "otro" calls onChange which hides the input; the
-              onOtherChange('') call below removes the companion key from payload. */}
-          <RadioGroup
-            name={question.id}
-            options={question.options.map((o) => ({ value: o.value, label: o.label }))}
-            value={(value as string) ?? ''}
-            onChange={(v) => {
-              onChange(question.id, v)
-              // If switching away from "otro", clear companion text
-              const prev = value as string
-              const OTHER_VALS = ['otro', 'otros', 'other']
-              if (OTHER_VALS.includes(prev) && !OTHER_VALS.includes(v)) {
-                onChange(`${question.id}_other_text`, undefined)
-              }
-            }}
-            otherValue={(values[`${question.id}_other_text`] as string) ?? ''}
-            onOtherChange={(v) => {
-              if (v === '') {
-                onChange(`${question.id}_other_text`, undefined)
-              } else {
-                onChange(`${question.id}_other_text`, v)
-              }
-            }}
-          />
-        </FormField>
+        <div data-error={dataError}>
+          <FormField
+            label={question.label}
+            error={error}
+            required={question.required}
+          >
+            {/* REQ-3: pass otherValue/onOtherChange; companion key is ${q.id}_other_text.
+                Switching away from "otro" calls onChange which hides the input; the
+                onOtherChange('') call below removes the companion key from payload. */}
+            <RadioGroup
+              name={question.id}
+              options={question.options.map((o) => ({ value: o.value, label: o.label }))}
+              value={(value as string) ?? ''}
+              onChange={(v) => {
+                onChange(question.id, v)
+                // If switching away from "otro", clear companion text
+                const prev = value as string
+                const OTHER_VALS = ['otro', 'otros', 'other']
+                if (OTHER_VALS.includes(prev) && !OTHER_VALS.includes(v)) {
+                  onChange(`${question.id}_other_text`, undefined)
+                }
+              }}
+              otherValue={(values[`${question.id}_other_text`] as string) ?? ''}
+              onOtherChange={(v) => {
+                if (v === '') {
+                  onChange(`${question.id}_other_text`, undefined)
+                } else {
+                  onChange(`${question.id}_other_text`, v)
+                }
+              }}
+            />
+          </FormField>
+        </div>
       )
 
     case 'multi_choice':
       return (
-        <FormField
-          label={question.label}
-          error={error}
-          required={question.required}
-        >
-          {/* REQ-2: pass otherValue/onOtherChange; companion key is ${q.id}_other_text.
-              On deselect of "otro", MultiSelect calls onOtherChange('') which removes the key. */}
-          <MultiSelect
-            options={question.options.map((o) => ({ value: o.value, label: o.label, is_other: (o as any).is_other }))}
-            selected={(value as string[]) ?? []}
-            onChange={(v) => onChange(question.id, v)}
-            otherValue={(values[`${question.id}_other_text`] as string) ?? ''}
-            onOtherChange={(v) => {
-              if (v === '') {
-                // Remove the companion key by setting undefined signals removal
-                onChange(`${question.id}_other_text`, undefined)
-              } else {
-                onChange(`${question.id}_other_text`, v)
-              }
-            }}
-          />
-        </FormField>
+        <div data-error={dataError}>
+          <FormField
+            label={question.label}
+            error={error}
+            required={question.required}
+          >
+            {/* REQ-2: pass otherValue/onOtherChange; companion key is ${q.id}_other_text.
+                On deselect of "otro", MultiSelect calls onOtherChange('') which removes the key. */}
+            <MultiSelect
+              options={question.options.map((o) => ({ value: o.value, label: o.label, is_other: (o as any).is_other }))}
+              selected={(value as string[]) ?? []}
+              onChange={(v) => onChange(question.id, v)}
+              otherValue={(values[`${question.id}_other_text`] as string) ?? ''}
+              onOtherChange={(v) => {
+                if (v === '') {
+                  // Remove the companion key by setting undefined signals removal
+                  onChange(`${question.id}_other_text`, undefined)
+                } else {
+                  onChange(`${question.id}_other_text`, v)
+                }
+              }}
+            />
+          </FormField>
+        </div>
       )
 
     case 'textarea':
       return (
-        <FormField
-          label={question.label}
-          error={error}
-          required={question.required}
-        >
-          <TextArea
-            value={(value as string) ?? ''}
-            onChange={(v) => onChange(question.id, v)}
-            placeholder={question.placeholder}
-          />
-        </FormField>
+        <div data-error={dataError}>
+          <FormField
+            label={question.label}
+            error={error}
+            required={question.required}
+          >
+            <TextArea
+              value={(value as string) ?? ''}
+              onChange={(v) => onChange(question.id, v)}
+              placeholder={question.placeholder}
+            />
+          </FormField>
+        </div>
       )
 
     case 'composite':
       return (
-        <fieldset className="border border-neutral-200 rounded-lg p-4 space-y-4">
+        <fieldset
+          data-error={dataError}
+          className="border border-neutral-200 rounded-lg p-4 space-y-4"
+        >
           <legend className="text-sm font-semibold text-neutral-800 px-2">{question.label}</legend>
           {question.helper_text && (
             <p className="text-xs text-neutral-500">{question.helper_text}</p>
@@ -129,7 +143,7 @@ export function FieldRenderer({ question, values, errors, onChange }: FieldRende
 
     case 'consent':
       return (
-        <div className="flex items-start gap-2">
+        <div data-error={dataError} className="flex items-start gap-2">
           <input
             type="checkbox"
             id={question.id}
@@ -156,18 +170,20 @@ export function FieldRenderer({ question, values, errors, onChange }: FieldRende
     default: {
       const q = question as TextQuestion
       return (
-        <FormField
-          label={q.label}
-          error={error}
-          required={q.required}
-        >
-          <TextInput
-            type={q.type === 'email' ? 'email' : 'text'}
-            value={(value as string) ?? ''}
-            onChange={(v) => onChange(q.id, v)}
-            placeholder={q.placeholder}
-          />
-        </FormField>
+        <div data-error={dataError}>
+          <FormField
+            label={q.label}
+            error={error}
+            required={q.required}
+          >
+            <TextInput
+              type={q.type === 'email' ? 'email' : 'text'}
+              value={(value as string) ?? ''}
+              onChange={(v) => onChange(q.id, v)}
+              placeholder={q.placeholder}
+            />
+          </FormField>
+        </div>
       )
     }
   }

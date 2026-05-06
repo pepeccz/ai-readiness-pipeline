@@ -15,7 +15,7 @@
  * canonical React idiom for "this is a different form instance".
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { BlockSchema } from './types/schema'
 import { FieldRenderer } from './FieldRenderer'
 import { useSchemaForm, getAnsweredQuestions, expandCompositePayload } from './hooks/useSchemaForm'
@@ -98,6 +98,10 @@ function BlockForm({
   // REQ-4: local submit error state for banner
   const [localError, setLocalError] = useState<string | null>(null)
 
+  // REQ-2: local validation error banner (count of fields) + form ref for scroll
+  const [localValidationError, setLocalValidationError] = useState<{ count: number } | null>(null)
+  const formRef = useRef<HTMLFormElement>(null)
+
   // REQ-6: read-only mode when block is submitted; user can unlock via "Editar respuestas"
   const [isReadOnly, setIsReadOnly] = useState(source === 'submitted')
 
@@ -127,10 +131,26 @@ function BlockForm({
   // REQ-1: use shared helper so composite questions count correctly
   const answeredCount = getAnsweredQuestions({ ...schema, questions: visibleQuestions }, form.values).length
 
+  // REQ-2: clear validation banner when user edits (isDirty flips)
+  useEffect(() => {
+    if (form.isDirty) setLocalValidationError(null)
+  }, [form.isDirty])
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const valid = form.validate()
-    if (!valid) return
+    if (!valid) {
+      // Count required visible questions that are not filled
+      // (form.errors is stale at this point — state updates are async)
+      const visibleReqs = form.getVisibleQuestions().filter((q) => q.required && q.type !== 'composite')
+      const count = visibleReqs.length > 0 ? visibleReqs.length : 1
+      setLocalValidationError({ count })
+      // Scroll first errored field into view
+      requestAnimationFrame(() => {
+        formRef.current?.querySelector('[data-error="true"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      })
+      return
+    }
 
     const payload = form.buildPayload()
     try {
@@ -214,6 +234,17 @@ function BlockForm({
         )}
       </div>
 
+      {/* REQ-2: validation error banner — top of form, cleared on next edit */}
+      {localValidationError && (
+        <div
+          role="alert"
+          aria-label="campos requeridos"
+          className="rounded-md bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-700"
+        >
+          Hay {localValidationError.count} {localValidationError.count === 1 ? 'campo requerido sin completar' : 'campos requeridos sin completar'}
+        </div>
+      )}
+
       {/* REQ-4: submit error banner — top of form, clears on next successful submit */}
       {localError && (
         <div
@@ -225,7 +256,7 @@ function BlockForm({
       )}
 
       {/* Questions */}
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
         {visibleQuestions.map((question) => (
           <FieldRenderer
             key={question.id}
@@ -239,13 +270,17 @@ function BlockForm({
         {/* Submit — hidden when read-only */}
         {!isReadOnly && (
           <div className="flex justify-end pt-4 border-t">
-            <button
-              type="submit"
-              disabled={submitMutation.isPending}
-              className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {submitMutation.isPending ? 'Guardando...' : 'Guardar bloque'}
-            </button>
+            <div className="flex flex-col items-end gap-1">
+              <button
+                type="submit"
+                disabled={submitMutation.isPending}
+                aria-label="Cerrar bloque y generar análisis IA"
+                className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {submitMutation.isPending ? 'Guardando...' : 'Cerrar bloque'}
+              </button>
+              <p className="text-xs text-neutral-500">Genera análisis IA y habilita cierre de sesión</p>
+            </div>
           </div>
         )}
 

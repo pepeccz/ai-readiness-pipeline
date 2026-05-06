@@ -71,7 +71,7 @@ describe('BlockRenderer — REQ-4: submit error banner', () => {
 
     render(<BlockRenderer leadId="lead-1" schema={schema} />)
 
-    const submitBtn = screen.getByRole('button', { name: /guardar bloque/i })
+    const submitBtn = screen.getByRole('button', { name: /cerrar bloque/i })
 
     await act(async () => {
       fireEvent.click(submitBtn)
@@ -89,7 +89,7 @@ describe('BlockRenderer — REQ-4: submit error banner', () => {
 
     render(<BlockRenderer leadId="lead-1" schema={schema} />)
 
-    const submitBtn = screen.getByRole('button', { name: /guardar bloque/i })
+    const submitBtn = screen.getByRole('button', { name: /cerrar bloque/i })
 
     await act(async () => {
       fireEvent.click(submitBtn)
@@ -97,7 +97,7 @@ describe('BlockRenderer — REQ-4: submit error banner', () => {
     })
 
     // Submit button must be re-enabled (not disabled)
-    expect(screen.getByRole('button', { name: /guardar bloque/i })).not.toBeDisabled()
+    expect(screen.getByRole('button', { name: /cerrar bloque/i })).not.toBeDisabled()
   })
 
   it('clears error banner after a subsequent successful submit', async () => {
@@ -110,7 +110,7 @@ describe('BlockRenderer — REQ-4: submit error banner', () => {
 
     render(<BlockRenderer leadId="lead-1" schema={schema} />)
 
-    const submitBtn = screen.getByRole('button', { name: /guardar bloque/i })
+    const submitBtn = screen.getByRole('button', { name: /cerrar bloque/i })
 
     // First submit — fails
     await act(async () => {
@@ -122,11 +122,103 @@ describe('BlockRenderer — REQ-4: submit error banner', () => {
 
     // Second submit — succeeds → error should clear
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /guardar bloque/i }))
+      fireEvent.click(screen.getByRole('button', { name: /cerrar bloque/i }))
       await new Promise((r) => setTimeout(r, 50))
     })
 
     expect(screen.queryByRole('alert')).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// T3 — REQ-2: global validation error banner on submit with invalid fields
+// T4 — REQ-2: data-error attribute present + scrollIntoView called
+// T6 — REQ-3: button label is "Cerrar bloque" + helper text
+// ---------------------------------------------------------------------------
+
+function makeSchemaWithRequiredField(id: string): BlockSchema {
+  return {
+    id,
+    layer: 'core',
+    order: 1,
+    estimated_minutes: 5,
+    title: 'Validation banner test',
+    questions: [
+      {
+        id: 'req_field',
+        type: 'text',
+        label: 'Campo obligatorio',
+        required: true,
+      },
+    ],
+  }
+}
+
+describe('BlockRenderer — T3/T4: validation error banner + data-error (REQ-2)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+    // Mock scrollIntoView — not available in jsdom
+    window.HTMLElement.prototype.scrollIntoView = vi.fn()
+  })
+
+  it('T3: shows global error banner with field count after submit when required field is empty', async () => {
+    const schema = makeSchemaWithRequiredField('block-val-banner')
+    render(<BlockRenderer leadId="lead-1" schema={schema} />)
+
+    const submitBtn = screen.getByRole('button', { name: /cerrar bloque/i })
+    await act(async () => {
+      fireEvent.click(submitBtn)
+    })
+
+    expect(screen.getByRole('alert', { name: /campos requeridos/i })).toBeInTheDocument()
+    expect(screen.getByText(/1 campo/i)).toBeInTheDocument()
+  })
+
+  it('T4: [data-error="true"] wrapper present after failed submit', async () => {
+    const schema = makeSchemaWithRequiredField('block-data-error')
+    const { container } = render(<BlockRenderer leadId="lead-1" schema={schema} />)
+
+    const submitBtn = screen.getByRole('button', { name: /cerrar bloque/i })
+    await act(async () => {
+      fireEvent.click(submitBtn)
+    })
+
+    expect(container.querySelector('[data-error="true"]')).toBeTruthy()
+  })
+
+  it('T4: scrollIntoView is called after failed submit', async () => {
+    const schema = makeSchemaWithRequiredField('block-scroll')
+    render(<BlockRenderer leadId="lead-1" schema={schema} />)
+
+    const submitBtn = screen.getByRole('button', { name: /cerrar bloque/i })
+    await act(async () => {
+      fireEvent.click(submitBtn)
+    })
+
+    expect(window.HTMLElement.prototype.scrollIntoView).toHaveBeenCalled()
+  })
+})
+
+describe('BlockRenderer — T6: submit button label (REQ-3)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+  })
+
+  it('T6: button label is "Cerrar bloque" (not "Guardar bloque")', () => {
+    const schema = makeSchemaWithRequiredField('block-label')
+    render(<BlockRenderer leadId="lead-1" schema={schema} />)
+
+    expect(screen.getByRole('button', { name: /cerrar bloque/i })).toBeInTheDocument()
+    expect(screen.queryByText(/guardar bloque/i)).toBeNull()
+  })
+
+  it('T6: helper text "Genera análisis IA y habilita cierre de sesión" is visible', () => {
+    const schema = makeSchemaWithRequiredField('block-helper')
+    render(<BlockRenderer leadId="lead-1" schema={schema} />)
+
+    expect(screen.getByText(/Genera análisis IA y habilita cierre de sesión/i)).toBeInTheDocument()
   })
 })
 
@@ -393,7 +485,7 @@ describe('BlockRenderer — TA.11: formKey remount, no form.reset() (REQ-3)', ()
     const schema = makeSimpleSchema('block-noreset')
     render(<BlockRenderer leadId="lead-1" schema={schema} />)
 
-    const submitBtn = screen.getByRole('button', { name: /guardar bloque/i })
+    const submitBtn = screen.getByRole('button', { name: /cerrar bloque/i })
     await act(async () => {
       fireEvent.click(submitBtn)
       await new Promise((r) => setTimeout(r, 50))

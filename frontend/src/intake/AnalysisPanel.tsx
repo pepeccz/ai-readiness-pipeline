@@ -94,6 +94,14 @@ export function AnalysisPanel({ leadId, blockId }: AnalysisPanelProps) {
     return <AnalysisSkeleton />
   }
 
+  if (analysis.status === 'skipped') {
+    return (
+      <div data-testid="analysis-skipped" className="mt-4 p-3 bg-neutral-50 border border-neutral-200 rounded text-sm text-neutral-500">
+        Análisis IA omitido para este bloque.
+      </div>
+    )
+  }
+
   if (analysis.status === 'failed' || isError) {
     return (
       <div data-testid="analysis-error" className="mt-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.services.sessions.session_closing import SessionClosingService
+from app.services.sessions.session_closing import Session1SynthesisOutput, SessionClosingService
 
 
 # ---------------------------------------------------------------------------
@@ -28,13 +28,14 @@ def _make_mock_llm(output_text: str):
 
 
 _SAMPLE_OUTPUT = """{
-    "global_synthesis": "La empresa está en fase exploratoria con objetivos poco definidos y riesgo de fracaso por falta de sponsor.",
-    "preliminary_hypotheses": [
+    "summary": "La empresa está en fase exploratoria con objetivos poco definidos.",
+    "key_insights": [
         "El equipo técnico tiene más madurez que el liderazgo organizacional.",
         "El proceso crítico seleccionado no tiene datos suficientes para IA.",
         "El timing puede ser prematuro dado el estado de governance."
     ],
-    "activated_branches": ["post_mortem_proyecto", "governance_previo_ia"]
+    "recommendations": ["Definir un sponsor ejecutivo.", "Piloto pequeño antes de escalar."],
+    "hypothesis": "El equipo técnico lidera pero sin alineación organizacional el proyecto fracasará."
 }"""
 
 
@@ -45,7 +46,7 @@ _SAMPLE_OUTPUT = """{
 
 @pytest.mark.asyncio
 async def test_generate_synthesis_returns_structured_output(monkeypatch):
-    """generate_synthesis returns dict with global_synthesis and hypotheses."""
+    """generate_synthesis returns Session1SynthesisOutput with expected fields."""
     svc = SessionClosingService()
     monkeypatch.setattr(svc, "_call_llm", _make_mock_llm(_SAMPLE_OUTPUT))
 
@@ -55,16 +56,16 @@ async def test_generate_synthesis_returns_structured_output(monkeypatch):
         block_syntheses={},
     )
 
-    assert "global_synthesis" in result
-    assert "preliminary_hypotheses" in result
-    assert "activated_branches" in result
-    assert isinstance(result["preliminary_hypotheses"], list)
-    assert len(result["preliminary_hypotheses"]) == 3
+    assert isinstance(result, Session1SynthesisOutput)
+    assert result.summary is not None
+    assert isinstance(result.key_insights, list)
+    assert isinstance(result.recommendations, list)
+    assert len(result.key_insights) == 3
 
 
 @pytest.mark.asyncio
-async def test_generate_synthesis_requires_three_hypotheses(monkeypatch):
-    """Output must contain exactly 3 preliminary hypotheses."""
+async def test_generate_synthesis_returns_key_insights_and_recommendations(monkeypatch):
+    """Output must contain key_insights and recommendations lists."""
     svc = SessionClosingService()
     monkeypatch.setattr(svc, "_call_llm", _make_mock_llm(_SAMPLE_OUTPUT))
 
@@ -74,17 +75,15 @@ async def test_generate_synthesis_requires_three_hypotheses(monkeypatch):
         block_syntheses={},
     )
 
-    assert len(result["preliminary_hypotheses"]) == 3
+    assert result.key_insights is not None
+    assert result.recommendations is not None
+    assert len(result.recommendations) == 2
 
 
 @pytest.mark.asyncio
-async def test_generate_synthesis_returns_activated_branches(monkeypatch):
-    """activated_branches list is returned and can be empty."""
-    output = """{
-        "global_synthesis": "Síntesis breve.",
-        "preliminary_hypotheses": ["H1", "H2", "H3"],
-        "activated_branches": []
-    }"""
+async def test_generate_synthesis_allows_empty_optional_fields(monkeypatch):
+    """Partial LLM output (missing optional fields) must not raise."""
+    output = '{"summary": "Síntesis breve."}'
     svc = SessionClosingService()
     monkeypatch.setattr(svc, "_call_llm", _make_mock_llm(output))
 
@@ -94,7 +93,8 @@ async def test_generate_synthesis_returns_activated_branches(monkeypatch):
         block_syntheses={},
     )
 
-    assert result["activated_branches"] == []
+    assert result.summary == "Síntesis breve."
+    assert result.key_insights is None or isinstance(result.key_insights, list)
 
 
 @pytest.mark.asyncio

@@ -113,9 +113,9 @@ export function AnalysisPanel({ leadId, blockId }: AnalysisPanelProps) {
   return (
     <div data-testid="analysis-panel" className="mt-4 space-y-4">
       {llm_output?.synthesis && (
-        <div className="p-3 bg-blue-50 border border-blue-200 rounded">
-          <p className="text-xs font-semibold text-blue-700 mb-1">Síntesis</p>
-          <p className="text-sm text-blue-900">{llm_output.synthesis}</p>
+        <div className="p-3 bg-teal-50 border border-teal-200 rounded">
+          <p className="text-xs font-semibold text-teal-700 mb-1">Síntesis</p>
+          <p className="text-sm text-teal-900">{llm_output.synthesis}</p>
         </div>
       )}
 

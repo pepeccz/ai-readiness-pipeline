@@ -86,7 +86,7 @@ export function AreaSelector({ leadId, schema, onSuccess }: AreaSelectorProps) {
                 }}
                 className={`p-3 rounded-lg border text-sm text-left transition-colors ${
                   primaryArea === opt.value
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    ? 'border-teal-500 bg-teal-50 text-teal-700'
                     : 'border-neutral-200 hover:border-neutral-300'
                 }`}
               >
@@ -157,7 +157,7 @@ export function AreaSelector({ leadId, schema, onSuccess }: AreaSelectorProps) {
           <button
             type="submit"
             disabled={!primaryArea || mutation.isPending}
-            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-2.5 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {mutation.isPending ? 'Guardando...' : 'Continuar'}
           </button>

@@ -81,7 +81,7 @@ export function DeepBranchForm({ branch, onSubmit, isSubmitting }: Props) {
             rows={3}
             value={responses[q.id] ?? ''}
             onChange={(e) => handleChange(q.id, e.target.value)}
-            className={`w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            className={`w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 ${
               errors[q.id]
                 ? 'border-red-400 focus:ring-red-400'
                 : 'border-gray-300'
@@ -97,7 +97,7 @@ export function DeepBranchForm({ branch, onSubmit, isSubmitting }: Props) {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full rounded-md bg-blue-600 px-4 py-2 text-white font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="w-full rounded-md bg-teal-600 px-4 py-2 text-white font-medium hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {isSubmitting ? 'Enviando...' : 'Enviar esta sección'}
       </button>

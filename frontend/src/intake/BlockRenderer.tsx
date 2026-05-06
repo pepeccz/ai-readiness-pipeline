@@ -188,7 +188,7 @@ function BlockForm({
             <button
               type="button"
               onClick={handleEdit}
-              className="text-xs text-blue-600 hover:text-blue-700 underline-offset-2 hover:underline ml-4 flex-shrink-0"
+              className="text-xs text-teal-600 hover:text-teal-700 underline-offset-2 hover:underline ml-4 flex-shrink-0"
             >
               Editar respuestas
             </button>
@@ -218,7 +218,7 @@ function BlockForm({
         {/* Progress bar */}
         <div className="mt-2 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
           <div
-            className="h-full bg-blue-500 rounded-full transition-all"
+            className="h-full bg-teal-500 rounded-full transition-all"
             style={{
               width: visibleQuestions.length > 0
                 ? `${(answeredCount / visibleQuestions.length) * 100}%`
@@ -275,7 +275,7 @@ function BlockForm({
                 type="submit"
                 disabled={submitMutation.isPending}
                 aria-label="Cerrar bloque y generar análisis IA"
-                className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-6 py-2.5 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {submitMutation.isPending ? 'Guardando...' : 'Cerrar bloque'}
               </button>

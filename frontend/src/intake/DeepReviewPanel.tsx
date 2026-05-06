@@ -29,7 +29,7 @@ const STATUS_LABELS: Record<string, string> = {
 const STATUS_COLORS: Record<string, string> = {
   pending_generation: 'bg-gray-100 text-gray-600',
   pending_review: 'bg-yellow-100 text-yellow-800',
-  sent_to_client: 'bg-blue-100 text-blue-800',
+  sent_to_client: 'bg-teal-100 text-teal-800',
   received: 'bg-green-100 text-green-800',
   generation_failed: 'bg-red-100 text-red-800',
 }
@@ -97,7 +97,7 @@ function BranchCard({
                 <button
                   onClick={onSave}
                   disabled={isSaving}
-                  className="px-3 py-1 text-xs text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50"
+                  className="px-3 py-1 text-xs text-white bg-teal-600 rounded hover:bg-teal-700 disabled:opacity-50"
                 >
                   {isSaving ? 'Guardando…' : 'Guardar'}
                 </button>
@@ -141,7 +141,7 @@ function BranchCard({
               <textarea
                 value={q.text}
                 onChange={(e) => onUpdateQuestion(idx, e.target.value)}
-                className="w-full text-sm border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
+                className="w-full text-sm border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-teal-300 resize-none"
                 rows={2}
               />
             </div>

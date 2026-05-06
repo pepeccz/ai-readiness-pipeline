@@ -102,7 +102,7 @@ export function ReportViewerPage({ token }: Props) {
           <a
             href={`/api/client/report/${token}/download`}
             download
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white font-medium hover:bg-blue-700 transition-colors"
+            className="rounded-md bg-teal-600 px-4 py-2 text-sm text-white font-medium hover:bg-teal-700 transition-colors"
           >
             Descargar PDF
           </a>

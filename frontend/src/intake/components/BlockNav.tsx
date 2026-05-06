@@ -46,7 +46,7 @@ export function BlockNav({ blocksOrder, blocksCompleted, currentBlockId, onSelec
             onClick={() => onSelectBlock(blockId)}
             className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors flex items-center gap-2 ${
               isCurrent
-                ? 'bg-blue-50 text-blue-700 font-medium'
+                ? 'bg-teal-50 text-teal-700 font-medium'
                 : 'text-neutral-600 hover:bg-neutral-50'
             }`}
           >

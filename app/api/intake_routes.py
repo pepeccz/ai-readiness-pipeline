@@ -758,8 +758,11 @@ def _assert_block_id_valid(block_id: str) -> None:
     except RuntimeError:
         # Schema not loaded yet (test context) — load now
         root = schema_loader.load_all()
-    blocks_order: list[str] = root.get("core", {}).get("blocks_order", [])
-    if block_id not in blocks_order:
+    core = root.get("core", {})
+    blocks_order: list[str] = core.get("blocks_order", [])
+    variants: dict = core.get("block_2_variants", {})
+    valid_ids = set(blocks_order) | set(variants.values())
+    if block_id not in valid_ids:
         raise HTTPException(
             status_code=404,
             detail=f"Block '{block_id}' not found in active schema.",

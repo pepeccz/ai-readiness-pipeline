@@ -18,8 +18,12 @@ from pydantic import ValidationError
 
 
 def test_schema_accepts_key_insights_and_recommendations():
-    """Valid output with new keys must parse without error."""
+    """Valid output with new keys must parse without error.
+
+    Legacy string recommendations are coerced to RecommendationItem objects.
+    """
     from app.services.sessions.session_closing import Session1SynthesisOutput
+    from app.services.sessions.synthesis_schema import RecommendationItem
 
     data = Session1SynthesisOutput(
         summary="Empresa con alto potencial de automatización.",
@@ -28,7 +32,10 @@ def test_schema_accepts_key_insights_and_recommendations():
         hypothesis="Hipótesis principal.",
     )
     assert data.key_insights == ["Insight 1", "Insight 2"]
-    assert data.recommendations == ["Rec 1", "Rec 2"]
+    # Legacy string recs are coerced to RecommendationItem
+    assert len(data.recommendations) == 2
+    assert all(isinstance(r, RecommendationItem) for r in data.recommendations)
+    assert data.recommendations[0].text == "Rec 1"
     assert data.summary == "Empresa con alto potencial de automatización."
     assert data.hypothesis == "Hipótesis principal."
 

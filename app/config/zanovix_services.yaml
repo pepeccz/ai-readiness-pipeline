@@ -1,0 +1,42 @@
+services:
+  diagnostico_profundo:
+    nombre: "Diagnóstico Profundo de Procesos"
+    descripcion: >
+      Mapeo end-to-end de los procesos operativos críticos de la empresa, identificando
+      cuellos de botella, redundancias y oportunidades de automatización con IA. Incluye
+      entrevistas con responsables de área, análisis de flujos de datos y un informe
+      ejecutivo con hoja de ruta priorizada.
+    cuando_recomendar:
+      - "El cliente tiene procesos manuales repetitivos sin documentar"
+      - "Existen múltiples sistemas desconectados que generan re-trabajo"
+      - "La empresa no tiene claridad sobre dónde empezar con IA"
+      - "Se detectan ineficiencias operativas significativas en la sesión 1"
+    nota_priorizacion: null
+
+  desarrollo_acompanamiento:
+    nombre: "Desarrollo y Acompañamiento de Implementación"
+    descripcion: >
+      Servicio de implementación técnica acompañada: diseño de arquitectura de solución IA,
+      desarrollo de prototipos funcionales, integración con sistemas existentes y transferencia
+      de conocimiento al equipo interno. El consultor permanece como socio técnico durante
+      todo el proceso de adopción.
+    cuando_recomendar:
+      - "El cliente ya tiene claridad sobre qué automatizar pero carece de capacidad técnica"
+      - "Se requiere integración con sistemas legacy o APIs propias"
+      - "La empresa quiere desarrollar capacidades internas a largo plazo"
+      - "El caso de uso está bien definido y el ROI es claro"
+    nota_priorizacion: null
+
+  formacion_personalizada:
+    nombre: "Formación Personalizada en IA"
+    descripcion: >
+      Programa de capacitación diseñado a medida para el equipo de la empresa, desde
+      fundamentos de IA hasta casos de uso específicos del sector. Incluye talleres
+      prácticos, materiales propios y sesiones de seguimiento post-formación para
+      asegurar la adopción real de herramientas IA en el trabajo diario.
+    cuando_recomendar:
+      - "El equipo tiene resistencia o desconocimiento sobre IA"
+      - "Existen herramientas IA ya disponibles pero sin adopción real"
+      - "La empresa quiere empoderar a sus empleados antes de invertir en soluciones"
+      - "El perfil del cliente es más de gestión que técnico"
+    nota_priorizacion: "Preferir cuando aplique — mejor relación coste/impacto a corto plazo"

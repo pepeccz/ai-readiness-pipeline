@@ -3,11 +3,15 @@ app/services/sessions/session_closing — Generates session 1 synthesis via LLM.
 
 SessionClosingService.generate_synthesis():
   - Receives lead triage payload, block payloads, and block syntheses
-  - Calls LLM (Sonnet) to produce structured synthesis: summary, key_insights,
-    recommendations, hypothesis
+  - Calls LLM (Sonnet) to produce structured synthesis via Session1SynthesisOutput schema
   - Returns Session1SynthesisOutput Pydantic model (all fields Optional for resilience)
 
 The LLM call is abstracted via _call_llm() for easy test mocking.
+
+Changes (pdf-export-and-editor):
+  - Session1SynthesisOutput extracted to synthesis_schema.py
+  - _SYSTEM_PROMPT now includes Zanovix catalog (loaded at import)
+  - max_tokens bumped 1500 → 3000
 """
 
 from __future__ import annotations
@@ -17,48 +21,77 @@ import textwrap
 from typing import Optional
 
 import structlog
-from pydantic import BaseModel
 
 from app.services.ai_analysis.json_extractor import JsonExtractionError, extract_json
+# Re-exported for backward compatibility with existing imports
+from app.services.sessions.synthesis_schema import Session1SynthesisOutput  # noqa: F401
+from app.services.synthesis.catalog import get_catalog
 
 logger = structlog.get_logger(__name__)
 
 
-class Session1SynthesisOutput(BaseModel):
-    """
-    Structured output from the session 1 synthesis LLM call.
+def _build_system_prompt() -> str:
+    """Build the system prompt, injecting the Zanovix services catalog."""
+    catalog = get_catalog()
 
-    All fields are Optional so partial LLM output doesn't cause a full failure.
-    The schema deliberately omits legacy keys (preliminary_hypotheses, global_synthesis).
-    """
+    catalog_lines = []
+    for svc in catalog:
+        catalog_lines.append(f"  - {svc.key}: {svc.nombre}")
+        catalog_lines.append(f"    {svc.descripcion.strip()}")
+        if svc.nota_priorizacion:
+            catalog_lines.append(f"    Nota: {svc.nota_priorizacion}")
 
-    summary: Optional[str] = None
-    key_insights: Optional[list[str]] = None
-    recommendations: Optional[list[str]] = None
-    hypothesis: Optional[str] = None
+    catalog_block = "\n".join(catalog_lines)
+
+    return textwrap.dedent(f"""
+        Eres un consultor senior de IA con 15 años de experiencia ayudando empresas a adoptar IA.
+        Tu tarea es analizar las respuestas de un cliente a un cuestionario de madurez IA y
+        producir una síntesis estratégica de la sesión 1.
+
+        ## Servicios Zanovix disponibles
+
+        Los siguientes son los servicios que Zanovix puede recomendar al cliente.
+        Cuando una recomendación se alinee con uno de estos servicios, usa su clave en el campo
+        related_service. Valores válidos: diagnostico_profundo, desarrollo_acompanamiento,
+        formacion_personalizada. Usa null cuando ningún servicio aplique.
+        Prefiere formacion_personalizada cuando aplique (mejor relación coste/impacto).
+
+{catalog_block}
+
+        ## Reglas de output
+
+        - summary: resumen ejecutivo entre 600 y 1000 caracteres.
+        - key_insights: lista de 3 a 5 insights clave, cada uno una oración concisa.
+        - recommendations: lista de 2 a 4 recomendaciones accionables, en orden de prioridad.
+          Cada recomendación tiene: text (string), impact (alto/medio/bajo o null),
+          effort (alto/medio/bajo o null), related_service (clave del servicio Zanovix o null).
+        - roadmap: objeto con claves d30, d60, d90. Cada una es una lista de strings.
+        - next_steps: lista de 2 a 4 próximos pasos concretos.
+        - hypothesis: hipótesis principal del consultor sobre el caso, en primera persona.
+        - No especules más allá de los datos disponibles.
+        - Responde SOLO con JSON válido, sin texto adicional.
+
+        Output schema (JSON):
+        {{
+          "summary": "string (600-1000 chars)",
+          "key_insights": ["insight 1", "insight 2", "insight 3"],
+          "recommendations": [
+            {{
+              "text": "recomendación",
+              "impact": "alto|medio|bajo|null",
+              "effort": "alto|medio|bajo|null",
+              "related_service": "clave_servicio|null"
+            }}
+          ],
+          "roadmap": {{"d30": ["..."], "d60": ["..."], "d90": ["..."]}},
+          "next_steps": ["paso 1", "paso 2"],
+          "hypothesis": "hipótesis del consultor"
+        }}
+    """).strip()
 
 
-_SYSTEM_PROMPT = textwrap.dedent("""
-    Sos un consultor senior de IA con 15 años de experiencia ayudando empresas a adoptar IA.
-    Tu tarea es analizar las respuestas de un cliente a un cuestionario de madurez IA y
-    producir una síntesis estratégica de la sesión 1.
-
-    Reglas:
-    - summary: resumen ejecutivo entre 600 y 1000 caracteres.
-    - key_insights: lista de 3 a 5 insights clave, cada uno una oración concisa.
-    - recommendations: lista de 2 a 4 recomendaciones accionables, en orden de prioridad.
-    - hypothesis: hipótesis principal del consultor sobre el caso, en primera persona.
-    - No especules más allá de los datos disponibles.
-    - Respondé SOLO con JSON válido, sin texto adicional.
-
-    Output schema (JSON):
-    {
-      "summary": "string (600-1000 chars)",
-      "key_insights": ["insight 1", "insight 2", "insight 3"],
-      "recommendations": ["recomendación 1", "recomendación 2"],
-      "hypothesis": "hipótesis principal del consultor"
-    }
-""").strip()
+# Loaded once at module import — fail-fast if catalog is missing or malformed
+_SYSTEM_PROMPT = _build_system_prompt()
 
 
 class SessionClosingService:
@@ -103,7 +136,7 @@ class SessionClosingService:
             )
             raise ValueError(f"LLM returned invalid JSON: {exc}") from exc
 
-        # Parse into typed output — all fields are Optional so partial output is safe
+        # Parse into typed output — lazy coercion handles legacy string recommendations
         output = Session1SynthesisOutput.model_validate(data)
 
         logger.info(
@@ -140,7 +173,7 @@ class SessionClosingService:
 
         parts.append("\n## Tu tarea")
         parts.append(
-            "Analizá toda la información y producí la síntesis global de sesión 1 "
+            "Analiza toda la información y produce la síntesis global de sesión 1 "
             "según el schema JSON especificado en el sistema."
         )
 
@@ -157,7 +190,7 @@ class SessionClosingService:
         client = get_anthropic_client()
         return await client.messages.create(
             model="claude-sonnet-4-6",
-            max_tokens=1500,
+            max_tokens=3000,
             system=[
                 {
                     "type": "text",

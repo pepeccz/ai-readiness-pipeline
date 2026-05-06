@@ -1329,16 +1329,12 @@ async def run_session1_synthesis(lead_id: str, session_id: str) -> None:
                 block_payloads=block_payloads,
                 block_syntheses=block_syntheses,
             )
-            # Persist synthesis result — map 1:1 from Session1SynthesisOutput
+            # Persist synthesis result — serialize via model_dump for nested objects
             if syn_session:
-                syn_session.session1_synthesis = {
-                    "summary": synthesis.summary,
-                    "key_insights": synthesis.key_insights or [],
-                    "recommendations": synthesis.recommendations or [],
-                    "hypothesis": synthesis.hypothesis,
-                    "generated_at": datetime.now(tz=timezone.utc).isoformat(),
-                    "model": "claude-sonnet-4-6",
-                }
+                synthesis_dict = synthesis.model_dump()
+                synthesis_dict["generated_at"] = datetime.now(tz=timezone.utc).isoformat()
+                synthesis_dict["model"] = "claude-sonnet-4-6"
+                syn_session.session1_synthesis = synthesis_dict
                 await syn_db.commit()
             logger.info("session1_synthesis_completed", session_id=session_id)
         except Exception as exc:
@@ -1800,3 +1796,168 @@ async def client_deep_submit(
     )
 
     return ClientDeepSubmitResponse(received=True, branch_id=body.branch_id)
+
+
+# ---------------------------------------------------------------------------
+# PATCH /api/intake/{lead_id}/session1/synthesis — edit synthesis (admin)
+# ---------------------------------------------------------------------------
+
+_SYNTHESIS_EDIT_ALLOWED_STATES = {"deep_received", "closed"}
+
+
+@router.patch("/intake/{lead_id}/session1/synthesis")
+async def patch_session1_synthesis(
+    lead_id: str,
+    body: dict,
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Edit session 1 synthesis (admin only).
+
+    State guard: only allowed when intake_state in {deep_received, closed}.
+    Writes validated body to synthesis_edited_json + synthesis_edited_at.
+    NEVER modifies session1_synthesis (raw LLM output).
+    """
+    from app.services.sessions.synthesis_schema import Session1SynthesisOutput  # noqa: PLC0415
+
+    # 1. Load lead
+    lead_stmt = select(Lead).where(Lead.id == lead_id)
+    lead_result = await db.execute(lead_stmt)
+    lead = lead_result.scalar_one_or_none()
+    if lead is None:
+        raise HTTPException(status_code=404, detail=f"Lead {lead_id} not found.")
+
+    # 2. Load session
+    session_stmt = select(IntakeSession).where(IntakeSession.lead_id == lead_id)
+    session_result = await db.execute(session_stmt)
+    session = session_result.scalar_one_or_none()
+    if session is None:
+        raise HTTPException(status_code=404, detail=f"No intake session found for lead {lead_id}.")
+
+    # 3. State guard
+    if session.state not in _SYNTHESIS_EDIT_ALLOWED_STATES:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Cannot edit synthesis in state '{session.state}'. "
+                f"Allowed states: {sorted(_SYNTHESIS_EDIT_ALLOWED_STATES)}."
+            ),
+        )
+
+    # 4. Validate body against Session1SynthesisOutput schema
+    try:
+        validated = Session1SynthesisOutput.model_validate(body)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    # 5. Write to synthesis_edited_json + synthesis_edited_at
+    session.synthesis_edited_json = validated.model_dump()
+    session.synthesis_edited_at = datetime.now(tz=timezone.utc)
+    await db.commit()
+
+    logger.info(
+        "synthesis_edited",
+        lead_id=lead_id,
+        admin_id=str(current_user.id),
+    )
+
+    return validated.model_dump()
+
+
+# ---------------------------------------------------------------------------
+# POST /api/intake/{lead_id}/session1/export-pdf — export PDF (admin)
+# ---------------------------------------------------------------------------
+
+@router.post("/intake/{lead_id}/session1/export-pdf")
+async def export_session1_pdf(
+    lead_id: str,
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Export session 1 synthesis as a PDF (admin only).
+
+    State guard: only allowed when intake_state in {deep_received, closed}.
+    Synthesis null guard: 409 if both session1_synthesis and synthesis_edited_json are null.
+    Uses effective synthesis: synthesis_edited_json ?? session1_synthesis.
+    On success: increments synthesis_export_count, sets synthesis_last_exported_at.
+    Returns StreamingResponse(application/pdf).
+    """
+    from fastapi.responses import StreamingResponse  # noqa: PLC0415
+
+    from app.services.sessions.synthesis_schema import Session1SynthesisOutput  # noqa: PLC0415
+    from app.services.pdf.filename import build_pdf_filename  # noqa: PLC0415
+    from app.services.synthesis.catalog import get_catalog  # noqa: PLC0415
+
+    # 1. Load lead
+    lead_stmt = select(Lead).where(Lead.id == lead_id)
+    lead_result = await db.execute(lead_stmt)
+    lead = lead_result.scalar_one_or_none()
+    if lead is None:
+        raise HTTPException(status_code=404, detail=f"Lead {lead_id} not found.")
+
+    # 2. Load session
+    session_stmt = select(IntakeSession).where(IntakeSession.lead_id == lead_id)
+    session_result = await db.execute(session_stmt)
+    session = session_result.scalar_one_or_none()
+    if session is None:
+        raise HTTPException(status_code=404, detail=f"No intake session found for lead {lead_id}.")
+
+    # 3. State guard
+    if session.state not in _SYNTHESIS_EDIT_ALLOWED_STATES:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Cannot export PDF in state '{session.state}'. "
+                f"Allowed states: {sorted(_SYNTHESIS_EDIT_ALLOWED_STATES)}."
+            ),
+        )
+
+    # 4. Effective synthesis guard
+    effective_raw = session.synthesis_edited_json or session.session1_synthesis
+    if effective_raw is None:
+        raise HTTPException(
+            status_code=409,
+            detail="No synthesis available to export. Run session 1 synthesis first.",
+        )
+
+    # 5. Parse effective synthesis
+    effective = Session1SynthesisOutput.model_validate(effective_raw)
+
+    # 6. Render PDF
+    try:
+        from app.services.pdf.session1_report import render_session1_pdf  # noqa: PLC0415
+    except ImportError as exc:
+        raise HTTPException(status_code=503, detail=f"PDF rendering unavailable: {exc}") from exc
+
+    catalog = get_catalog()
+    import time  # noqa: PLC0415
+    t0 = time.monotonic()
+    pdf_bytes = render_session1_pdf(effective, lead, catalog)
+    duration_ms = int((time.monotonic() - t0) * 1000)
+
+    # 7. Post-render side effects
+    session.synthesis_export_count = (session.synthesis_export_count or 0) + 1
+    session.synthesis_last_exported_at = datetime.now(tz=timezone.utc)
+    await db.commit()
+
+    logger.info(
+        "pdf_exported",
+        lead_id=lead_id,
+        admin_id=str(current_user.id),
+        duration_ms=duration_ms,
+        export_count=session.synthesis_export_count,
+    )
+
+    # 8. Build filename and return
+    filename = build_pdf_filename(lead)
+
+    return StreamingResponse(
+        iter([pdf_bytes]),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}",
+            "Content-Length": str(len(pdf_bytes)),
+        },
+    )

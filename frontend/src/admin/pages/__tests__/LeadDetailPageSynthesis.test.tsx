@@ -44,6 +44,11 @@ vi.mock('../../../intake/api/intake', async (importOriginal) => {
   }
 })
 
+// Mock useCatalog hook for SessionSynthesisPanel
+vi.mock('../../hooks/useCatalog', () => ({
+  useServiceCatalog: () => ({ data: [], isLoading: false, isError: false }),
+}))
+
 // Mock BucketBadge to avoid complex rendering
 vi.mock('../../components/LeadDetail/BucketBadge', () => ({
   BucketBadge: () => null,
@@ -87,18 +92,38 @@ describe('LeadDetailPage — SessionSynthesisPanel mount', () => {
     vi.clearAllMocks()
   })
 
-  it('mounts SessionSynthesisPanel when intake state is deep_pending', async () => {
+  it('mounts SessionSynthesisPanel when intake state is deep_pending (H.1 updated)', async () => {
+    // New component: deep_pending with synthesis ready shows read-only panel
     mockUseIntakeState.mockReturnValue({
-      data: { state: 'deep_pending', session1_synthesis_status: 'pending', session1_synthesis: null, deep_branches_count: 2 },
+      data: {
+        state: 'deep_pending',
+        session1_synthesis_status: 'ready',
+        session1_synthesis: {
+          summary: 'Resumen del lead.',
+          key_insights: ['Insight clave'],
+          recommendations: [{ text: 'Rec 1', impact: null, effort: null, related_service: null }],
+          hypothesis: 'Hipótesis interna.',
+          generated_at: '2026-01-01T00:00:00Z',
+          model: 'claude-sonnet-4-6',
+        },
+        synthesis_edited_json: null,
+        synthesis_edited_at: null,
+        synthesis_last_exported_at: null,
+        synthesis_export_count: 0,
+        deep_branches_count: 2,
+      },
       isLoading: false,
+      refetch: vi.fn(),
     })
 
     render(React.createElement(LeadDetailPage), { wrapper: makeWrapper() })
 
     // Wait for the lead to load (async query)
     await screen.findAllByText('Acme')
-    // When deep_pending, SessionSynthesisPanel shows the pending spinner text
-    expect(screen.getByText(/generando síntesis/i)).toBeInTheDocument()
+    // New component: synthesis content is shown read-only for deep_pending
+    expect(screen.getByDisplayValue('Resumen del lead.')).toBeInTheDocument()
+    // No Guardar button in view mode
+    expect(screen.queryByRole('button', { name: /guardar/i })).not.toBeInTheDocument()
   })
 
   it('does NOT show synthesis panel content when intake state is in_progress', async () => {

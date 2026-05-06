@@ -213,6 +213,7 @@ from app.api import intake_routes  # noqa: E402 — B3 TRIAGE público
 from app.api.admin import leads_routes as admin_leads_routes  # noqa: E402 — B4
 from app.api.admin import users_routes as admin_users_routes  # noqa: E402
 from app.api import client_routes  # noqa: E402 — B8 client session 2
+from app.api import catalog_routes  # noqa: E402 — pdf-export-and-editor catalog
 
 app.include_router(auth_routes.router, prefix="/api/admin")
 app.include_router(admin_leads_routes.router, prefix="/api/admin")  # B4 leads
@@ -221,6 +222,7 @@ app.include_router(public_routes.router, prefix="/api")
 
 app.include_router(intake_routes.router, prefix="/api")  # TRIAGE público (B3)
 app.include_router(client_routes.router, prefix="/api")  # B8 client session 2
+app.include_router(catalog_routes.router, prefix="/api")  # catalog (pdf-export)
 
 # --- Static files (React SPA) ---
 # IMPORTANT: StaticFiles MUST be the LAST registration (TASK-X-01).

@@ -1,36 +1,60 @@
 /**
- * TE.3 — SessionSynthesisPanel renders correct state per synthesis_status
- * TE.5 — SessionSynthesisPanel mounts in LeadDetailPage when state >= deep_pending
+ * SessionSynthesisPanel.test.tsx — H.2 Updated fixtures for new dual-mode component.
+ *
+ * Tests the new props-based SessionSynthesisPanel interface.
+ * Replaces old useIntakeState-based tests.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
+import type { Session1Synthesis } from '../../../types/api'
 
-// ---------------------------------------------------------------------------
-// Mock useIntakeState
-// ---------------------------------------------------------------------------
-
-const mockUseIntakeState = vi.fn()
-vi.mock('../../../intake/api/intake', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../intake/api/intake')>()
-  return {
-    ...actual,
-    useIntakeState: (...args: unknown[]) => mockUseIntakeState(...args),
-  }
-})
-
-const mockMutate = vi.fn()
-vi.mock('../../../intake/hooks/useSession1Synthesize', () => ({
-  useSession1Synthesize: () => ({
-    mutate: mockMutate,
-    isPending: false,
+// Mock useCatalog hook (no network calls in tests)
+vi.mock('../../hooks/useCatalog', () => ({
+  useServiceCatalog: () => ({
+    data: [],
+    isLoading: false,
     isError: false,
   }),
 }))
 
 import { SessionSynthesisPanel } from '../SessionSynthesisPanel'
+
+// ── Fixtures (H.2 — updated to new schema) ─────────────────────────────────
+
+const legacySynthesis: Session1Synthesis = {
+  summary: 'Executive summary text',
+  key_insights: ['Insight A', 'Insight B'],
+  // Legacy: recommendations as string array — coerced to RecommendationItem by backend
+  // Frontend receives them as objects after coercion
+  recommendations: [{ text: 'Rec 1', impact: null, effort: null, related_service: null }],
+  hypothesis: 'Hypothesis text',
+  generated_at: '2026-01-01T00:00:00Z',
+  model: 'claude-sonnet-4-6',
+}
+
+const newSchemaSynthesis: Session1Synthesis = {
+  summary: 'Executive summary text',
+  key_insights: ['Insight A', 'Insight B'],
+  recommendations: [
+    {
+      text: 'Rec 1',
+      impact: 'alto',
+      effort: 'medio',
+      related_service: 'desarrollo_acompanamiento',
+    },
+  ],
+  roadmap: { d30: ['Step 1'], d60: ['Step 2'], d90: [] },
+  next_steps: ['Next step 1'],
+  hypothesis: 'Hypothesis text',
+  synthesis_edited_at: '2026-05-06T15:00:00Z',
+  synthesis_last_exported_at: '2026-05-06T14:00:00Z',
+  synthesis_export_count: 1,
+  generated_at: '2026-01-01T00:00:00Z',
+  model: 'claude-sonnet-4-6',
+}
 
 function wrapper() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -44,102 +68,88 @@ describe('SessionSynthesisPanel', () => {
   })
 
   it('returns null when state is not_started', () => {
-    mockUseIntakeState.mockReturnValue({
-      data: { state: 'not_started', session1_synthesis_status: 'not_started', session1_synthesis: null },
-      isLoading: false,
-    })
     const { container } = render(
-      React.createElement(SessionSynthesisPanel, { leadId: 'lead-1' }),
+      React.createElement(SessionSynthesisPanel, {
+        leadId: 'lead-1',
+        intakeState: 'not_started',
+        synthesisEffective: null,
+        synthesisRaw: null,
+      }),
       { wrapper: wrapper() }
     )
     expect(container.firstChild).toBeNull()
   })
 
   it('returns null when state is in_progress', () => {
-    mockUseIntakeState.mockReturnValue({
-      data: { state: 'in_progress', session1_synthesis_status: 'not_started', session1_synthesis: null },
-      isLoading: false,
-    })
     const { container } = render(
-      React.createElement(SessionSynthesisPanel, { leadId: 'lead-1' }),
+      React.createElement(SessionSynthesisPanel, {
+        leadId: 'lead-1',
+        intakeState: 'in_progress',
+        synthesisEffective: null,
+        synthesisRaw: null,
+      }),
       { wrapper: wrapper() }
     )
     expect(container.firstChild).toBeNull()
   })
 
-  it('shows loading spinner when synthesis_status is pending', () => {
-    mockUseIntakeState.mockReturnValue({
-      data: { state: 'deep_pending', session1_synthesis_status: 'pending', session1_synthesis: null },
-      isLoading: false,
-    })
+  it('renders read-only view when deep_pending with synthesis', () => {
     render(
-      React.createElement(SessionSynthesisPanel, { leadId: 'lead-1' }),
+      React.createElement(SessionSynthesisPanel, {
+        leadId: 'lead-1',
+        intakeState: 'deep_pending',
+        synthesisEffective: legacySynthesis,
+        synthesisRaw: legacySynthesis,
+      }),
       { wrapper: wrapper() }
     )
-    expect(screen.getByText(/generando síntesis/i)).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Executive summary text')).toBeInTheDocument()
+    // No Guardar button in view mode
+    expect(screen.queryByRole('button', { name: /guardar/i })).not.toBeInTheDocument()
   })
 
-  it('renders synthesis content when status is ready', () => {
-    mockUseIntakeState.mockReturnValue({
-      data: {
-        state: 'deep_pending',
-        session1_synthesis_status: 'ready',
-        session1_synthesis: {
-          summary: 'Executive summary text',
-          key_insights: ['Insight A', 'Insight B'],
-          recommendations: ['Rec 1'],
-          hypothesis: 'Hypothesis text',
-          generated_at: '2026-01-01T00:00:00Z',
-          model: 'gpt-4o',
-        },
-      },
-      isLoading: false,
-    })
+  it('renders synthesis content when status is ready (new schema)', () => {
     render(
-      React.createElement(SessionSynthesisPanel, { leadId: 'lead-1' }),
+      React.createElement(SessionSynthesisPanel, {
+        leadId: 'lead-1',
+        intakeState: 'deep_received',
+        synthesisEffective: newSchemaSynthesis,
+        synthesisRaw: newSchemaSynthesis,
+      }),
       { wrapper: wrapper() }
     )
-    expect(screen.getByText('Executive summary text')).toBeInTheDocument()
-    expect(screen.getByText('Insight A')).toBeInTheDocument()
-    expect(screen.getByText('Rec 1')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Executive summary text')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Insight A')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Rec 1')).toBeInTheDocument()
+    // Hypothesis is visible
     expect(screen.getByText('Hypothesis text')).toBeInTheDocument()
   })
 
-  it('shows error card with active retry button when status is failed', () => {
-    mockUseIntakeState.mockReturnValue({
-      data: { state: 'deep_pending', session1_synthesis_status: 'failed', session1_synthesis: null },
-      isLoading: false,
-    })
+  it('shows editable form with Guardar when deep_received', () => {
     render(
-      React.createElement(SessionSynthesisPanel, { leadId: 'lead-1' }),
+      React.createElement(SessionSynthesisPanel, {
+        leadId: 'lead-1',
+        intakeState: 'deep_received',
+        synthesisEffective: newSchemaSynthesis,
+        synthesisRaw: newSchemaSynthesis,
+      }),
       { wrapper: wrapper() }
     )
-    expect(screen.getByText(/falló generación/i)).toBeInTheDocument()
-    const retryBtn = screen.getByRole('button', { name: /reintentar/i })
-    expect(retryBtn).not.toBeDisabled()
+    expect(screen.getByRole('button', { name: /guardar/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /guardar/i })).toBeDisabled()
   })
 
-  it('shows soft-timeout warning after 3 minutes (mocked timer)', () => {
-    vi.useFakeTimers()
-    mockUseIntakeState.mockReturnValue({
-      data: { state: 'deep_pending', session1_synthesis_status: 'pending', session1_synthesis: null },
-      isLoading: false,
-    })
-
+  it('renders legacy synthesis (string recs as objects) without crash', () => {
     render(
-      React.createElement(SessionSynthesisPanel, { leadId: 'lead-1' }),
+      React.createElement(SessionSynthesisPanel, {
+        leadId: 'lead-1',
+        intakeState: 'deep_received',
+        synthesisEffective: legacySynthesis,
+        synthesisRaw: legacySynthesis,
+      }),
       { wrapper: wrapper() }
     )
-
-    // Before timeout — no warning
-    expect(screen.queryByText(/tomando más de lo esperado/i)).not.toBeInTheDocument()
-
-    // Advance 3 minutes + 1s
-    act(() => {
-      vi.advanceTimersByTime(181_000)
-    })
-
-    expect(screen.getByText(/tomando más de lo esperado/i)).toBeInTheDocument()
-    vi.useRealTimers()
+    // Should render without error and show the recommendation text
+    expect(screen.getByDisplayValue('Rec 1')).toBeInTheDocument()
   })
 })

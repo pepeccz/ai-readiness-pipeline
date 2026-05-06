@@ -12,7 +12,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON
 
@@ -56,6 +56,26 @@ class IntakeSession(Base):
     # LLM-generated synthesis produced at session 1 close (write-once, opaque JSON blob)
     session1_synthesis: Mapped[dict | None] = mapped_column(
         JSON, nullable=True, default=None
+    )
+
+    # Edited synthesis — written by PATCH /session1/synthesis endpoint (never modifies session1_synthesis)
+    synthesis_edited_json: Mapped[dict | None] = mapped_column(
+        JSON, nullable=True, default=None
+    )
+
+    # Timestamp of last PATCH edit to synthesis_edited_json
+    synthesis_edited_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    # Timestamp of last successful PDF export
+    synthesis_last_exported_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    # Count of successful PDF exports
+    synthesis_export_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
     )
 
     # Report content generated after session 2 (HTML or PDF path string)

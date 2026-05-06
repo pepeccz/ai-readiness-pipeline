@@ -78,3 +78,55 @@ export interface AssessmentFormPayload {
   // Auth (not sent in body, used for header)
   _token?: string
 }
+
+// ── Session 1 Synthesis types (pdf-export-and-editor) ──────────────────────
+
+export type ImpactLevel = 'alto' | 'medio' | 'bajo'
+export type EffortLevel = 'alto' | 'medio' | 'bajo'
+export type RelatedServiceKey =
+  | 'diagnostico_profundo'
+  | 'desarrollo_acompanamiento'
+  | 'formacion_personalizada'
+
+export interface RecommendationItem {
+  text: string
+  impact: ImpactLevel | null
+  effort: EffortLevel | null
+  related_service: RelatedServiceKey | null
+}
+
+export interface RoadmapBuckets {
+  d30: string[]
+  d60: string[]
+  d90: string[]
+}
+
+export interface Session1Synthesis {
+  summary?: string
+  key_insights?: string[]
+  recommendations?: RecommendationItem[]
+  roadmap?: RoadmapBuckets
+  next_steps?: string[]
+  /** Internal field — visible to admin only, never rendered in PDF */
+  hypothesis?: string
+  generated_at?: string
+  model?: string
+  // Export tracking columns (from lead detail API response)
+  synthesis_edited_at?: string | null
+  synthesis_last_exported_at?: string | null
+  synthesis_export_count?: number
+}
+
+// ── Catalog types ──────────────────────────────────────────────────────────
+
+export interface ServiceCatalogEntry {
+  key: RelatedServiceKey
+  nombre: string
+  descripcion: string
+  cuando_recomendar: string[]
+  nota_priorizacion: string | null
+}
+
+export interface CatalogResponse {
+  services: ServiceCatalogEntry[]
+}

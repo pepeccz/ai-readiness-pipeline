@@ -13,7 +13,7 @@
 
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getLead } from '../api/leads'
 import { BucketBadge } from '../components/LeadDetail/BucketBadge'
 import { LeadActionPanel } from '../components/LeadDetail/LeadActionPanel'
@@ -21,6 +21,7 @@ import { LifecycleBadge } from '../components/LifecycleBadge'
 import { SessionSynthesisPanel } from '../components/SessionSynthesisPanel'
 import { useIntakeState } from '../../intake/api/intake'
 import { DeepReviewPanel } from '../../intake/DeepReviewPanel'
+import type { Session1Synthesis } from '../../types/api'
 
 const STATUS_LABELS: Record<string, string> = {
   pending_review: 'Pendiente revisión',
@@ -29,10 +30,14 @@ const STATUS_LABELS: Record<string, string> = {
   converted: 'Convertido',
 }
 
+const SYNTHESIS_ACTIVE_STATES = new Set(['deep_received', 'closed'])
+
 export function LeadDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [showPayload, setShowPayload] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
 
   const { data: lead, isLoading, isError, refetch } = useQuery({
     queryKey: ['lead', id],
@@ -40,7 +45,52 @@ export function LeadDetailPage() {
     enabled: !!id,
   })
 
-  const { data: intakeState } = useIntakeState(id ?? '')
+  const { data: intakeState, refetch: refetchIntakeState } = useIntakeState(id ?? '')
+
+  // ── Synthesis state derived values ──────────────────────────────────────
+  const state = intakeState?.state ?? ''
+  const synthesisRaw = intakeState?.session1_synthesis as Session1Synthesis | null ?? null
+  const synthesisEdited = intakeState?.synthesis_edited_json as Session1Synthesis | null ?? null
+  const synthesisEffective = synthesisEdited ?? synthesisRaw
+  const editedAt = intakeState?.synthesis_edited_at ?? null
+  const lastExportedAt = intakeState?.synthesis_last_exported_at ?? null
+
+  const canExportPdf =
+    SYNTHESIS_ACTIVE_STATES.has(state) && synthesisEffective !== null
+
+  const isStale =
+    lastExportedAt !== null &&
+    editedAt !== null &&
+    new Date(editedAt) > new Date(lastExportedAt)
+
+  const handleExportPdf = async () => {
+    if (!id || !canExportPdf) return
+    setIsExporting(true)
+    try {
+      const resp = await fetch(`/api/intake/${id}/session1/export-pdf`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+      if (!resp.ok) return
+
+      const contentDisposition = resp.headers.get('Content-Disposition') ?? ''
+      const filenameMatch = contentDisposition.match(/filename=([^;]+)/)
+      const filename = filenameMatch?.[1] ?? `diagnostico-${id}.pdf`
+
+      const blob = await resp.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      a.click()
+      URL.revokeObjectURL(url)
+
+      // Refresh intake state to update export count and timestamp
+      refetchIntakeState()
+    } finally {
+      setIsExporting(false)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -255,8 +305,42 @@ export function LeadDetailPage() {
         {/* Action panel */}
         <LeadActionPanel lead={lead} onActionComplete={() => refetch()} />
 
-        {/* Synthesis panel — visible when intake state >= deep_pending */}
-        {id && <SessionSynthesisPanel leadId={id} />}
+        {/* PDF staleness banner */}
+        {isStale && lastExportedAt && (
+          <div className="bg-amber-50 border border-amber-300 rounded-lg px-4 py-3 text-sm text-amber-800">
+            PDF exportado el{' '}
+            {new Date(lastExportedAt).toLocaleDateString('es-ES', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            })}
+            . La síntesis fue editada después — el PDF anterior está desactualizado.
+          </div>
+        )}
+
+        {/* PDF export button */}
+        {canExportPdf && (
+          <div className="flex justify-end">
+            <button
+              onClick={handleExportPdf}
+              disabled={isExporting}
+              className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {isExporting ? 'Exportando…' : 'Exportar PDF'}
+            </button>
+          </div>
+        )}
+
+        {/* Synthesis panel — dual-mode edit/view based on intake state */}
+        {id && (
+          <SessionSynthesisPanel
+            leadId={id}
+            intakeState={state}
+            synthesisEffective={synthesisEffective}
+            synthesisRaw={synthesisRaw}
+            onSaveSuccess={() => refetchIntakeState()}
+          />
+        )}
 
         {/* Deep review panel — visible for deep_pending and deep_received */}
         {id && ['deep_pending', 'deep_received'].includes(intakeState?.state ?? '') && (

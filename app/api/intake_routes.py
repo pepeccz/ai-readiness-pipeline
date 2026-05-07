@@ -382,6 +382,21 @@ class DraftResponse(BaseModel):
     updated_at: str
 
 
+class TimerState(BaseModel):
+    """Current timer snapshot returned with every state response (REQ-8)."""
+    started_at: datetime | None
+    paused_at: datetime | None
+    accumulated_seconds: int
+    is_running: bool
+    server_now: datetime  # client uses this for initial drift correction
+
+
+class TimerPatchRequest(BaseModel):
+    """Body for PATCH /intake/{lead_id}/timer (REQ-3,4,5,6)."""
+    action: Literal["pause", "resume", "reset", "adjust"]
+    started_at: datetime | None = None  # required only when action == "adjust"
+
+
 class IntakeStateResponse(BaseModel):
     lead_id: str
     state: str
@@ -396,11 +411,23 @@ class IntakeStateResponse(BaseModel):
     synthesis_edited_at: str | None = None
     synthesis_last_exported_at: str | None = None
     synthesis_export_count: int = 0
+    timer: TimerState | None = None
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+def _build_timer_state(session: IntakeSession) -> TimerState:
+    """Build a TimerState snapshot from an IntakeSession."""
+    return TimerState(
+        started_at=session.timer_started_at,
+        paused_at=session.timer_paused_at,
+        accumulated_seconds=session.timer_accumulated_seconds or 0,
+        is_running=session.is_timer_running,
+        server_now=datetime.utcnow(),
+    )
+
 
 async def _get_accepted_lead(db: AsyncSession, lead_id: str) -> Lead:
     """Load Lead, raise 404 if not found, 403 if not accepted."""
@@ -580,6 +607,17 @@ async def get_intake_state(
     deep_count_result = await db.execute(deep_count_stmt)
     deep_branches_count = len(deep_count_result.scalars().all())
 
+    # REQ-2: Auto-start timer on first visit for in_progress sessions.
+    # Idempotent: only writes if timer has NEVER been started (both started_at and
+    # paused_at are NULL). If paused_at is set the timer was explicitly paused by the
+    # user — do NOT re-start it on GET.
+    if (
+        session.state == "in_progress"
+        and session.timer_started_at is None
+        and session.timer_paused_at is None
+    ):
+        session.timer_started_at = datetime.utcnow()
+
     await db.commit()
 
     return IntakeStateResponse(
@@ -596,7 +634,110 @@ async def get_intake_state(
         synthesis_edited_at=session.synthesis_edited_at.isoformat() if session.synthesis_edited_at else None,
         synthesis_last_exported_at=session.synthesis_last_exported_at.isoformat() if session.synthesis_last_exported_at else None,
         synthesis_export_count=session.synthesis_export_count or 0,
+        timer=_build_timer_state(session),
     )
+
+
+# ---------------------------------------------------------------------------
+# PATCH /api/intake/{lead_id}/timer  — REQ-3, REQ-4, REQ-5, REQ-6, REQ-11
+# ---------------------------------------------------------------------------
+
+
+class TimerActionResponse(BaseModel):
+    timer: TimerState
+
+
+@router.patch("/intake/{lead_id}/timer")
+async def patch_timer(
+    lead_id: str,
+    body: TimerPatchRequest,
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> TimerActionResponse:
+    """
+    Apply a timer action (pause/resume/reset/adjust) to the intake session timer.
+
+    State machine (ADR-2 — timer_started_at IS NULL means paused):
+      pause  → accumulated += (now - started_at); started_at = NULL; paused_at = now
+      resume → started_at = now; paused_at = NULL
+      reset  → accumulated = 0; started_at = now; paused_at = NULL
+      adjust → validate elapsed >= 0; started_at = payload.started_at
+
+    Idempotency:
+      pause on already-paused  → no-op, 200
+      resume on already-running → no-op, 200
+
+    409 Conflict if session.state == "closed" (ADR-6).
+    422 if adjust would produce negative total elapsed (REQ-6).
+    """
+    await _get_accepted_lead(db, lead_id)
+
+    session_stmt = select(IntakeSession).where(IntakeSession.lead_id == lead_id)
+    session_result = await db.execute(session_stmt)
+    session = session_result.scalar_one_or_none()
+    if session is None:
+        raise HTTPException(status_code=404, detail="No intake session found.")
+
+    # REQ-11 + ADR-6: reject all timer mutations on closed sessions
+    if session.state == "closed":
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "session_closed",
+                "detail": "Timer mutations are not allowed on a closed session.",
+            },
+        )
+
+    now = datetime.utcnow()
+
+    if body.action == "pause":
+        if session.timer_started_at is not None:
+            # Timer is running → pause it
+            elapsed = int((now - session.timer_started_at).total_seconds())
+            session.timer_accumulated_seconds = (session.timer_accumulated_seconds or 0) + elapsed
+            session.timer_started_at = None
+            session.timer_paused_at = now
+        # else: already paused → no-op (idempotent)
+
+    elif body.action == "resume":
+        if session.timer_started_at is None:
+            # Timer is paused → resume it
+            session.timer_started_at = now
+            session.timer_paused_at = None
+        # else: already running → no-op (idempotent)
+
+    elif body.action == "reset":
+        session.timer_accumulated_seconds = 0
+        session.timer_started_at = now
+        session.timer_paused_at = None
+
+    elif body.action == "adjust":
+        if body.started_at is None:
+            raise HTTPException(
+                status_code=422,
+                detail={"error": "missing_started_at", "detail": "started_at is required for action=adjust"},
+            )
+        # Validate: total elapsed must be non-negative
+        # Handle timezone-naive vs timezone-aware started_at
+        new_started_at = body.started_at
+        if new_started_at.tzinfo is not None:
+            # Convert to naive UTC for comparison
+            new_started_at = new_started_at.replace(tzinfo=None) - new_started_at.utcoffset()
+        total_elapsed = (now - new_started_at).total_seconds() + (session.timer_accumulated_seconds or 0)
+        if total_elapsed < 0:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": "negative_elapsed",
+                    "detail": "La hora ajustada produciría tiempo negativo.",
+                },
+            )
+        session.timer_started_at = new_started_at
+
+    await db.commit()
+    await db.refresh(session)
+
+    return TimerActionResponse(timer=_build_timer_state(session))
 
 
 # ---------------------------------------------------------------------------
@@ -1288,6 +1429,7 @@ async def close_intake(
         synthesis_edited_at=session.synthesis_edited_at.isoformat() if session.synthesis_edited_at else None,
         synthesis_last_exported_at=session.synthesis_last_exported_at.isoformat() if session.synthesis_last_exported_at else None,
         synthesis_export_count=session.synthesis_export_count or 0,
+        timer=_build_timer_state(session),
     )
 
 
@@ -1444,6 +1586,20 @@ async def close_session1(
         session.state = "deep_received"
     else:
         session.state = "deep_pending"
+
+    # REQ-7: Write session1_completed_at (fix latent bug — was never set).
+    session.session1_completed_at = datetime.utcnow()
+
+    # REQ-7: Auto-pause a running timer on close.
+    # If timer is running (started_at set, paused_at None), promote running time into
+    # accumulated and set paused_at. If already paused or never started, leave alone.
+    if session.timer_started_at is not None and session.timer_paused_at is None:
+        close_now = datetime.utcnow()
+        elapsed = int((close_now - session.timer_started_at).total_seconds())
+        session.timer_accumulated_seconds = (session.timer_accumulated_seconds or 0) + elapsed
+        session.timer_started_at = None
+        session.timer_paused_at = close_now
+
     await db.commit()
 
     logger.info(

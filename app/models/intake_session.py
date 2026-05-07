@@ -83,6 +83,26 @@ class IntakeSession(Base):
         String(10000), nullable=True
     )
 
+    # ── Timer columns (REQ-1) ─────────────────────────────────────────────────
+    # timer_started_at IS NOT NULL → timer is running (canonical "is_running" signal)
+    # timer_started_at IS NULL     → timer is paused or never started
+    # timer_paused_at is informational (last pause wall-clock); not used for logic
+    # timer_accumulated_seconds holds sum of all prior closed run intervals
+    timer_started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    timer_paused_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    timer_accumulated_seconds: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+
+    @property
+    def is_timer_running(self) -> bool:
+        """True when timer_started_at is set (canonical running signal per ADR-2)."""
+        return self.timer_started_at is not None
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=datetime.utcnow
     )

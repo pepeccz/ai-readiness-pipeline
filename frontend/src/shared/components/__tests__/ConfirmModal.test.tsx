@@ -10,7 +10,7 @@ import { ConfirmModal } from '../ConfirmModal'
 describe('ConfirmModal — REQ-1 D6', () => {
   const baseProps = {
     open: true,
-    title: 'Cerrar sesión 1',
+    title: 'Cerrar sesión',
     body: '¿Confirmar acción?',
     confirmLabel: 'Confirmar',
     cancelLabel: 'Cancelar',
@@ -20,7 +20,7 @@ describe('ConfirmModal — REQ-1 D6', () => {
 
   it('renders title and body when open', () => {
     render(<ConfirmModal {...baseProps} />)
-    expect(screen.getByText('Cerrar sesión 1')).toBeInTheDocument()
+    expect(screen.getByText('Cerrar sesión')).toBeInTheDocument()
     expect(screen.getByText('¿Confirmar acción?')).toBeInTheDocument()
   })
 
@@ -46,7 +46,7 @@ describe('ConfirmModal — REQ-1 D6', () => {
 
   it('does not render when open=false', () => {
     render(<ConfirmModal {...baseProps} open={false} />)
-    expect(screen.queryByText('Cerrar sesión 1')).not.toBeInTheDocument()
+    expect(screen.queryByText('Cerrar sesión')).not.toBeInTheDocument()
   })
 
   it('applies danger styling when variant="danger"', () => {

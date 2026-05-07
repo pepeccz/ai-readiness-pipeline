@@ -68,31 +68,31 @@ describe('Session1CloseFooter — REQ-1 D9', () => {
 
   it('renders button when state=in_progress and block-1-strategic completed', () => {
     renderFooter('in_progress', ['block-1-strategic'])
-    expect(screen.getByRole('button', { name: /cerrar sesión 1/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /cerrar sesión 1/i })).not.toBeDisabled()
+    expect(screen.getByRole('button', { name: /cerrar sesión/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /cerrar sesión/i })).not.toBeDisabled()
   })
 
   it('renders disabled button when state=in_progress but block-1-strategic NOT completed', () => {
     renderFooter('in_progress', [])
-    const btn = screen.getByRole('button', { name: /cerrar sesión 1/i })
+    const btn = screen.getByRole('button', { name: /cerrar sesión/i })
     expect(btn).toBeDisabled()
   })
 
   it('renders button when state=blocks_completed and block-1-strategic completed', () => {
     renderFooter('blocks_completed', ['block-1-strategic'])
-    expect(screen.getByRole('button', { name: /cerrar sesión 1/i })).not.toBeDisabled()
+    expect(screen.getByRole('button', { name: /cerrar sesión/i })).not.toBeDisabled()
   })
 
   it('opens confirm modal on button click', () => {
     renderFooter('in_progress', ['block-1-strategic'])
-    fireEvent.click(screen.getByRole('button', { name: /cerrar sesión 1/i }))
+    fireEvent.click(screen.getByRole('button', { name: /cerrar sesión/i }))
     // Modal body text must appear
     expect(screen.getByText(/síntesis LLM/i)).toBeInTheDocument()
   })
 
   it('calls mutate on modal confirm', () => {
     renderFooter('in_progress', ['block-1-strategic'])
-    fireEvent.click(screen.getByRole('button', { name: /cerrar sesión 1/i }))
+    fireEvent.click(screen.getByRole('button', { name: /cerrar sesión/i }))
     // Click Continuar in the modal
     fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
     expect(mockMutate).toHaveBeenCalledOnce()
@@ -100,7 +100,7 @@ describe('Session1CloseFooter — REQ-1 D9', () => {
 
   it('does NOT call mutate on modal cancel', () => {
     renderFooter('in_progress', ['block-1-strategic'])
-    fireEvent.click(screen.getByRole('button', { name: /cerrar sesión 1/i }))
+    fireEvent.click(screen.getByRole('button', { name: /cerrar sesión/i }))
     fireEvent.click(screen.getByRole('button', { name: /cancelar/i }))
     expect(mockMutate).not.toHaveBeenCalled()
   })

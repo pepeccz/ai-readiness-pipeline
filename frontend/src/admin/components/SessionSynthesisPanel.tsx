@@ -187,7 +187,7 @@ export function SessionSynthesisPanel({
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
-      <h3 className="text-sm font-semibold text-gray-700">Síntesis — Sesión 1</h3>
+      <h3 className="text-sm font-semibold text-gray-700">Síntesis — Sesión</h3>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
 

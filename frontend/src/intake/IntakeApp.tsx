@@ -19,6 +19,7 @@ import { LifecycleBadge } from '../admin/components/LifecycleBadge'
 import { AreaSelector } from './AreaSelector'
 import { BlockRenderer } from './BlockRenderer'
 import { BlockNav } from './components/BlockNav'
+import { SessionTimer } from './components/SessionTimer'
 import { AnalysisPanel } from './AnalysisPanel'
 import { useBlockPayload } from './api/intake'
 import { Session1CloseFooter } from './components/Session1CloseFooter'
@@ -87,7 +88,7 @@ export function IntakeApp({ leadId }: IntakeAppProps) {
           ← Volver al lead
         </button>
         <span className="flex items-center gap-2 text-xs text-neutral-500">
-          Sesión 1 — Intake CORE
+          Sesión — Intake CORE
           {session?.state && <LifecycleBadge state={session.state} />}
         </span>
       </header>
@@ -103,6 +104,13 @@ export function IntakeApp({ leadId }: IntakeAppProps) {
           setLastSubmittedBlock(null)
         }}
       />
+      {session?.timer && (
+        <SessionTimer
+          leadId={leadId}
+          timer={session.timer}
+          sessionState={session.state ?? ''}
+        />
+      )}
       </div>
 
       {/* Main content */}

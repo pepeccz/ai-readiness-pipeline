@@ -179,14 +179,14 @@ export function LeadDetailPage() {
             const title = isStart
               ? 'Lead aceptado'
               : isClosed
-                ? 'Sesión 1 cerrada'
-                : 'Sesión 1 en curso'
+                ? 'Sesión cerrada'
+                : 'Sesión en curso'
             const subtitle = isStart
-              ? 'Lista para arrancar la sesión 1 de diagnóstico (CORE).'
+              ? 'Lista para arrancar la sesión de diagnóstico (CORE).'
               : isClosed
                 ? 'Próximo paso: sesión 2 (entrega formal — pendiente de implementación).'
                 : 'Podés revisar las respuestas y el análisis por bloque.'
-            const buttonLabel = isStart ? 'Iniciar sesión 1 →' : 'Ver respuestas sesión 1 →'
+            const buttonLabel = isStart ? 'Iniciar sesión →' : 'Ver respuestas sesión →'
             return (
               <div className="mt-4 flex items-center justify-between bg-teal-50 border border-teal-200 rounded-md px-4 py-3">
                 <div>

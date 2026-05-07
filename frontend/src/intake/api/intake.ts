@@ -12,6 +12,22 @@ import type { CoreSchema, FormValues } from '../types/schema'
 
 export type SynthesisStatus = 'not_started' | 'pending' | 'ready' | 'failed'
 
+// Timer types (REQ-8 / REQ-10)
+export interface TimerState {
+  started_at: string | null
+  paused_at: string | null
+  accumulated_seconds: number
+  is_running: boolean
+  server_now: string
+}
+
+export type TimerAction = 'pause' | 'resume' | 'reset' | 'adjust'
+
+export interface TimerPatchPayload {
+  action: TimerAction
+  started_at?: string | null
+}
+
 export interface Session1Synthesis {
   summary: string
   key_insights: string[]
@@ -35,6 +51,8 @@ export interface IntakeState {
   synthesis_edited_at: string | null
   synthesis_last_exported_at: string | null
   synthesis_export_count: number
+  /** Timer state — always present in the response (REQ-8) */
+  timer: TimerState
 }
 
 export interface FinalClosePayload {
@@ -232,6 +250,17 @@ export function useUpdateSuggestionNote(leadId: string, suggestionId: string, bl
         queryClient.invalidateQueries({ queryKey: intakeKeys.blockAnalysis(leadId, blockId) })
       }
     },
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Timer API — REQ-10
+// ---------------------------------------------------------------------------
+
+export function patchTimer(leadId: string, payload: TimerPatchPayload): Promise<TimerState> {
+  return fetchJson<TimerState>(`/intake/${leadId}/timer`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
   })
 }
 

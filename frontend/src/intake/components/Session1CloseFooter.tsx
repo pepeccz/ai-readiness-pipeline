@@ -67,14 +67,14 @@ export function Session1CloseFooter({
               bg-teal-600 text-white hover:bg-teal-700
               disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {isPending ? 'Cerrando...' : 'Cerrar sesión 1'}
+            {isPending ? 'Cerrando...' : 'Cerrar sesión'}
           </button>
         </div>
       </div>
 
       <ConfirmModal
         open={modalOpen}
-        title="¿Cerrar sesión 1?"
+        title="¿Cerrar sesión?"
         body={MODAL_BODY}
         confirmLabel="Continuar"
         cancelLabel="Cancelar"

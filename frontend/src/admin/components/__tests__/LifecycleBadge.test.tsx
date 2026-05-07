@@ -124,7 +124,7 @@ describe('TC.3 — LifecycleBadge mounts in LeadsListPage rows', () => {
 })
 
 describe('TC.3 — LifecycleBadge mounts in IntakeApp header', () => {
-  it('renders LifecycleBadge next to "Sesión 1 — Intake CORE" header text', async () => {
+  it('renders LifecycleBadge next to "Sesión — Intake CORE" header text', async () => {
     const { IntakeApp } = await import('../../../intake/IntakeApp')
 
     const qc = makeQC()
@@ -137,7 +137,7 @@ describe('TC.3 — LifecycleBadge mounts in IntakeApp header', () => {
     )
 
     // Header text must be present
-    expect(screen.getByText('Sesión 1 — Intake CORE')).toBeInTheDocument()
+    expect(screen.getByText('Sesión — Intake CORE')).toBeInTheDocument()
     // Badge must be present
     expect(screen.getByText('En progreso')).toBeInTheDocument()
   })

@@ -20,7 +20,11 @@ import { LeadActionPanel } from '../components/LeadDetail/LeadActionPanel'
 import { LifecycleBadge } from '../components/LifecycleBadge'
 import { SessionSynthesisPanel } from '../components/SessionSynthesisPanel'
 import { useIntakeState } from '../../intake/api/intake'
+import { Session2PrepPanel } from '../../intake/session2/Session2PrepPanel'
 import type { Session1Synthesis } from '../../types/api'
+
+// States in which the "Prep Sesión 2" tab is visible (REQ-10, H.8)
+const SESSION2_PREP_STATES = new Set(['blocks_completed', 'session2_pending', 'closed'])
 
 const STATUS_LABELS: Record<string, string> = {
   pending_review: 'Pendiente revisión',
@@ -339,6 +343,14 @@ export function LeadDetailPage() {
             synthesisRaw={synthesisRaw}
             onSaveSuccess={() => refetchIntakeState()}
           />
+        )}
+
+        {/* Prep Sesión 2 panel — visible when state >= blocks_completed (H.8, REQ-10) */}
+        {id && SESSION2_PREP_STATES.has(state) && (
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h3 className="text-sm font-semibold text-gray-700 mb-4">Prep Sesión 2</h3>
+            <Session2PrepPanel leadId={id} />
+          </div>
         )}
 
       </main>

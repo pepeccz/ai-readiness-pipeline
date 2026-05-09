@@ -102,6 +102,42 @@ describe('IntakeApp — TA.13: passes undefined not empty string to useBlockPayl
 })
 
 // ---------------------------------------------------------------------------
+// G.4 — REQ-16: DeepReviewPanel removed from IntakeApp (regression guard)
+// ---------------------------------------------------------------------------
+
+describe('IntakeApp — G.4: DeepReviewPanel no longer present (REQ-16)', () => {
+  it('G.4: DeepReviewPanel module does not exist (deep review flow retired)', () => {
+    // Static regression guard: the DeepReviewPanel module must not exist after PR6a.
+    // If someone accidentally re-creates it, this test fails immediately.
+    import.meta.glob('../DeepReviewPanel.tsx')
+    // The glob returns an empty record when the file does not exist.
+    const modules = import.meta.glob('../DeepReviewPanel.tsx')
+    expect(Object.keys(modules)).toHaveLength(0)
+  })
+
+  it('G.4: IntakeApp render does not show any deep review text', async () => {
+    const { default: React } = await import('react')
+    const { IntakeApp } = await import('../IntakeApp')
+
+    mockUseIntakeSession.mockReturnValue({
+      session: null,
+      isLoading: true,
+      hasAreaSelected: () => false,
+    })
+    mockUseIntakeSchema.mockReturnValue({ data: undefined, isLoading: true })
+    mockUseBlockPayload.mockReturnValue({ data: undefined })
+
+    const { screen } = await import('@testing-library/react')
+    const { render } = await import('@testing-library/react')
+    const Wrapper = makeWrapper()
+    render(<Wrapper><IntakeApp leadId="lead-123" /></Wrapper>)
+
+    expect(screen.queryByText(/deep review/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/deep_pending/i)).not.toBeInTheDocument()
+  })
+})
+
+// ---------------------------------------------------------------------------
 // A-2 — REQ-2: always-rendered placeholder div below BlockRenderer
 // ---------------------------------------------------------------------------
 

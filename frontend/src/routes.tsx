@@ -8,28 +8,11 @@ import { LeadsListPage } from './admin/pages/LeadsListPage'
 import { LeadDetailPage } from './admin/pages/LeadDetailPage'
 import { TRIAGEWizard } from './triage/TRIAGEWizard'
 import { IntakeApp } from './intake/IntakeApp'
-import { DeepFormPage } from './client-session2/DeepFormPage'
-import { ReportViewerPage } from './client-session2/ReportViewerPage'
-
 // Route wrapper: extracts :leadId param and passes to IntakeApp
 function IntakePage() {
   const { leadId } = useParams<{ leadId: string }>()
   if (!leadId) return <Navigate to="/admin/leads" replace />
   return <IntakeApp leadId={leadId} />
-}
-
-// Route wrapper: extracts :token param and passes to DeepFormPage
-function DeepFormRoute() {
-  const { token } = useParams<{ token: string }>()
-  if (!token) return <Navigate to="/triage" replace />
-  return <DeepFormPage token={token} />
-}
-
-// Route wrapper: extracts :token param and passes to ReportViewerPage
-function ReportViewerRoute() {
-  const { token } = useParams<{ token: string }>()
-  if (!token) return <Navigate to="/triage" replace />
-  return <ReportViewerPage token={token} />
 }
 
 export const router = createBrowserRouter([
@@ -75,14 +58,4 @@ export const router = createBrowserRouter([
     ],
   },
 
-  {
-    // Public client DEEP form (session 2) — accessed via signed URL, no auth
-    path: '/client/deep/:token',
-    element: <DeepFormRoute />,
-  },
-  {
-    // Public client report viewer — accessed via signed URL, no auth
-    path: '/client/report/:token',
-    element: <ReportViewerRoute />,
-  },
 ])

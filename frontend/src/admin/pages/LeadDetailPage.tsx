@@ -20,7 +20,6 @@ import { LeadActionPanel } from '../components/LeadDetail/LeadActionPanel'
 import { LifecycleBadge } from '../components/LifecycleBadge'
 import { SessionSynthesisPanel } from '../components/SessionSynthesisPanel'
 import { useIntakeState } from '../../intake/api/intake'
-import { DeepReviewPanel } from '../../intake/DeepReviewPanel'
 import type { Session1Synthesis } from '../../types/api'
 
 const STATUS_LABELS: Record<string, string> = {
@@ -30,7 +29,7 @@ const STATUS_LABELS: Record<string, string> = {
   converted: 'Convertido',
 }
 
-const SYNTHESIS_ACTIVE_STATES = new Set(['deep_received', 'closed'])
+const SYNTHESIS_ACTIVE_STATES = new Set(['session2_pending', 'closed'])
 
 export function LeadDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -342,10 +341,6 @@ export function LeadDetailPage() {
           />
         )}
 
-        {/* Deep review panel — visible for deep_pending and deep_received */}
-        {id && ['deep_pending', 'deep_received'].includes(intakeState?.state ?? '') && (
-          <DeepReviewPanel leadId={id} />
-        )}
       </main>
     </div>
   )

@@ -1634,7 +1634,7 @@ async def retry_session1_synthesis(
 
     Preconditions:
       - Session must exist and state must NOT be in pre-close states (i.e., session was closed)
-      - No in-flight synthesis (synthesis is None and state is deep_pending → still running)
+      - No in-flight synthesis (synthesis is None and state is session2_pending → still running)
 
     On success:
       - Resets session1_synthesis to None
@@ -1673,45 +1673,13 @@ async def retry_session1_synthesis(
 
 
 # ===========================================================================
-# DEEP CONSULTANT REVIEW ENDPOINTS — B7
+# DEEP CONSULTANT REVIEW ENDPOINTS — B7 (PR6a: stubs simplified)
 # ===========================================================================
-
-
-class DeepBranchResponse(BaseModel):
-    id: str
-    branch_id: str
-    status: str
-    generated_questions: list[dict] = Field(default_factory=list)
-    consultant_edits: list[dict] | None = None
-    consultant_reviewed_at: str | None = None
-    sent_to_client_at: str | None = None
-
-
-class DeepListResponse(BaseModel):
-    lead_id: str
-    branches: list[DeepBranchResponse] = Field(default_factory=list)
-
-
-class DeepPatchRequest(BaseModel):
-    questions: list[dict]
-
-
-class DeepSendResponse(BaseModel):
-    signed_url: str
-    sent_to: str
-    expires_at: str
-
-
-def _branch_to_response(b: DeepBranch) -> DeepBranchResponse:
-    return DeepBranchResponse(
-        id=b.id,
-        branch_id=b.branch_id,
-        status=b.status,
-        generated_questions=b.generated_questions or [],
-        consultant_edits=b.consultant_edits,
-        consultant_reviewed_at=b.consultant_reviewed_at.isoformat() if b.consultant_reviewed_at else None,
-        sent_to_client_at=b.sent_to_client_at.isoformat() if b.sent_to_client_at else None,
-    )
+#
+# All deep review Pydantic models, helpers, and duplicate /client/deep/*
+# handlers removed in PR6a. The admin /intake/{lead_id}/deep/* stubs remain
+# to return 410 for any lingering bookmarked URLs. Canonical /client/deep/*
+# routes live in client_routes.py.
 
 
 # ---------------------------------------------------------------------------
@@ -1722,13 +1690,12 @@ def _branch_to_response(b: DeepBranch) -> DeepBranchResponse:
 async def list_deep_branches(
     lead_id: str,
     current_user: User = Depends(require_admin),
-    db: AsyncSession = Depends(get_db),
-) -> DeepListResponse:
+):
     """
-    RETIRED: async deep review flow has been retired (PR5b).
+    RETIRED: async deep review flow has been retired (PR5b). Returns 410 Gone.
 
-    Returns 410 Gone. The deep_branches table is preserved (soft-deprecated, REQ-14)
-    but the consultant review UI is removed. PR6a removes the frontend counterpart.
+    The deep_branches table is preserved (soft-deprecated, REQ-14).
+    Frontend counterpart removed in PR6a.
     """
     import json as _json
     from fastapi.responses import Response as _Response
@@ -1747,14 +1714,10 @@ async def list_deep_branches(
 async def patch_deep_branch(
     lead_id: str,
     branch_id: str,
-    body: DeepPatchRequest,
     current_user: User = Depends(require_admin),
-    db: AsyncSession = Depends(get_db),
-) -> DeepBranchResponse:
+):
     """
-    RETIRED: async deep review flow has been retired (PR5b).
-
-    Returns 410 Gone. PR6a removes the frontend counterpart.
+    RETIRED: async deep review flow has been retired (PR5b). Returns 410 Gone.
     """
     import json as _json
     from fastapi.responses import Response as _Response
@@ -1774,84 +1737,9 @@ async def send_deep_branch(
     lead_id: str,
     branch_id: str,
     current_user: User = Depends(require_admin),
-    db: AsyncSession = Depends(get_db),
-) -> DeepSendResponse:
+):
     """
-    RETIRED: async deep review flow has been retired (PR5b).
-
-    Returns 410 Gone. PR6a removes the frontend counterpart.
-    """
-    import json as _json
-    from fastapi.responses import Response as _Response
-    return _Response(
-        status_code=410,
-        content=_json.dumps({"detail": "Gone — async deep flow has been retired. Sesión 2 is now synchronous."}),
-        media_type="application/json",
-    )
-
-
-# ===========================================================================
-# CLIENT DEEP FORM ENDPOINTS — public, signed URL auth
-# ===========================================================================
-
-
-class ClientDeepGetResponse(BaseModel):
-    lead_id: str
-    status: str
-    deep_branches: list[dict] = Field(default_factory=list)
-
-
-class ClientDeepSubmitRequest(BaseModel):
-    branch_id: str
-    responses: dict
-
-
-class ClientDeepSubmitResponse(BaseModel):
-    received: bool
-    branch_id: str
-
-
-def _verify_deep_token(token: str) -> dict:
-    """Verify and decode a DEEP form signed URL token. Raises HTTPException on failure."""
-    from app.signed_urls import SignedUrlError, verify_payload  # noqa: PLC0415
-    try:
-        return verify_payload(token)
-    except SignedUrlError:
-        raise HTTPException(status_code=401, detail="Invalid or expired token.")
-
-
-# ---------------------------------------------------------------------------
-# GET /api/client/deep/{signed_token}
-# ---------------------------------------------------------------------------
-
-@router.get("/client/deep/{signed_token}")
-async def client_deep_get(signed_token: str):
-    """
-    RETIRED: async deep form flow has been retired (PR5b).
-
-    Route kept registered so in-flight signed URLs receive 410 Gone
-    instead of 404 Not Found. Will be removed in a future cleanup PR.
-    """
-    import json as _json
-    from fastapi.responses import Response as _Response
-    return _Response(
-        status_code=410,
-        content=_json.dumps({"detail": "Gone — async deep flow has been retired. Sesión 2 is now synchronous."}),
-        media_type="application/json",
-    )
-
-
-# ---------------------------------------------------------------------------
-# POST /api/client/deep/{signed_token}/submit
-# ---------------------------------------------------------------------------
-
-@router.post("/client/deep/{signed_token}/submit")
-async def client_deep_submit(signed_token: str):
-    """
-    RETIRED: async deep form flow has been retired (PR5b).
-
-    Route kept registered so in-flight signed URLs receive 410 Gone
-    instead of 404 Not Found. Will be removed in a future cleanup PR.
+    RETIRED: async deep review flow has been retired (PR5b). Returns 410 Gone.
     """
     import json as _json
     from fastapi.responses import Response as _Response
@@ -1881,7 +1769,7 @@ async def patch_session1_synthesis(
     """
     Edit session 1 synthesis (admin only).
 
-    State guard: only allowed when intake_state in {deep_received, closed}.
+    State guard: only allowed when intake_state in {session2_pending, closed}.
     Writes validated body to synthesis_edited_json + synthesis_edited_at.
     NEVER modifies session1_synthesis (raw LLM output).
     """
@@ -1944,7 +1832,7 @@ async def export_session1_pdf(
     """
     Export session 1 synthesis as a PDF (admin only).
 
-    State guard: only allowed when intake_state in {deep_received, closed}.
+    State guard: only allowed when intake_state in {session2_pending, closed}.
     Synthesis null guard: 409 if both session1_synthesis and synthesis_edited_json are null.
     Uses effective synthesis: synthesis_edited_json ?? session1_synthesis.
     On success: increments synthesis_export_count, sets synthesis_last_exported_at.

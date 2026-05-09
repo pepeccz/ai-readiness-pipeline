@@ -27,9 +27,6 @@ vi.mock('../../../intake/api/intake', async (importOriginal) => {
 const mockGetLead = vi.fn()
 vi.mock('../../api/leads', () => ({ getLead: (...args: unknown[]) => mockGetLead(...args) }))
 
-// Mock DeepReviewPanel
-vi.mock('../../../intake/DeepReviewPanel', () => ({ DeepReviewPanel: () => null }))
-
 import { LeadDetailPage } from '../LeadDetailPage'
 
 const baseLead = {
@@ -69,10 +66,10 @@ describe('LeadDetailPage — PDF export button (G.1)', () => {
     mockGetLead.mockResolvedValue(baseLead)
   })
 
-  it('PDF button hidden when deep_pending', async () => {
+  it('PDF button hidden when in_progress (no synthesis)', async () => {
     mockUseIntakeState.mockReturnValue({
       data: {
-        state: 'deep_pending',
+        state: 'in_progress',
         session1_synthesis_status: 'pending',
         session1_synthesis: null,
         synthesis_edited_json: null,
@@ -86,6 +83,25 @@ describe('LeadDetailPage — PDF export button (G.1)', () => {
 
     await waitFor(() => expect(mockGetLead).toHaveBeenCalled())
     expect(screen.queryByRole('button', { name: /exportar pdf/i })).not.toBeInTheDocument()
+  })
+
+  it('PDF button visible when session2_pending with synthesis', async () => {
+    mockUseIntakeState.mockReturnValue({
+      data: {
+        state: 'session2_pending',
+        session1_synthesis_status: 'ready',
+        session1_synthesis: { summary: 'Test', key_insights: [], recommendations: [], hypothesis: null },
+        synthesis_edited_json: null,
+        synthesis_edited_at: null,
+        synthesis_last_exported_at: null,
+        synthesis_export_count: 0,
+      },
+    })
+
+    render(React.createElement(LeadDetailPage), { wrapper: makeWrapper() })
+
+    await waitFor(() => screen.getByRole('button', { name: /exportar pdf/i }))
+    expect(screen.getByRole('button', { name: /exportar pdf/i })).toBeInTheDocument()
   })
 
   it('PDF button visible when closed with synthesis', async () => {
@@ -110,7 +126,7 @@ describe('LeadDetailPage — PDF export button (G.1)', () => {
   it('PDF click triggers POST request to export-pdf endpoint', async () => {
     mockUseIntakeState.mockReturnValue({
       data: {
-        state: 'deep_received',
+        state: 'session2_pending',
         session1_synthesis_status: 'ready',
         session1_synthesis: { summary: 'Test', key_insights: [], recommendations: [], hypothesis: null },
         synthesis_edited_json: null,

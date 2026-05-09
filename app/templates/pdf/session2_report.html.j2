@@ -2,10 +2,10 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Diagnóstico AI Readiness — Sesión 1 · {{ lead.company_name }}</title>
+  <title>AI Readiness Assessment — Sesión 2 · {{ session.company_name }}</title>
   <style>
     /* ─────────────────────────────────────────────────────────────────────
-       PALETA
+       PALETA (identical to session1_report for brand consistency)
        Primary  navy   #1E2A44
        Accent   ochre  #E8A33D
        Teal     accent #0D9488
@@ -42,7 +42,7 @@
         content: element(runHeaderR);
       }
       @bottom-left {
-        content: "Diagnóstico AI Readiness · Sesión 1";
+        content: "AI Readiness Assessment · Sesión 2";
         font-family: Helvetica, Arial, sans-serif;
         font-size: 8pt;
         color: #6B7280;
@@ -105,6 +105,23 @@
 
     h1, h2, h3, h4 { font-family: Georgia, "Times New Roman", serif; }
 
+    /* ── BORRADOR watermark ─────────────────────────────────────────────── */
+    .borrador-watermark {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-45deg);
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 80pt;
+      font-weight: 900;
+      color: rgba(220, 0, 0, 0.12);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      pointer-events: none;
+      z-index: 9999;
+      white-space: nowrap;
+    }
+
     /* ── COVER ───────────────────────────────────────────────────────────── */
     .cover {
       page-break-after: always;
@@ -127,7 +144,7 @@
     }
 
     .cover-eyebrow {
-      margin-top: 5cm;
+      margin-top: 4.5cm;
       font-family: Helvetica, Arial, sans-serif;
       font-size: 9.5pt;
       font-weight: 700;
@@ -138,29 +155,100 @@
 
     .cover h1 {
       font-family: Georgia, serif;
-      font-size: 38pt;
+      font-size: 36pt;
       font-weight: 700;
       letter-spacing: -0.015em;
       line-height: 1.05;
-      margin: 0.4cm 0 0.6cm;
+      margin: 0.4cm 0 0.5cm;
       max-width: 14cm;
       color: white;
     }
 
     .cover-subtitle {
       font-style: italic;
-      font-size: 13pt;
+      font-size: 12pt;
       font-weight: 300;
       max-width: 13cm;
       color: rgba(255,255,255,0.78);
-      margin: 0 0 1.6cm;
+      margin: 0 0 1.2cm;
       line-height: 1.5;
     }
 
+    /* ── Cover score block ─────────────────────────────────────────────── */
+    .cover-score-row {
+      display: table;
+      width: 100%;
+      border-top: 1px solid rgba(255,255,255,0.25);
+      border-bottom: 1px solid rgba(255,255,255,0.25);
+      padding: 0.5cm 0;
+      margin-bottom: 0.6cm;
+    }
+    .cover-score-cell {
+      display: table-cell;
+      vertical-align: middle;
+      padding-right: 1.5cm;
+    }
+    .cover-score-cell-wide {
+      display: table-cell;
+      vertical-align: middle;
+      width: 60%;
+    }
+    .cover-score-label {
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 8pt;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.55);
+      margin-bottom: 0.1cm;
+    }
+    .cover-score-value {
+      font-family: Georgia, serif;
+      font-size: 28pt;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+    }
+    .cover-score-pct {
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 12pt;
+      color: rgba(255,255,255,0.7);
+      margin-left: 0.2cm;
+    }
+    .cover-level-badge {
+      display: inline-block;
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 11pt;
+      font-weight: 700;
+      padding: 0.2cm 0.5cm;
+      border-radius: 4px;
+      margin-top: 0.15cm;
+    }
+    .cover-risk-badge {
+      display: inline-block;
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 10pt;
+      font-weight: 700;
+      padding: 0.18cm 0.45cm;
+      border-radius: 4px;
+      margin-top: 0.15cm;
+    }
+
+    /* CMMI level badge colours */
+    .cmmi-0 { background: #FEE2E2; color: #991B1B; }
+    .cmmi-1 { background: #FEF3C7; color: #92400E; }
+    .cmmi-2 { background: #FEF9C3; color: #713F12; }
+    .cmmi-3 { background: #DCFCE7; color: #166534; }
+    .cmmi-4 { background: #DBEAFE; color: #1E40AF; }
+
+    /* Risk profile badge colours */
+    .risk-low      { background: #DCFCE7; color: #166534; }
+    .risk-medium   { background: #FEF9C3; color: #713F12; }
+    .risk-high     { background: #FEF3C7; color: #92400E; }
+    .risk-critical { background: #FEE2E2; color: #991B1B; }
+
     .cover-meta {
       border-top: 1px solid rgba(255,255,255,0.22);
-      padding-top: 0.6cm;
-      margin-top: 1.2cm;
+      padding-top: 0.5cm;
       max-width: 14cm;
       display: table;
       width: 100%;
@@ -174,7 +262,7 @@
       letter-spacing: 0.1em;
       text-transform: uppercase;
       color: rgba(255,255,255,0.55);
-      padding: 0.18cm 0;
+      padding: 0.15cm 0;
       vertical-align: top;
     }
     .cover-meta-value {
@@ -182,7 +270,7 @@
       font-family: Helvetica, Arial, sans-serif;
       font-size: 10.5pt;
       color: white;
-      padding: 0.18cm 0;
+      padding: 0.15cm 0;
     }
 
     .cover-footer {
@@ -241,114 +329,107 @@
       letter-spacing: 0.02em;
     }
 
-    /* ── Identification card ─────────────────────────────────────────────── */
-    .id-card {
-      background: var(--bg-soft);
-      border: 1px solid var(--border);
-      border-left: 4px solid var(--accent);
-      padding: 0.6cm 0.8cm;
-      margin-bottom: 1cm;
-      page-break-inside: avoid;
-    }
-    .id-card-title {
-      font-family: Helvetica, Arial, sans-serif;
-      font-size: 8.5pt;
-      font-weight: 700;
-      letter-spacing: 0.16em;
-      color: var(--mute);
-      text-transform: uppercase;
-      margin-bottom: 0.3cm;
-    }
-    .id-grid {
-      display: table;
+    /* ── Scorecard table ─────────────────────────────────────────────────── */
+    .scorecard-table {
       width: 100%;
       border-collapse: collapse;
-    }
-    .id-row { display: table-row; }
-    .id-cell {
-      display: table-cell;
-      width: 50%;
-      padding: 0.18cm 0.5cm 0.18cm 0;
-      vertical-align: top;
+      margin: 0.3cm 0 0.6cm;
       font-size: 10pt;
     }
-    .id-cell-label {
+    .scorecard-table th {
+      background: var(--primary);
+      color: white;
       font-family: Helvetica, Arial, sans-serif;
       font-size: 8.5pt;
-      color: var(--mute);
-      letter-spacing: 0.06em;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
-      margin-bottom: 0.06cm;
+      padding: 0.3cm 0.4cm;
+      text-align: left;
+      font-weight: 700;
     }
-    .id-cell-value {
-      font-size: 10.5pt;
-      color: var(--primary);
+    .scorecard-table td {
+      padding: 0.28cm 0.4cm;
+      vertical-align: middle;
+      border-bottom: 1px solid var(--border);
+    }
+    .scorecard-table tr:last-child td {
+      border-bottom: none;
+    }
+    .scorecard-table tr:nth-child(even) td {
+      background: var(--bg-soft);
+    }
+    .scorecard-block-title {
       font-weight: 600;
+      color: var(--primary);
+    }
+    .scorecard-score {
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .scorecard-level-badge {
+      display: inline-block;
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 8pt;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 3px;
+    }
+    .scorecard-pending {
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 8.5pt;
+      font-style: italic;
+      color: var(--mute);
+      background: #F3F4F6;
+      border: 1px solid var(--border);
+      padding: 3px 8px;
+      border-radius: 3px;
+      display: inline-block;
     }
 
-    /* ── TOC ─────────────────────────────────────────────────────────────── */
-    .toc {
+    /* ── Block narrative section ────────────────────────────────────────── */
+    .block-narrative {
+      border-left: 3px solid var(--accent);
+      padding: 0.3cm 0 0.3cm 0.5cm;
+      margin-bottom: 0.5cm;
       page-break-inside: avoid;
     }
-    .toc h3 {
-      margin-top: 0.2cm;
-    }
-    .toc ol {
-      list-style: none;
-      padding: 0;
-      margin: 0.3cm 0 0;
-    }
-    .toc li {
+    .block-narrative-title {
       font-family: Helvetica, Arial, sans-serif;
       font-size: 10.5pt;
-      padding: 0.18cm 0;
-      border-bottom: 1px dotted var(--border);
-      color: var(--text);
-    }
-    .toc-num {
-      display: inline-block;
-      width: 0.9cm;
-      color: var(--teal);
       font-weight: 700;
-    }
-
-    /* ── Executive summary ──────────────────────────────────────────────── */
-    .summary-block {
-      font-size: 11pt;
-      line-height: 1.65;
-      color: var(--text);
-    }
-    .summary-block .lead-paragraph::first-line {
-      font-weight: 600;
       color: var(--primary);
+      margin-bottom: 0.15cm;
     }
-
-    /* ── Key insights ────────────────────────────────────────────────────── */
-    .insights-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      counter-reset: insights;
+    .block-narrative-level {
+      margin-bottom: 0.2cm;
     }
-    .insights-list li {
-      counter-increment: insights;
-      position: relative;
-      padding: 0.3cm 0 0.3cm 1.4cm;
-      border-bottom: 1px solid var(--border);
-      page-break-inside: avoid;
-      font-size: 10.5pt;
+    .block-narrative-text {
+      font-size: 10pt;
+      color: var(--text);
       line-height: 1.55;
     }
-    .insights-list li:last-child { border-bottom: none; }
-    .insights-list li::before {
-      content: counter(insights, decimal-leading-zero);
-      position: absolute;
-      left: 0;
-      top: 0.32cm;
-      font-family: Georgia, serif;
-      font-size: 14pt;
-      font-weight: 700;
-      color: var(--accent);
+    .block-narrative-pending {
+      font-size: 10pt;
+      color: var(--mute);
+      font-style: italic;
+      padding: 0.2cm 0.4cm;
+      background: #F9FAFB;
+      border: 1px dashed var(--border);
+      border-radius: 3px;
+    }
+
+    /* ── Risk narrative ──────────────────────────────────────────────────── */
+    .risk-narrative-block {
+      background: var(--bg-soft);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--alert);
+      padding: 0.5cm 0.7cm;
+      margin-bottom: 0.6cm;
+      page-break-inside: avoid;
     }
 
     /* ── Recommendations ─────────────────────────────────────────────────── */
@@ -434,50 +515,6 @@
     .svc-tag-extern {
       color: var(--mute);
       font-style: italic;
-    }
-
-    /* ── Quick-wins matrix ──────────────────────────────────────────────── */
-    .matrix {
-      margin: 0.4cm 0 0.7cm;
-      page-break-inside: avoid;
-    }
-    .matrix-grid {
-      display: table;
-      width: 100%;
-      border-collapse: collapse;
-    }
-    .matrix-row { display: table-row; }
-    .matrix-cell {
-      display: table-cell;
-      width: 50%;
-      border: 1px solid var(--border);
-      padding: 0.35cm;
-      vertical-align: top;
-      background: var(--bg-card);
-      font-size: 9pt;
-      min-height: 1.6cm;
-    }
-    .matrix-quad-label {
-      font-family: Helvetica, Arial, sans-serif;
-      font-size: 7.5pt;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--mute);
-      margin-bottom: 0.15cm;
-    }
-    .matrix-quad-quick {
-      background: #ECFDF5;
-      border-color: #A7F3D0;
-    }
-    .matrix-quad-quick .matrix-quad-label {
-      color: #047857;
-      font-weight: 700;
-    }
-    .matrix-item {
-      display: block;
-      font-size: 9pt;
-      color: var(--text);
-      padding: 0.08cm 0;
     }
 
     /* ── Roadmap timeline ───────────────────────────────────────────────── */
@@ -587,50 +624,6 @@
       border-radius: 50%;
     }
 
-    /* ── Services menu (catalog footer) ─────────────────────────────────── */
-    .svc-menu {
-      page-break-before: auto;
-      page-break-inside: avoid;
-      margin-top: 0.6cm;
-    }
-    .svc-menu-intro {
-      font-style: italic;
-      color: var(--mute);
-      font-size: 10pt;
-      margin-bottom: 0.5cm;
-    }
-    .svc-grid {
-      display: table;
-      width: 100%;
-      border-collapse: separate;
-      border-spacing: 0.2cm 0;
-    }
-    .svc-card {
-      display: table-cell;
-      width: 33%;
-      vertical-align: top;
-      background: var(--bg-soft);
-      border-top: 4px solid var(--accent);
-      padding: 0.45cm 0.4cm;
-      border-radius: 2px;
-    }
-    .svc-card-1 { border-top-color: var(--teal); }
-    .svc-card-2 { border-top-color: var(--accent); }
-    .svc-card-3 { border-top-color: var(--primary); }
-    .svc-card h4 {
-      font-family: Georgia, serif;
-      font-size: 11pt;
-      color: var(--primary);
-      margin: 0 0 0.2cm;
-      line-height: 1.25;
-    }
-    .svc-card p {
-      font-size: 9pt;
-      line-height: 1.45;
-      color: var(--text);
-      margin: 0;
-    }
-
     /* ── Closing block ──────────────────────────────────────────────────── */
     .closing {
       margin-top: 1.2cm;
@@ -655,22 +648,21 @@
       color: var(--primary);
     }
     .closing-contact strong { color: var(--teal); }
-
-    .empty-section {
-      color: var(--mute);
-      font-style: italic;
-      font-size: 10pt;
-    }
   </style>
 </head>
 <body>
+
+  {# ── BORRADOR watermark (only when draft=True) ────────────────────────── #}
+  {% if draft %}
+  <div class="borrador-watermark">BORRADOR</div>
+  {% endif %}
 
   {# ── Running header (pages 2+) ────────────────────────────────────────── #}
   <div class="run-header-l">
     {% if logo_path %}<img src="{{ logo_path }}" alt="Zanovix">{% endif %}
   </div>
   <div class="run-header-r">
-    {{ lead.company_name }} &nbsp;·&nbsp; {{ fecha }}
+    {{ session.company_name }} &nbsp;·&nbsp; {{ session.generation_date }}
   </div>
 
   {# ═══════════════════════════════════════════════════════════════════════
@@ -681,180 +673,181 @@
       {% if logo_white_path %}<img src="{{ logo_white_path }}" alt="Zanovix">{% endif %}
     </div>
 
-    <div class="cover-eyebrow">Diagnóstico AI Readiness · Sesión 1</div>
-    <h1>{{ lead.company_name }}</h1>
+    {% if draft %}
+    <div style="position:absolute;top:1.5cm;left:2.2cm;background:#B23A48;color:white;font-family:Helvetica,Arial,sans-serif;font-size:9pt;font-weight:700;padding:4px 12px;border-radius:3px;letter-spacing:0.12em;text-transform:uppercase;">
+      BORRADOR — no entregar al cliente
+    </div>
+    {% endif %}
+
+    <div class="cover-eyebrow">AI Readiness Assessment · Informe Final</div>
+    <h1>{{ session.company_name }}</h1>
     <p class="cover-subtitle">
-      Síntesis estratégica de hallazgos, oportunidades priorizadas
-      y hoja de ruta para la adopción responsable de IA.
+      Scorecard de madurez IA, narrativa por dimensión,
+      recomendaciones priorizadas por brecha y hoja de ruta 30/60/90.
     </p>
 
+    {# ── Composite score + risk profile block ───────────────────────────── #}
+    <div class="cover-score-row">
+      <div class="cover-score-cell">
+        <div class="cover-score-label">Score compuesto</div>
+        <div class="cover-score-value">
+          {{ (session.composite_score * 100) | round(0) | int }}<span class="cover-score-pct">%</span>
+        </div>
+        <div>
+          <span class="cover-level-badge cmmi-{{ session.composite_level }}">
+            {{ session.composite_level_name }}
+          </span>
+        </div>
+      </div>
+      <div class="cover-score-cell-wide">
+        <div class="cover-score-label">Perfil de riesgo</div>
+        <div>
+          <span class="cover-risk-badge risk-{{ session.risk_profile }}">
+            {% if session.risk_profile == 'low' %}Riesgo Bajo
+            {% elif session.risk_profile == 'medium' %}Riesgo Medio
+            {% elif session.risk_profile == 'high' %}Riesgo Alto
+            {% elif session.risk_profile == 'critical' %}Riesgo Crítico
+            {% else %}{{ session.risk_profile }}
+            {% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+
     <div class="cover-meta">
-      {% if lead.contact_name %}
+      {% if session.contact_name %}
       <div class="cover-meta-row">
         <div class="cover-meta-label">Contacto</div>
-        <div class="cover-meta-value">{{ lead.contact_name }}{% if lead.contact_email %} — {{ lead.contact_email }}{% endif %}</div>
+        <div class="cover-meta-value">{{ session.contact_name }}{% if session.contact_email %} — {{ session.contact_email }}{% endif %}</div>
       </div>
       {% endif %}
-      {% if lead.sector %}
+      {% if session.sector %}
       <div class="cover-meta-row">
         <div class="cover-meta-label">Sector</div>
-        <div class="cover-meta-value">{{ lead.sector }}</div>
+        <div class="cover-meta-value">{{ session.sector }}</div>
       </div>
       {% endif %}
       <div class="cover-meta-row">
         <div class="cover-meta-label">Fecha de emisión</div>
-        <div class="cover-meta-value">{{ fecha }}</div>
+        <div class="cover-meta-value">{{ session.generation_date }}</div>
       </div>
-      {% if lead.lead_id_short %}
+      {% if session.reference_id %}
       <div class="cover-meta-row">
         <div class="cover-meta-label">Referencia</div>
-        <div class="cover-meta-value">AIR-{{ lead.lead_id_short }}</div>
+        <div class="cover-meta-value">AIR-{{ session.reference_id }}</div>
       </div>
       {% endif %}
-      <div class="cover-meta-row">
-        <div class="cover-meta-label">Elaborado por</div>
-        <div class="cover-meta-value">{{ consultor_name }} · zanovix.com</div>
-      </div>
     </div>
 
     <div class="cover-footer">
-      <div class="cover-footer-l">Documento confidencial — uso exclusivo de {{ lead.company_name }}</div>
+      <div class="cover-footer-l">Documento confidencial — uso exclusivo de {{ session.company_name }}</div>
       <div class="cover-footer-r">Tu hoja de ruta para adoptar IA con criterio</div>
     </div>
   </div>
 
   {# ═══════════════════════════════════════════════════════════════════════
-     PÁGINA 2 — Identificación + TOC
+     01 · Scorecard por dimensión (REQ-19)
+     Precedes all narrative sections — required by spec.
      ═══════════════════════════════════════════════════════════════════════ #}
   <div class="section">
-    <span class="section-num">Información del cliente</span>
-    <h2>Contexto del diagnóstico</h2>
+    <span class="section-num">01 · Scorecard de madurez IA</span>
+    <h2>Puntuación por dimensión</h2>
+    <p style="font-size:10pt;color:var(--mute);margin:0 0 0.4cm;">
+      Cada dimensión se puntúa de 0 a 100 % y se clasifica en uno de los cinco
+      niveles CMMI: Inicial · Emergente · Establecido · Avanzado · Optimizado.
+    </p>
 
-    <div class="id-card">
-      <div class="id-card-title">Cliente analizado</div>
-      <div class="id-grid">
-        <div class="id-row">
-          <div class="id-cell">
-            <div class="id-cell-label">Empresa</div>
-            <div class="id-cell-value">{{ lead.company_name }}</div>
-          </div>
-          <div class="id-cell">
-            <div class="id-cell-label">Sector</div>
-            <div class="id-cell-value">{{ lead.sector or "—" }}</div>
-          </div>
-        </div>
-        {% if lead.contact_name %}
-        <div class="id-row">
-          <div class="id-cell">
-            <div class="id-cell-label">Persona de contacto</div>
-            <div class="id-cell-value">{{ lead.contact_name }}</div>
-          </div>
-          <div class="id-cell">
-            <div class="id-cell-label">Email</div>
-            <div class="id-cell-value">{{ lead.contact_email or "—" }}</div>
-          </div>
-        </div>
-        {% endif %}
-        <div class="id-row">
-          {% if lead.company_size %}
-          <div class="id-cell">
-            <div class="id-cell-label">Tamaño del equipo</div>
-            <div class="id-cell-value">{{ lead.company_size }}</div>
-          </div>
+    <table class="scorecard-table">
+      <thead>
+        <tr>
+          <th style="width:35%">Dimensión</th>
+          <th style="width:18%">Puntuación</th>
+          <th style="width:22%">Nivel CMMI</th>
+          <th style="width:25%">Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for block in session.per_block %}
+        <tr>
+          <td class="scorecard-block-title">{{ block.block_title }}</td>
+          <td class="scorecard-score">{{ (block.score * 100) | round(0) | int }} %</td>
+          <td>
+            <span class="scorecard-level-badge cmmi-{{ block.level }}">{{ block.level_name }}</span>
+          </td>
+          <td>
+            {% if block.block_id in session.insufficient_block_ids %}
+            <span class="scorecard-pending">Datos pendientes — completar en Sesión 2</span>
+            {% else %}
+            <span style="font-size:9pt;color:var(--teal);">✓ Evaluado</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {# Summary row — composite #}
+    <div style="display:table;width:100%;border-top:2px solid var(--primary);padding-top:0.3cm;margin-top:0.1cm;">
+      <div style="display:table-cell;font-weight:700;color:var(--primary);font-size:10.5pt;">
+        Score compuesto (nivel mínimo)
+      </div>
+      <div style="display:table-cell;text-align:right;white-space:nowrap;">
+        <strong>{{ (session.composite_score * 100) | round(0) | int }} %</strong>
+        &nbsp;
+        <span class="scorecard-level-badge cmmi-{{ session.composite_level }}">{{ session.composite_level_name }}</span>
+        &nbsp;
+        <span class="cover-risk-badge risk-{{ session.risk_profile }}" style="font-size:8pt;padding:2px 7px;">
+          {% if session.risk_profile == 'low' %}Riesgo Bajo
+          {% elif session.risk_profile == 'medium' %}Riesgo Medio
+          {% elif session.risk_profile == 'high' %}Riesgo Alto
+          {% elif session.risk_profile == 'critical' %}Riesgo Crítico
+          {% else %}{{ session.risk_profile }}
           {% endif %}
-          {% if primary_area %}
-          <div class="id-cell">
-            <div class="id-cell-label">Área principal evaluada</div>
-            <div class="id-cell-value">{{ primary_area }}{% if secondary_area %} · {{ secondary_area }}{% endif %}</div>
-          </div>
-          {% endif %}
-        </div>
+        </span>
       </div>
     </div>
-
-    <div class="toc">
-      <h3>Contenido del informe</h3>
-      <ol>
-        {% if synthesis.summary %}<li><span class="toc-num">01</span>Resumen ejecutivo</li>{% endif %}
-        {% if synthesis.key_insights %}<li><span class="toc-num">02</span>Hallazgos clave</li>{% endif %}
-        {% if synthesis.recommendations %}<li><span class="toc-num">03</span>Recomendaciones priorizadas</li>{% endif %}
-        {% if synthesis.roadmap %}<li><span class="toc-num">04</span>Hoja de ruta · 30 / 60 / 90 días</li>{% endif %}
-        {% if synthesis.next_steps %}<li><span class="toc-num">05</span>Próximos pasos</li>{% endif %}
-        <li><span class="toc-num">06</span>Servicios complementarios Zanovix</li>
-      </ol>
-    </div>
   </div>
 
   {# ═══════════════════════════════════════════════════════════════════════
-     01 · Resumen ejecutivo
+     02 · Narrativa por bloque (REQ-19)
      ═══════════════════════════════════════════════════════════════════════ #}
-  {% if synthesis.summary %}
-  <div class="section" >
-    <span class="section-num">01 · Resumen ejecutivo</span>
-    <h2>Visión global del diagnóstico</h2>
-    <div class="summary-block">
-      <p class="lead-paragraph">{{ synthesis.summary }}</p>
-    </div>
-  </div>
-  {% endif %}
-
-  {# ═══════════════════════════════════════════════════════════════════════
-     02 · Hallazgos clave
-     ═══════════════════════════════════════════════════════════════════════ #}
-  {% if synthesis.key_insights %}
   <div class="section">
-    <span class="section-num">02 · Hallazgos clave</span>
-    <h2>Lo que revela la sesión</h2>
-    <ul class="insights-list">
-      {% for insight in synthesis.key_insights %}
-      <li>{{ insight }}</li>
-      {% endfor %}
-    </ul>
+    <span class="section-num">02 · Análisis por dimensión</span>
+    <h2>Hallazgos y brechas por área</h2>
+
+    {% for block in session.per_block %}
+    <div class="block-narrative">
+      <div class="block-narrative-title">{{ block.block_title }}</div>
+      <div class="block-narrative-level">
+        <span class="scorecard-level-badge cmmi-{{ block.level }}">{{ block.level_name }}</span>
+        &nbsp;
+        <span style="font-size:9pt;color:var(--mute);">{{ (block.score * 100) | round(0) | int }} %</span>
+      </div>
+      {% if block.block_id in session.insufficient_block_ids %}
+      <div class="block-narrative-pending">
+        Datos pendientes — completar en Sesión 2
+      </div>
+      {% else %}
+      <div class="block-narrative-text">{{ block.indicators_synthesized }}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
   </div>
-  {% endif %}
 
   {# ═══════════════════════════════════════════════════════════════════════
-     03 · Recomendaciones priorizadas
+     03 · Recomendaciones ordenadas por brecha (REQ-20)
+     Sorted in the Python layer by target_gap_size descending.
      ═══════════════════════════════════════════════════════════════════════ #}
-  {% if synthesis.recommendations %}
-  <div class="section" >
-    <span class="section-num">03 · Recomendaciones priorizadas</span>
-    <h2>Acciones con mayor impacto</h2>
+  {% if session.recommendations %}
+  <div class="section">
+    <span class="section-num">03 · Recomendaciones</span>
+    <h2>Acciones priorizadas por brecha</h2>
+    <p style="font-size:9.5pt;color:var(--mute);margin:0 0 0.4cm;">
+      Ordenadas de mayor a menor brecha: la dimensión con menor nivel CMMI aparece primero.
+    </p>
 
-    {# Quick-wins matrix — only show if any rec has both impact and effort #}
-    {% set has_matrix = synthesis.recommendations | selectattr("impact") | selectattr("effort") | list | length > 0 %}
-    {% if has_matrix %}
-    <div class="matrix">
-      <h3>Matriz de priorización</h3>
-      <p style="font-size:9.5pt;color:var(--mute);margin:0 0 0.3cm;">Cada recomendación se clasifica por impacto y esfuerzo. El cuadrante verde representa <strong>quick-wins</strong> — alto impacto con bajo esfuerzo.</p>
-      <div class="matrix-grid">
-        <div class="matrix-row">
-          <div class="matrix-cell matrix-quad-quick">
-            <div class="matrix-quad-label">Impacto Alto · Esfuerzo Bajo (Quick-wins)</div>
-            {% for rec in synthesis.recommendations %}{% if rec.impact == 'alto' and rec.effort == 'bajo' %}<span class="matrix-item">▸ {{ rec.text | truncate(180) }}</span>{% endif %}{% endfor %}
-          </div>
-          <div class="matrix-cell">
-            <div class="matrix-quad-label">Impacto Alto · Esfuerzo Alto/Medio</div>
-            {% for rec in synthesis.recommendations %}{% if rec.impact == 'alto' and rec.effort != 'bajo' %}<span class="matrix-item">▸ {{ rec.text | truncate(180) }}</span>{% endif %}{% endfor %}
-          </div>
-        </div>
-        <div class="matrix-row">
-          <div class="matrix-cell">
-            <div class="matrix-quad-label">Impacto Medio/Bajo · Esfuerzo Bajo</div>
-            {% for rec in synthesis.recommendations %}{% if rec.impact != 'alto' and rec.effort == 'bajo' %}<span class="matrix-item">▸ {{ rec.text | truncate(180) }}</span>{% endif %}{% endfor %}
-          </div>
-          <div class="matrix-cell">
-            <div class="matrix-quad-label">Impacto Medio/Bajo · Esfuerzo Alto/Medio</div>
-            {% for rec in synthesis.recommendations %}{% if rec.impact != 'alto' and rec.effort != 'bajo' %}<span class="matrix-item">▸ {{ rec.text | truncate(180) }}</span>{% endif %}{% endfor %}
-          </div>
-        </div>
-      </div>
-    </div>
-    {% endif %}
-
-    <h3>Detalle de recomendaciones</h3>
     <div class="recs">
-      {% for rec in synthesis.recommendations %}
+      {% for rec in session.recommendations %}
       <div class="rec-card">
         <p class="rec-text">{{ rec.text }}</p>
         <div class="rec-meta">
@@ -863,7 +856,7 @@
             {% if rec.effort %}<span class="badge badge-effort-{{ rec.effort }}">Esfuerzo {{ rec.effort }}</span>{% endif %}
           </div>
           <div class="rec-meta-svc">
-            {% if rec.related_service and rec.related_service in catalog_by_key %}
+            {% if rec.related_service and rec.related_service != 'otro' and rec.related_service in catalog_by_key %}
               <span class="svc-tag-label">Servicio Zanovix</span>
               <span class="svc-tag">{{ catalog_by_key[rec.related_service].nombre }}</span>
             {% elif rec.related_service == 'otro' %}
@@ -879,10 +872,10 @@
   {% endif %}
 
   {# ═══════════════════════════════════════════════════════════════════════
-     04 · Hoja de ruta
+     04 · Hoja de ruta 30/60/90 (REQ-21)
      ═══════════════════════════════════════════════════════════════════════ #}
-  {% if synthesis.roadmap %}
-  <div class="section" >
+  {% if session.roadmap %}
+  <div class="section">
     <span class="section-num">04 · Hoja de ruta</span>
     <h2>30 · 60 · 90 días</h2>
 
@@ -893,8 +886,8 @@
           <div class="timeline-head-label">días</div>
         </div>
         <div class="timeline-body">
-          {% if synthesis.roadmap.d30 %}
-          <ul>{% for item in synthesis.roadmap.d30 %}<li>{{ item }}</li>{% endfor %}</ul>
+          {% if session.roadmap.d30 %}
+          <ul>{% for item in session.roadmap.d30 %}<li>{{ item }}</li>{% endfor %}</ul>
           {% else %}<p class="timeline-empty">Sin acciones definidas.</p>{% endif %}
         </div>
       </div>
@@ -904,8 +897,8 @@
           <div class="timeline-head-label">días</div>
         </div>
         <div class="timeline-body">
-          {% if synthesis.roadmap.d60 %}
-          <ul>{% for item in synthesis.roadmap.d60 %}<li>{{ item }}</li>{% endfor %}</ul>
+          {% if session.roadmap.d60 %}
+          <ul>{% for item in session.roadmap.d60 %}<li>{{ item }}</li>{% endfor %}</ul>
           {% else %}<p class="timeline-empty">Sin acciones definidas.</p>{% endif %}
         </div>
       </div>
@@ -915,8 +908,8 @@
           <div class="timeline-head-label">días</div>
         </div>
         <div class="timeline-body">
-          {% if synthesis.roadmap.d90 %}
-          <ul>{% for item in synthesis.roadmap.d90 %}<li>{{ item }}</li>{% endfor %}</ul>
+          {% if session.roadmap.d90 %}
+          <ul>{% for item in session.roadmap.d90 %}<li>{{ item }}</li>{% endfor %}</ul>
           {% else %}<p class="timeline-empty">Sin acciones definidas.</p>{% endif %}
         </div>
       </div>
@@ -927,44 +920,25 @@
   {# ═══════════════════════════════════════════════════════════════════════
      05 · Próximos pasos
      ═══════════════════════════════════════════════════════════════════════ #}
-  {% if synthesis.next_steps %}
+  {% if session.next_steps %}
   <div class="section">
     <span class="section-num">05 · Próximos pasos</span>
     <h2>Por dónde continuar</h2>
     <ol class="next-steps">
-      {% for step in synthesis.next_steps %}<li>{{ step }}</li>{% endfor %}
+      {% for step in session.next_steps %}<li>{{ step }}</li>{% endfor %}
     </ol>
   </div>
   {% endif %}
 
   {# ═══════════════════════════════════════════════════════════════════════
-     06 · Servicios complementarios Zanovix
-     ═══════════════════════════════════════════════════════════════════════ #}
-  <div class="section svc-menu">
-    <span class="section-num">06 · Servicios complementarios Zanovix</span>
-    <h2>Cómo seguimos acompañándote</h2>
-    <p class="svc-menu-intro">
-      Más allá de esta sesión, Zanovix ofrece un conjunto de servicios diseñados
-      para llevar las recomendaciones de la mano hasta su implementación.
-    </p>
-    <div class="svc-grid">
-      {% for svc in catalog %}
-      <div class="svc-card svc-card-{{ loop.index }}">
-        <h4>{{ svc.nombre }}</h4>
-        <p>{{ svc.descripcion | truncate(420) }}</p>
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-
-  {# ═══════════════════════════════════════════════════════════════════════
      Cierre + contacto
      ═══════════════════════════════════════════════════════════════════════ #}
   <div class="closing">
-    <p class="closing-title">¿Quieres profundizar?</p>
+    <p class="closing-title">¿Quieres profundizar en los resultados?</p>
     <p>
-      Este informe es la base de la conversación. Si quieres revisarlo en detalle,
-      ajustar prioridades o coordinar la siguiente sesión, contacta con nosotros:
+      Este informe es la base para coordinar los próximos pasos.
+      Si quieres ajustar prioridades o planificar la implementación,
+      contacta con nosotros:
     </p>
     <p class="closing-contact">
       <strong>{{ consultor_name }}</strong> &nbsp;·&nbsp; {{ consultor_email }} &nbsp;·&nbsp; zanovix.com

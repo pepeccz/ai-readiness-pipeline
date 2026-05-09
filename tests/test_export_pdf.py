@@ -105,7 +105,12 @@ async def _set_session_state_and_synthesis(
 # ─── Tests ───────────────────────────────────────────────────────────────────
 
 async def test_export_pdf_success(client, test_db):
-    """POST export-pdf with synthesis in deep_received → 200, PDF bytes, correct headers."""
+    """POST export-pdf → 503 after PR4 deleted session1_report.py (endpoint removed in PR7).
+
+    The session1/export-pdf endpoint returns 503 PDF rendering unavailable because
+    session1_report.py was deleted in PR4. The endpoint itself is removed in PR7.
+    This test documents the transitional state post-PR4 / pre-PR7.
+    """
     user, sid = await _create_admin_session(test_db, "exp@t.com", "exp-sid-001")
     lead_id, session_id = await _create_accepted_lead(client, test_db, sid, user.id, "lead@exp1.com")
     await _set_session_state_and_synthesis(test_db, session_id, "deep_received", _SAMPLE_SYNTHESIS)
@@ -115,11 +120,8 @@ async def test_export_pdf_success(client, test_db):
         cookies={"admin_sid": sid},
     )
 
-    assert resp.status_code == 200
-    assert resp.headers["content-type"] == "application/pdf"
-    assert "content-disposition" in resp.headers
-    assert "exportadora" in resp.headers["content-disposition"].lower()
-    assert resp.content[:4] == b"%PDF"
+    # PR4: session1_report.py deleted → ImportError → 503 until PR7 removes the endpoint
+    assert resp.status_code == 503
 
 
 async def test_export_pdf_blocked_deep_pending(client, test_db):
@@ -151,7 +153,11 @@ async def test_export_pdf_null_synthesis_blocked(client, test_db):
 
 
 async def test_export_pdf_uses_edited_synthesis(client, test_db):
-    """When synthesis_edited_json exists, PDF is rendered from it."""
+    """POST export-pdf → 503 after PR4 deleted session1_report.py (endpoint removed in PR7).
+
+    The session1/export-pdf endpoint returns 503 because session1_report.py was
+    deleted in PR4. The endpoint is removed entirely in PR7.
+    """
     user, sid = await _create_admin_session(test_db, "exp4@t.com", "exp-sid-004")
     lead_id, session_id = await _create_accepted_lead(client, test_db, sid, user.id, "lead@exp4.com")
     await _set_session_state_and_synthesis(test_db, session_id, "deep_received", _SAMPLE_SYNTHESIS)
@@ -168,12 +174,17 @@ async def test_export_pdf_uses_edited_synthesis(client, test_db):
         cookies={"admin_sid": sid},
     )
 
-    assert resp.status_code == 200
-    assert resp.content[:4] == b"%PDF"
+    # PR4: session1_report.py deleted → 503 until PR7 removes the endpoint
+    assert resp.status_code == 503
 
 
 async def test_export_pdf_bumps_count_and_timestamp(client, test_db):
-    """Successful export increments synthesis_export_count and sets synthesis_last_exported_at."""
+    """POST export-pdf → 503 after PR4 deleted session1_report.py (endpoint removed in PR7).
+
+    Side effects (export_count, last_exported_at) are not triggered because the
+    endpoint returns 503 before reaching the post-render code. This is the
+    transitional state between PR4 and PR7.
+    """
     user, sid = await _create_admin_session(test_db, "exp5@t.com", "exp-sid-005")
     lead_id, session_id = await _create_accepted_lead(client, test_db, sid, user.id, "lead@exp5.com")
     await _set_session_state_and_synthesis(test_db, session_id, "deep_received", _SAMPLE_SYNTHESIS)
@@ -182,11 +193,5 @@ async def test_export_pdf_bumps_count_and_timestamp(client, test_db):
         f"/api/intake/{lead_id}/session1/export-pdf",
         cookies={"admin_sid": sid},
     )
-    assert resp.status_code == 200
-
-    await test_db.refresh(await test_db.get(IntakeSession, session_id))
-    result = await test_db.execute(select(IntakeSession).where(IntakeSession.id == session_id))
-    session = result.scalar_one()
-
-    assert session.synthesis_export_count == 1
-    assert session.synthesis_last_exported_at is not None
+    # PR4: session1_report.py deleted → 503 until PR7 removes the endpoint
+    assert resp.status_code == 503

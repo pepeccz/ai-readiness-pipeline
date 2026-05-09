@@ -10,26 +10,41 @@ questions:
   label: ¿Cómo está compuesto el equipo técnico?
   hint_didactic: Developer ≠ ML engineer. Data analyst ≠ data scientist. Esta distinción define qué arquitectura puede sostener
     el equipo.
+  critical_for_synthesis: true
   sub_fields:
   - id: q4_1_profiles
     type: multi_choice
     required: true
     label: Perfiles disponibles
+    weight: 1.0
+    # Tuning: ceiling override to avoid punitive scoring for small teams.
+    # Auto-derived sum-of-positives = 12 (six positive options), which would
+    # require selecting all profiles to reach max — unrealistic for PYMEs.
+    # max_score=6 means dev+analyst (2+2=4) → 0.67 normalized → CMMI 3.
+    max_score: 6
+    critical_for_synthesis: true
     options:
     - value: ninguno
       label: Sin perfiles técnicos internos
+      score: 0
     - value: it_generalista
       label: IT generalista / Soporte
+      score: 1
     - value: dev_software
       label: Desarrollador de software
+      score: 2
     - value: data_analyst
       label: Data analyst / Business analyst
+      score: 2
     - value: data_engineer_ml
       label: Data engineer / ML engineer
+      score: 3
     - value: data_scientist
       label: Data scientist
+      score: 3
     - value: externalizado
       label: Equipo externalizado / Agencia
+      score: 1
   - id: q4_1_count
     type: text
     required: false
@@ -43,19 +58,26 @@ questions:
     type: single_choice
     required: true
     label: Nivel de experiencia
+    weight: 1.0
     options:
     - value: ninguna
       label: Ninguna
+      score: 0
     - value: uso_individual
       label: Uso individual de ChatGPT / Copilot
+      score: 1
     - value: prompts_elaborados
       label: Prompts elaborados y sistemáticos
+      score: 2
     - value: integracion_apis
       label: Integración de APIs de IA en productos
+      score: 3
     - value: fine_tuning
       label: Fine-tuning / entrenamiento de modelos
+      score: 4
     - value: mlops_produccion
       label: MLOps — modelos en producción con monitoreo
+      score: 5
   - id: q4_2_areas
     type: multi_choice
     required: false
@@ -82,37 +104,48 @@ questions:
   required: true
   label: Plan de formación IA y disposición del equipo
   hint_didactic: Formación es parte del scope, no un extra. Comprar Ferrari sin enseñar a conducir.
+  critical_for_synthesis: true
   sub_fields:
   - id: q4_3_plan
     type: single_choice
     required: true
     label: Plan de formación actual
+    weight: 1.0
     options:
     - value: presupuestado
       label: Presupuestado y planificado
+      score: 3
     - value: planeado_sin_fecha
       label: Planeado pero sin fecha
+      score: 2
     - value: hablado_no_formal
       label: Se habló pero no es formal
+      score: 1
     - value: no_plan
       label: No hay plan
+      score: 0
       deep_branches:
       - change_management
   - id: q4_3_disposition
     type: single_choice
     required: true
     label: Disposición del equipo al cambio
+    weight: 1.0
     options:
     - value: motivado
       label: Motivado — quieren aprender IA
+      score: 3
     - value: mixto
       label: Mixto — algunos entusiastas, otros escépticos
+      score: 2
     - value: reacio
       label: Reacio — resistencia significativa
+      score: 0
       deep_branches:
       - change_management
     - value: no_hablado
       label: No se ha comunicado aún
+      score: 1
 - id: q4_4_change_capacity
   type: composite
   required: true
@@ -123,17 +156,22 @@ questions:
     type: single_choice
     required: true
     label: Historial de cambios organizacionales
+    weight: 1.0
     options:
     - value: exitosos
       label: Cambios grandes han sido exitosos
+      score: 3
     - value: resistencia
       label: Se intentó pero hubo resistencia significativa
+      score: 1
       deep_branches:
       - change_management
     - value: sin_cambios
       label: Sin cambios recientes relevantes
+      score: 2
     - value: otro_cambio_activo
       label: Estamos en medio de otro cambio importante
+      score: 1
       deep_branches:
       - evaluacion_timing
   - id: q4_4_example

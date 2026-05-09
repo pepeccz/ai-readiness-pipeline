@@ -14,17 +14,23 @@ questions:
     type: single_choice
     required: true
     label: Proceso de aprobación
+    weight: 1.0
     options:
     - value: comite_formal
       label: Comité formal con criterios definidos
+      score: 4
     - value: persona_criterios
       label: Persona responsable con criterios claros
+      score: 3
     - value: persona_sin_criterios
       label: Persona responsable sin criterios formales
+      score: 2
     - value: caso_a_caso
       label: Caso a caso sin proceso definido
+      score: 1
     - value: nadie
       label: Nadie — cada uno hace lo que quiere
+      score: 0
       deep_branches:
       - governance_minimo
   - id: q7_1_responsible
@@ -44,24 +50,32 @@ questions:
   label: ¿Tienen política de uso de IA generativa para empleados?
   hint_didactic: 'Shadow AI ya ocurre. Política regulariza. Plantilla mínima: herramientas autorizadas, datos prohibidos,
     validación humana, documentación.'
+  critical_for_synthesis: true
   sub_fields:
   - id: q7_2_policy_status
     type: single_choice
     required: true
     label: Estado de la política
+    weight: 1.0
+    critical_for_synthesis: true
     options:
     - value: firmada
       label: Sí, firmada y comunicada a todos
+      score: 4
     - value: redactada_no_comunicada
       label: Redactada pero no comunicada formalmente
+      score: 2
     - value: verbal
       label: Solo verbal / acuerdo informal
+      score: 1
     - value: no_prohibimos_no_oficial
       label: No prohibimos pero tampoco es oficial
+      score: 0
       deep_branches:
       - politica_genai
     - value: cada_uno
       label: Cada persona hace lo que quiere
+      score: 0
       deep_branches:
       - politica_genai
   - id: q7_2_risks_identified
@@ -91,47 +105,60 @@ questions:
   required: true
   label: ¿Informan a los clientes cuando usan IA en su servicio?
   hint_didactic: AI Act Art.50 + RGPD Art.13-14 obligan a informar. NO declarar = incumplimiento.
+  weight: 1.0
   options:
   - value: siempre
     label: Sí, siempre lo declaramos explícitamente
+    score: 4
   - value: casos_sensibles
     label: Solo en casos sensibles
+    score: 2
   - value: asumimos_no_declaramos
     label: Asumimos que el cliente lo sabe, no lo declaramos
+    score: 1
     deep_branches:
     - transparencia_ai_act
   - value: no_informamos
     label: No informamos activamente
+    score: 0
     deep_branches:
     - transparencia_ai_act
   - value: no_aplica
     label: No aplica — sin IA customer-facing
+    score: 3
 - id: q7_4_error_plan
   type: composite
   required: true
   label: ¿Tienen plan documentado para gestionar errores de IA?
   hint_didactic: 'AI Act exige plan de gestión de riesgos en alto riesgo. Componentes: detección, reversión, comunicación,
     aprendizaje post-mortem.'
+  critical_for_synthesis: true
   sub_fields:
   - id: q7_4_plan_status
     type: single_choice
     required: true
     label: Estado del plan
+    weight: 1.0
     options:
     - value: documentado
       label: Documentado con detección, reversión, comunicación y aprendizaje
+      score: 4
     - value: sabemos_no_doc
       label: Sabemos qué haríamos, no está documentado
+      score: 2
     - value: lo_decidiriamos
       label: Lo decidiríamos en el momento
+      score: 1
       deep_branches:
       - gestion_riesgo_ia
     - value: no_pensado
       label: No lo hemos pensado
+      score: 0
       deep_branches:
       - gestion_riesgo_ia
     - value: no_aplica
       label: No aplica — sin IA en producción
+      score: 3
   - id: q7_4_example
     type: text
     required: false

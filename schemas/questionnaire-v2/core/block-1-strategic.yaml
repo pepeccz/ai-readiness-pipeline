@@ -18,23 +18,30 @@ questions:
     type: textarea
     required: true
     label: Resultado esperado
+    critical_for_synthesis: true
   - id: q1_1_metric
     type: text
     required: true
     label: ¿Cómo lo medirías?
+    critical_for_synthesis: true
   - id: q1_1_timeframe
     type: single_choice
     required: true
     label: Plazo esperado
+    weight: 1.0
     options:
     - value: 3m
       label: 3 meses
+      score: 3
     - value: 6m
       label: 6 meses
+      score: 2
     - value: 12m
       label: 12 meses
+      score: 2
     - value: 24m_plus
       label: Más de 24 meses
+      score: 1
 - id: q1_2_sponsor
   type: single_choice
   required: true
@@ -42,6 +49,8 @@ questions:
   helper_text: Sponsor es quien tiene autoridad para aprobar presupuesto, resolver bloqueos y comunicar prioridad al equipo.
   hint_didactic: Sponsor ≠ usuario. La IA fracasa más por falta de respaldo organizacional que por limitaciones técnicas.
   hint_commercial: Sin sponsor = proyecto zombi. Es preferible postergar que arrancar sin respaldo.
+  weight: 1.0
+  critical_for_synthesis: true
   options:
   - value: ceo_total
     label: CEO con decisión total
@@ -64,6 +73,7 @@ questions:
   type: single_choice
   required: true
   label: ¿Han intentado antes implementar IA o automatización en la empresa?
+  weight: 1.0
   options:
   - value: first_time
     label: Primera vez
@@ -123,26 +133,35 @@ questions:
     type: single_choice
     required: true
     label: Apetito de riesgo
+    weight: 1.0
     options:
     - value: conservador
       label: Conservador — empezamos con 1 piloto pequeño
+      score: 1
     - value: moderado
       label: Moderado — varios pilotos en paralelo
+      score: 2
     - value: agresivo
       label: Agresivo — transformación amplia
+      score: 3
   - id: q1_4_horizon
     type: single_choice
     required: true
     label: Horizonte ROI esperado
+    weight: 1.0
     options:
     - value: 3m
       label: 3 meses
+      score: 1
     - value: 6m
       label: 6 meses
+      score: 2
     - value: 12m
       label: 12 meses
+      score: 3
     - value: 24m_plus
       label: Más de 24 meses
+      score: 2
 closing_analysis:
   trigger_event: block_completed
   llm_model: sonnet

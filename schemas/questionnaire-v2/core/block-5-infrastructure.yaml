@@ -9,26 +9,34 @@ questions:
   required: true
   label: ¿Dónde corre la infraestructura tecnológica de la empresa?
   hint_didactic: Cloud vs on-prem es decisión de compliance + control + coste, no solo técnica.
+  critical_for_synthesis: true
   sub_fields:
   - id: q5_1_model
     type: single_choice
     required: true
     label: Modelo de infraestructura
+    weight: 1.0
     options:
     - value: 100_cloud
       label: 100% Cloud
+      score: 4
     - value: mayoria_cloud
       label: Mayoría Cloud con algo on-prem
+      score: 3
     - value: hibrido
       label: Híbrido equilibrado
+      score: 2
     - value: mayoria_on_prem
       label: Mayoría on-premise con algo cloud
+      score: 1
     - value: 100_on_prem
       label: 100% On-premise
+      score: 0
       deep_branches:
       - ia_self_hosted
     - value: no_se
       label: No sé
+      score: 0
   - id: q5_1_clouds
     type: multi_choice
     required: false
@@ -107,30 +115,41 @@ questions:
     type: single_choice
     required: true
     label: Frecuencia de deploy actual
+    weight: 1.0
     options:
     - value: continuo
       label: Continuo / CI-CD
+      score: 4
     - value: mensual
       label: Mensual
+      score: 3
     - value: trimestral
       label: Trimestral
+      score: 2
     - value: esporadico
       label: Esporádico
+      score: 1
     - value: nunca
       label: Sin proceso de deploy definido
+      score: 0
   - id: q5_3_time_new_tool
     type: single_choice
     required: true
     label: Tiempo para integrar una herramienta nueva
+    weight: 1.0
     options:
     - value: dias
       label: Días
+      score: 4
     - value: semanas
       label: Semanas
+      score: 3
     - value: meses
       label: Meses
+      score: 2
     - value: trimestres
       label: Trimestres o más
+      score: 0
       deep_branches:
       - modelo_delivery_saas
 - id: q5_4_lockin
@@ -143,17 +162,22 @@ questions:
     type: single_choice
     required: true
     label: Nivel de lock-in
+    weight: 1.0
     options:
     - value: bajo
       label: Bajo — podemos cambiar en semanas
+      score: 3
     - value: medio
       label: Medio — cambio posible pero costoso
+      score: 2
     - value: alto
       label: Alto — cambiar requeriría proyecto mayor
+      score: 0
       deep_branches:
       - arquitectura_agnostica
     - value: no_evaluado
       label: No lo hemos evaluado
+      score: 1
   - id: q5_4_example
     type: text
     required: false

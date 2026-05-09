@@ -1,0 +1,93 @@
+schema_version: 1
+
+# ---------------------------------------------------------------------------
+# Block weights for composite score calculation
+# All blocks default to 1.0 weight (equal contribution).
+# Compliance and governance carry same weight as others — risk profile gates
+# handle their elevated importance, not weight inflation.
+# ---------------------------------------------------------------------------
+block_weights:
+  block-1-strategic: 1.0
+  block-2-process-critical: 1.0
+  block-3-data: 1.0
+  block-4-talent: 1.0
+  block-5-infrastructure: 1.0
+  block-6-compliance: 1.0
+  block-7-governance: 1.0
+
+# ---------------------------------------------------------------------------
+# CMMI thresholds — fixed global boundaries on normalized score [0, 1].
+# Applied per-block and for composite (min across ready blocks).
+#
+# Level mapping:
+#   0 = Inicial      (0.00 – 0.20)
+#   1 = Emergente    (0.20 – 0.40)
+#   2 = Establecido  (0.40 – 0.60)
+#   3 = Avanzado     (0.60 – 0.80)
+#   4 = Optimizado   (0.80 – 1.01)  # max slightly above 1 to capture perfect scores
+# ---------------------------------------------------------------------------
+cmmi_thresholds:
+  inicial:
+    min: 0.00
+    max: 0.20
+    level: 0
+    label: Inicial
+  emergente:
+    min: 0.20
+    max: 0.40
+    level: 1
+    label: Emergente
+  establecido:
+    min: 0.40
+    max: 0.60
+    level: 2
+    label: Establecido
+  avanzado:
+    min: 0.60
+    max: 0.80
+    level: 3
+    label: Avanzado
+  optimizado:
+    min: 0.80
+    max: 1.01
+    level: 4
+    label: Optimizado
+
+# ---------------------------------------------------------------------------
+# Risk gates — deterministic rules evaluated in order.
+# Inputs: per-block CMMI levels (int 0-4) from composite_score result.
+# insufficient_data blocks default to level 0 (worst-case conservative).
+#
+# Evaluation order: critical → high → medium → low
+# ---------------------------------------------------------------------------
+risk_gates:
+  critical:
+    description: Compliance AND governance both at level <= 1
+    conditions:
+      compliance_level_max: 1
+      governance_level_max: 1
+      operator: AND
+  high:
+    description: Compliance OR governance OR data at level <= 1 (compliance/governance) / level <= 0 (data)
+    conditions:
+      compliance_level_max: 1
+      governance_level_max: 1
+      data_level_max: 0
+      operator: OR
+  medium:
+    description: Composite level <= 1
+    conditions:
+      composite_level_max: 1
+  low:
+    description: All other cases
+    conditions: {}
+
+# ---------------------------------------------------------------------------
+# CMMI level integer labels (for reference / narrative)
+# ---------------------------------------------------------------------------
+cmmi_level_labels:
+  0: Inicial
+  1: Emergente
+  2: Establecido
+  3: Avanzado
+  4: Optimizado

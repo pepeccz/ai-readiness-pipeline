@@ -17,21 +17,28 @@ questions:
     type: text
     required: true
     label: Nombre del proceso
+    critical_for_synthesis: true
   - id: q2_1_frequency
     type: single_choice
     required: true
     label: Frecuencia
+    weight: 1.0
     options:
     - value: continuo
       label: Continuo (24/7)
+      score: 3
     - value: diario
       label: Diario
+      score: 3
     - value: semanal
       label: Semanal
+      score: 2
     - value: mensual
       label: Mensual
+      score: 1
     - value: esporadico
       label: Esporádico / Por demanda
+      score: 0
   - id: q2_1_volume
     type: text
     required: false
@@ -43,15 +50,20 @@ questions:
   helper_text: ¿Las entradas son siempre similares, o cambian mucho?
   hint_didactic: Proceso estable → reglas deterministas. Proceso errático → IA. Intermedio → híbrido. Esta distinción es clave
     anti-hype.
+  weight: 1.0
   options:
   - value: estable
     label: Estable — entradas muy similares siempre
+    score: 2
   - value: estacional
     label: Estacional — picos predecibles
+    score: 2
   - value: variable
     label: Variable — cambia bastante
+    score: 3
   - value: erratico
     label: Errático — muy impredecible
+    score: 1
     deep_branches:
     - alternativas_no_ia
 - id: q2_3_metrics
@@ -68,13 +80,17 @@ questions:
     type: single_choice
     required: true
     label: ¿La métrica está documentada?
+    weight: 1.0
     options:
     - value: documentado
       label: Sí, documentada y monitoreada
+      score: 3
     - value: parcial
       label: Parcialmente documentada
+      score: 1
     - value: no_mide
       label: No se mide actualmente
+      score: 0
       deep_branches:
       - definicion_baseline
   - id: q2_3_target
@@ -92,15 +108,21 @@ questions:
     type: single_choice
     required: true
     label: Nivel de criticidad
+    weight: 1.0
+    critical_for_synthesis: true
     options:
     - value: bajo
       label: Bajo — molestia menor, fácilmente reversible
+      score: 1
     - value: medio
       label: Medio — impacto económico o reputacional limitado
+      score: 2
     - value: alto
       label: Alto — pérdida económica significativa o daño reputacional
+      score: 3
     - value: critico
       label: Crítico — riesgo legal, seguridad, o afecta derechos de personas
+      score: 3
       deep_branches:
       - ai_act_supervision
   - id: q2_4_example
@@ -117,13 +139,17 @@ questions:
     type: single_choice
     required: true
     label: Dependencia de personas clave
+    weight: 1.0
     options:
     - value: una_dos_personas
       label: Depende de 1-2 personas específicas (bus factor alto)
+      score: 1
     - value: parcial
       label: Documentado parcialmente, otros pueden cubrirlo
+      score: 2
     - value: distribuido
       label: Distribuido, cualquier persona del equipo puede ejecutarlo
+      score: 3
   - id: q2_5_external
     type: multi_choice
     required: false

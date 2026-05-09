@@ -275,15 +275,11 @@ class TestSession1CloseNoPDFGeneration:
         """
         After POST /intake/{lead_id}/session1/close completes,
         IntakeSession.report_content must remain None.
+
+        PR5b: TriggerDetector removed from close_session1. No patch needed.
         """
-        from app.services.deep import trigger_detector as td_module
         import app.db.session as db_session_module
         from contextlib import asynccontextmanager
-
-        # Prevent background tasks from using real DB
-        monkeypatch.setattr(
-            td_module.TriggerDetector, "detect_from_all_blocks", staticmethod(lambda payloads: set())
-        )
 
         @asynccontextmanager
         async def _fake_session_factory():
@@ -366,17 +362,11 @@ class TestSession1CloseTransitionsToSession2Pending:
     ):
         """
         After POST /intake/{lead_id}/session1/close, state must be session2_pending.
+
+        PR5b: TriggerDetector removed from close_session1. No patch needed.
         """
-        from app.services.deep import trigger_detector as td_module
         import app.db.session as db_session_module
         from contextlib import asynccontextmanager
-
-        # Prevent background tasks from touching real DB
-        monkeypatch.setattr(
-            td_module.TriggerDetector,
-            "detect_from_all_blocks",
-            staticmethod(lambda payloads: set()),
-        )
 
         @asynccontextmanager
         async def _fake_session_factory():
@@ -446,18 +436,13 @@ class TestSession1CloseTransitionsToSession2Pending:
     ):
         """
         E.7 triangulation: After session1/close, state must NOT be deep_pending
-        or deep_received under any condition (even if branches would have been created).
+        or deep_received under any condition.
+
+        PR5b: TriggerDetector removed entirely. This test verifies the state
+        machine constraint is preserved — session always goes to session2_pending.
         """
-        from app.services.deep import trigger_detector as td_module
         import app.db.session as db_session_module
         from contextlib import asynccontextmanager
-
-        # Simulate trigger detector returning branches (old code path set deep_pending)
-        monkeypatch.setattr(
-            td_module.TriggerDetector,
-            "detect_from_all_blocks",
-            staticmethod(lambda payloads: {"governance"}),
-        )
 
         @asynccontextmanager
         async def _fake_session_factory():

@@ -1,19 +1,19 @@
 """
-tests/integration/test_client_deep_form — T8.1
+tests/integration/test_client_deep_form — T8.1 (updated PR5b)
 
 Integration tests for public client DEEP form endpoints (Batch 8).
 
-Endpoints under test:
-  GET  /api/client/deep/{signed_token}          — fetch DEEP questions
-  POST /api/client/deep/{signed_token}/submit   — submit branch responses
+PR5b: The async deep form flow has been retired. All /client/deep/* endpoints
+now return HTTP 410 Gone regardless of token validity. Tests updated to
+assert 410 for every scenario that previously expected 200 or 401.
 
-Token type: signed URL with payload {lead_id, branch_ids, purpose="deep_form"}
+Endpoints under test:
+  GET  /api/client/deep/{signed_token}          — RETIRED, returns 410
+  POST /api/client/deep/{signed_token}/submit   — RETIRED, returns 410
 """
 
 from __future__ import annotations
 
-import json
-import time
 from datetime import datetime, timezone
 
 import pytest
@@ -144,18 +144,24 @@ def _make_expired_deep_token(lead_id: str, branch_ids: list[str]) -> str:
 
 
 # ---------------------------------------------------------------------------
-# GET /api/client/deep/{token} — fetch questions
+# GET /api/client/deep/{token} — RETIRED (PR5b: returns 410 Gone)
 # ---------------------------------------------------------------------------
 
 
 class TestClientDeepGet:
-    async def test_invalid_token_returns_401(self, client: AsyncClient):
-        resp = await client.get("/api/client/deep/not-a-real-token")
-        assert resp.status_code == 401
+    """PR5b: All GET /client/deep/* requests return 410 Gone unconditionally."""
 
-    async def test_tampered_token_returns_401(
+    async def test_invalid_token_returns_410(self, client: AsyncClient):
+        """Invalid token now returns 410, not 401 — endpoint is retired."""
+        resp = await client.get("/api/client/deep/not-a-real-token")
+        assert resp.status_code == 410, (
+            f"Expected 410 Gone for retired endpoint, got {resp.status_code}: {resp.text}"
+        )
+
+    async def test_tampered_token_returns_410(
         self, client: AsyncClient, test_db: AsyncSession
     ):
+        """Tampered token now returns 410, not 401 — endpoint is retired."""
         user, sid = await _create_admin_session(
             test_db, "deep.tamper@t.com", "deep-sid-tamper01"
         )
@@ -166,11 +172,14 @@ class TestClientDeepGet:
         # tamper last character
         tampered = token[:-1] + ("x" if token[-1] != "x" else "y")
         resp = await client.get(f"/api/client/deep/{tampered}")
-        assert resp.status_code == 401
+        assert resp.status_code == 410, (
+            f"Expected 410 Gone for retired endpoint, got {resp.status_code}"
+        )
 
-    async def test_expired_token_returns_401(
+    async def test_expired_token_returns_410(
         self, client: AsyncClient, test_db: AsyncSession
     ):
+        """Expired token now returns 410, not 401 — endpoint is retired."""
         user, sid = await _create_admin_session(
             test_db, "deep.exp@t.com", "deep-sid-expired01"
         )
@@ -179,11 +188,14 @@ class TestClientDeepGet:
         )
         token = _make_expired_deep_token(lead_id, [])
         resp = await client.get(f"/api/client/deep/{token}")
-        assert resp.status_code == 401
+        assert resp.status_code == 410, (
+            f"Expected 410 Gone for retired endpoint, got {resp.status_code}"
+        )
 
-    async def test_valid_token_returns_branches(
+    async def test_valid_token_returns_410(
         self, client: AsyncClient, test_db: AsyncSession
     ):
+        """Even a valid token returns 410 — endpoint is retired."""
         user, sid = await _create_admin_session(
             test_db, "deep.valid@t.com", "deep-sid-valid001"
         )
@@ -194,17 +206,16 @@ class TestClientDeepGet:
         token = _make_deep_token(lead_id, [branch.id])
 
         resp = await client.get(f"/api/client/deep/{token}")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["lead_id"] == lead_id
-        assert len(data["deep_branches"]) == 1
-        b = data["deep_branches"][0]
-        assert b["branch_id"] == "strategic"
-        assert len(b["generated_questions"]) == 2
+        assert resp.status_code == 410, (
+            f"Expected 410 Gone for retired endpoint, got {resp.status_code}: {resp.text}"
+        )
+        body = resp.json()
+        assert "detail" in body
 
-    async def test_valid_token_returns_status(
+    async def test_response_body_mentions_retired(
         self, client: AsyncClient, test_db: AsyncSession
     ):
+        """410 response body must include the 'Gone' detail message."""
         user, sid = await _create_admin_session(
             test_db, "deep.status@t.com", "deep-sid-status01"
         )
@@ -215,27 +226,35 @@ class TestClientDeepGet:
         token = _make_deep_token(lead_id, [branch.id])
 
         resp = await client.get(f"/api/client/deep/{token}")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert "status" in data
+        assert resp.status_code == 410
+        body = resp.json()
+        assert "Gone" in body.get("detail", ""), (
+            f"Expected 'Gone' in response detail, got: {body!r}"
+        )
 
 
 # ---------------------------------------------------------------------------
-# POST /api/client/deep/{token}/submit — submit responses
+# POST /api/client/deep/{token}/submit — RETIRED (PR5b: returns 410 Gone)
 # ---------------------------------------------------------------------------
 
 
 class TestClientDeepSubmit:
-    async def test_invalid_token_returns_401(self, client: AsyncClient):
+    """PR5b: All POST /client/deep/*/submit requests return 410 Gone unconditionally."""
+
+    async def test_invalid_token_returns_410(self, client: AsyncClient):
+        """Invalid token now returns 410, not 401 — endpoint is retired."""
         resp = await client.post(
             "/api/client/deep/bad-token/submit",
             json={"branch_id": "x", "responses": {}},
         )
-        assert resp.status_code == 401
+        assert resp.status_code == 410, (
+            f"Expected 410 Gone for retired endpoint, got {resp.status_code}: {resp.text}"
+        )
 
-    async def test_submit_persists_client_responses(
+    async def test_submit_with_valid_token_returns_410(
         self, client: AsyncClient, test_db: AsyncSession
     ):
+        """Even a valid token + real branch returns 410 — endpoint is retired."""
         user, sid = await _create_admin_session(
             test_db, "deep.sub@t.com", "deep-sid-sub00001"
         )
@@ -250,17 +269,16 @@ class TestClientDeepSubmit:
             f"/api/client/deep/{token}/submit",
             json={"branch_id": branch.id, "responses": responses},
         )
-        assert resp.status_code == 200
+        assert resp.status_code == 410, (
+            f"Expected 410 Gone for retired endpoint, got {resp.status_code}: {resp.text}"
+        )
 
-        # Verify DB state
-        await test_db.refresh(branch)
-        assert branch.client_responses == responses
-        assert branch.status == "received"
-        assert branch.received_at is not None
-
-    async def test_submit_last_branch_transitions_session_state(
+    async def test_submit_does_not_persist_state(
         self, client: AsyncClient, test_db: AsyncSession
     ):
+        """
+        PR5b regression: submitting to retired endpoint must NOT change branch or session state.
+        """
         user, sid = await _create_admin_session(
             test_db, "deep.last@t.com", "deep-sid-last0001"
         )
@@ -268,74 +286,39 @@ class TestClientDeepSubmit:
             client, test_db, sid, user.id, "deep.last.lead@t.com"
         )
         branch = await _create_deep_branch(test_db, session_id, "governance")
+        original_status = branch.status
         token = _make_deep_token(lead_id, [branch.id])
 
         resp = await client.post(
             f"/api/client/deep/{token}/submit",
             json={"branch_id": branch.id, "responses": {"q1": "Respuesta"}},
         )
-        assert resp.status_code == 200
+        assert resp.status_code == 410
 
-        # Session state must transition to deep_received
+        # Branch status must be unchanged
+        test_db.expire_all()
         await test_db.refresh(branch)
+        assert branch.status == original_status, (
+            f"Branch status changed unexpectedly to {branch.status!r} after 410 response"
+        )
+
+        # Session state must NOT be deep_received
         result = await test_db.execute(
             select(IntakeSession).where(IntakeSession.id == session_id)
         )
         session = result.scalar_one()
-        assert session.state == "deep_received"
-
-    async def test_submit_partial_branches_does_not_transition(
-        self, client: AsyncClient, test_db: AsyncSession
-    ):
-        user, sid = await _create_admin_session(
-            test_db, "deep.part@t.com", "deep-sid-part0001"
+        assert session.state != "deep_received", (
+            f"Session should not have transitioned to deep_received, got {session.state!r}"
         )
-        lead_id, session_id = await _create_accepted_lead_with_session(
-            client, test_db, sid, user.id, "deep.part.lead@t.com"
-        )
-        branch1 = await _create_deep_branch(test_db, session_id, "strategic")
-        branch2 = await _create_deep_branch(test_db, session_id, "data")
-        token = _make_deep_token(lead_id, [branch1.id, branch2.id])
 
-        # Submit only branch1
+    async def test_response_body_mentions_retired(self, client: AsyncClient):
+        """410 response body must include the 'Gone' detail message."""
         resp = await client.post(
-            f"/api/client/deep/{token}/submit",
-            json={"branch_id": branch1.id, "responses": {"q1": "Answer1"}},
+            "/api/client/deep/any-token/submit",
+            json={"branch_id": "x", "responses": {}},
         )
-        assert resp.status_code == 200
-
-        # Session state should NOT be deep_received yet
-        result = await test_db.execute(
-            select(IntakeSession).where(IntakeSession.id == session_id)
+        assert resp.status_code == 410
+        body = resp.json()
+        assert "Gone" in body.get("detail", ""), (
+            f"Expected 'Gone' in response detail, got: {body!r}"
         )
-        session = result.scalar_one()
-        assert session.state != "deep_received"
-
-    async def test_submit_sends_confirmation_email(
-        self, client: AsyncClient, test_db: AsyncSession, monkeypatch
-    ):
-        sent = []
-
-        async def mock_send_email(to, subject, body):
-            sent.append({"to": to, "subject": subject})
-            return True
-
-        from app.email import sender
-        monkeypatch.setattr(sender, "send_email", mock_send_email)
-
-        user, sid = await _create_admin_session(
-            test_db, "deep.email@t.com", "deep-sid-email001"
-        )
-        lead_id, session_id = await _create_accepted_lead_with_session(
-            client, test_db, sid, user.id, "deep.email.lead@t.com"
-        )
-        branch = await _create_deep_branch(test_db, session_id, "strategic")
-        token = _make_deep_token(lead_id, [branch.id])
-
-        await client.post(
-            f"/api/client/deep/{token}/submit",
-            json={"branch_id": branch.id, "responses": {"q1": "Answer"}},
-        )
-
-        # Email to lead must be queued (BackgroundTask executes inline in test)
-        assert any("deep.email.lead@t.com" in m["to"] for m in sent)

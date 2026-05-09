@@ -12,13 +12,13 @@ Flow:
   6. (Mock LLM returns analysis per block) → BlockAnalysis status=ready
   7. GET  /api/intake/{lead_id}/blocks/{block_id}/analysis → suggestions present
   8. POST /api/intake/{lead_id}/suggestions/{id}/action → "done"
-  9. POST /api/intake/{lead_id}/session1/close → synthesis + DeepBranches created
- 10. GET  /api/intake/{lead_id}/deep → branches listed
- 11. PATCH /api/intake/{lead_id}/deep/{branch_id} → consultant edits
- 12. POST /api/intake/{lead_id}/deep/{branch_id}/send → signed URL + email to client
- 13. GET  /api/client/deep/{token} → questions returned (public endpoint)
- 14. POST /api/client/deep/{token}/submit → client_responses persisted
- 15. Verify IntakeSession.state=deep_received
+  9. POST /api/intake/{lead_id}/session1/close → synthesis, state=session2_pending
+ 10. GET  /api/intake/{lead_id}/deep → 410 Gone (PR5b: deep flow retired)
+ 11. PATCH /api/intake/{lead_id}/deep/{branch_id} → 410 Gone (PR5b)
+ 12. POST /api/intake/{lead_id}/deep/{branch_id}/send → 410 Gone (PR5b)
+ 13. GET  /api/client/deep/{token} → 410 Gone (PR5b)
+ 14. POST /api/client/deep/{token}/submit → 410 Gone (PR5b)
+ 15. Verify IntakeSession.state=session2_pending (REQ-09)
  16. Verify confirmation email sent
 
 Mocks:
@@ -399,94 +399,58 @@ async def test_full_lifecycle(client: AsyncClient, test_db: AsyncSession, monkey
     # synthesis_job_started is the actual field name (deep_generation also triggered)
     assert close_data.get("synthesis_job_started") is True or close_data.get("deep_branches_created") is not None
 
-    # Verify DeepBranch rows created (via immediate creation in endpoint, not background)
+    # PR5b: deep_branches are no longer created from session1/close.
+    # TriggerDetector removed. Verify session is in session2_pending state.
     await test_db.refresh(intake_session)
 
-    deep_stmt = select(DeepBranch).where(DeepBranch.intake_session_id == intake_session.id)
-    deep_branches = (await test_db.execute(deep_stmt)).scalars().all()
-
-    # ── STEP 10: GET /api/intake/{lead_id}/deep ─────────────────────────────
+    # ── STEP 10 (PR5b): Verify deep list returns 410 Gone ───────────────────
+    # The async deep review flow has been retired. All /intake/{lead_id}/deep
+    # endpoints return 410.
     resp = await client.get(f"/api/intake/{lead_id}/deep", cookies=cookies)
-    assert resp.status_code == 200, f"Deep list failed: {resp.text}"
+    assert resp.status_code == 410, (
+        f"PR5b: Expected 410 Gone for retired deep list endpoint, got {resp.status_code}: {resp.text}"
+    )
 
-    # If no branches exist from triggers, create one manually for the rest of the test
-    await test_db.refresh(intake_session)
-    deep_stmt = select(DeepBranch).where(DeepBranch.intake_session_id == intake_session.id)
-    deep_branches = (await test_db.execute(deep_stmt)).scalars().all()
-
-    if not deep_branches:
-        # Create a test branch manually
-        test_branch = DeepBranch(
-            intake_session_id=intake_session.id,
-            branch_id="strategic",
-            generated_questions=_DEEP_LLM_OUTPUT["questions"],
-            status="pending_review",
-        )
-        test_db.add(test_branch)
-        await test_db.commit()
-        deep_branches = [test_branch]
-
-    branch = deep_branches[0]
-    branch_db_id = branch.id
-
-    # ── STEP 11: PATCH /api/intake/{lead_id}/deep/{branch_id} ───────────────
-    new_questions = _DEEP_LLM_OUTPUT["questions"] + [{"text": "Additional consultant question?", "rationale": "Consultant added"}]
+    # ── STEP 11 (PR5b): Verify deep patch returns 410 Gone ──────────────────
     resp = await client.patch(
-        f"/api/intake/{lead_id}/deep/{branch_db_id}",
-        json={"questions": new_questions},
+        f"/api/intake/{lead_id}/deep/some-branch-id",
+        json={"questions": []},
         cookies=cookies,
     )
-    assert resp.status_code == 200, f"Deep patch failed: {resp.text}"
-    patched_data = resp.json()
-    assert len(patched_data.get("generated_questions", [])) == len(new_questions)
+    assert resp.status_code == 410, (
+        f"PR5b: Expected 410 Gone for retired deep patch endpoint, got {resp.status_code}: {resp.text}"
+    )
 
-    # ── STEP 12: POST /api/intake/{lead_id}/deep/{branch_id}/send ───────────
+    # ── STEP 12 (PR5b): Verify deep send returns 410 Gone ───────────────────
     resp = await client.post(
-        f"/api/intake/{lead_id}/deep/{branch_db_id}/send",
+        f"/api/intake/{lead_id}/deep/some-branch-id/send",
         cookies=cookies,
     )
-    assert resp.status_code == 200, f"Deep send failed: {resp.text}"
-    send_data = resp.json()
-    assert "signed_url" in send_data or "sent_to" in send_data
-
-    # Verify branch updated
-    await test_db.refresh(branch)
-    token = branch.signed_token
-    assert token is not None, "signed_token not set on branch after send"
-
-    # ── STEP 13: GET /api/client/deep/{token} ───────────────────────────────
-    # Try both possible routes (intake_routes and client_routes both have this endpoint)
-    resp = await client.get(f"/api/client/deep/{token}")
-    assert resp.status_code == 200, f"Client deep GET failed: {resp.text}"
-    client_data = resp.json()
-    # Should contain either branches or deep_branches
-    assert (
-        "deep_branches" in client_data
-        or "branches" in client_data
-        or isinstance(client_data, list)
-    ), f"Unexpected client GET response: {client_data}"
-
-    # ── STEP 14: POST /api/client/deep/{token}/submit ────────────────────────
-    # generated_questions is list[dict] with "text" key, or may be list[str] fallback
-    raw_questions = branch.generated_questions or _DEEP_LLM_OUTPUT["questions"]
-    client_responses = {}
-    for i, q in enumerate(raw_questions):
-        key = q.get("text", str(q)) if isinstance(q, dict) else str(q)
-        client_responses[key] = f"Client answer {i+1}"
-
-    resp = await client.post(
-        f"/api/client/deep/{token}/submit",
-        json={"branch_id": branch_db_id, "responses": client_responses},
+    assert resp.status_code == 410, (
+        f"PR5b: Expected 410 Gone for retired deep send endpoint, got {resp.status_code}: {resp.text}"
     )
-    assert resp.status_code == 200, f"Client deep submit failed: {resp.text}"
-    submit_data = resp.json()
-    assert submit_data.get("received") is True
 
-    # ── STEP 15: Verify IntakeSession.state=deep_received ───────────────────
+    # ── STEP 13 (PR5b): Verify client deep GET returns 410 Gone ─────────────
+    resp = await client.get(f"/api/client/deep/any-token")
+    assert resp.status_code == 410, (
+        f"PR5b: Expected 410 Gone for retired client deep GET, got {resp.status_code}: {resp.text}"
+    )
+
+    # ── STEP 14 (PR5b): Verify client deep submit returns 410 Gone ──────────
+    resp = await client.post(
+        f"/api/client/deep/any-token/submit",
+        json={"branch_id": "x", "responses": {}},
+    )
+    assert resp.status_code == 410, (
+        f"PR5b: Expected 410 Gone for retired client deep submit, got {resp.status_code}: {resp.text}"
+    )
+
+    # ── STEP 15 (PR5b): Verify IntakeSession.state=session2_pending ─────────
     await test_db.refresh(intake_session)
-    # For single branch, all_received should be True → state=deep_received
-    assert intake_session.state == "deep_received", (
-        f"Expected state=deep_received, got={intake_session.state}"
+    # PR5b: session1/close now always transitions to session2_pending (REQ-09).
+    # deep_received is a retired state — never reachable from session1/close.
+    assert intake_session.state == "session2_pending", (
+        f"PR5b: Expected state=session2_pending (REQ-09), got={intake_session.state}"
     )
 
     # ── STEP 16: Verify confirmation email was sent ──────────────────────────

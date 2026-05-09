@@ -236,15 +236,10 @@ class TestCrossTenantDeepSubmit:
             f"/api/client/deep/token-b/submit",
             json={"responses": {"0": "answer"}},
         )
-        # Should 200 if token resolves correctly (branch belongs to session_b, not session_a)
-        # The cross-tenant guard: if we load the branch by token and the branch's session
-        # doesn't match the expected session, it should 403.
-        # Since the token is "token-b" which belongs to session_b, that IS session_b's
-        # branch, so it should pass — this is the SAME tenant case.
-        # The cross-tenant attack is using token-b but claiming it belongs to session_a.
-        # The test validates the guard is IN PLACE by checking the response code.
-        # We accept 200 (token resolves to correct session) or 403 (guard fires).
-        assert resp.status_code in (200, 403, 404, 422), (
+        # PR5b: The /client/deep/*/submit endpoint is retired and returns 410 Gone.
+        # We also accept 200 (old guard pass), 403 (cross-tenant guard), 404, 422
+        # for backward compatibility with test intent.
+        assert resp.status_code in (200, 403, 404, 410, 422), (
             f"Unexpected status: {resp.status_code} body={resp.text}"
         )
 
@@ -269,12 +264,11 @@ class TestCrossTenantDeepSubmit:
 
         monkeypatch.setattr(email_sender, "send_email", _noop)
 
-        # This endpoint is GET /api/client/deep/{signed_token} (read) or
-        # POST /api/client/deep/{signed_token}/submit (write).
-        # The guard should live in the submit handler.
-        # We verify the endpoint exists and handles gracefully.
+        # PR5b: /client/deep/*/submit is retired and returns 410 Gone.
+        # Previously this would 401 (invalid token) or 403/404 (guard).
+        # Now it always returns 410 regardless of token.
         resp = await client.post(
             "/api/client/deep/nonexistent-token/submit",
             json={"responses": {"0": "answer"}},
         )
-        assert resp.status_code in (400, 403, 404, 422)
+        assert resp.status_code in (400, 403, 404, 410, 422)

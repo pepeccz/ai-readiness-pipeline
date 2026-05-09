@@ -629,15 +629,14 @@ class TestCloseSession1Timer:
         return lead_id, session_id, sid
 
     def _close_patches(self):
-        """Context managers to mock background tasks in close_session1."""
+        """Context managers to mock background tasks in close_session1.
+
+        PR5b: app.services.deep removed; only run_session1_synthesis needs patching.
+        """
         return [
             patch(
                 "app.api.intake_routes.run_session1_synthesis",
                 new_callable=lambda: lambda *a, **kw: AsyncMock(),
-            ),
-            patch(
-                "app.services.deep.generator.generate_all_branches",
-                new_callable=AsyncMock,
             ),
         ]
 
@@ -652,15 +651,9 @@ class TestCloseSession1Timer:
         session_before = await _get_session(test_db, session_id)
         assert session_before.session1_completed_at is None
 
-        with (
-            patch(
-                "app.api.intake_routes.run_session1_synthesis",
-                new_callable=lambda: lambda *a, **kw: AsyncMock(),
-            ),
-            patch(
-                "app.services.deep.generator.generate_all_branches",
-                new=AsyncMock(),
-            ),
+        with patch(
+            "app.api.intake_routes.run_session1_synthesis",
+            new_callable=lambda: lambda *a, **kw: AsyncMock(),
         ):
             resp = await client.post(
                 f"/api/intake/{lead_id}/session1/close",
@@ -684,15 +677,9 @@ class TestCloseSession1Timer:
         assert session_before.timer_started_at is not None
         assert session_before.timer_paused_at is None
 
-        with (
-            patch(
-                "app.api.intake_routes.run_session1_synthesis",
-                new_callable=lambda: lambda *a, **kw: AsyncMock(),
-            ),
-            patch(
-                "app.services.deep.generator.generate_all_branches",
-                new=AsyncMock(),
-            ),
+        with patch(
+            "app.api.intake_routes.run_session1_synthesis",
+            new_callable=lambda: lambda *a, **kw: AsyncMock(),
         ):
             resp = await client.post(
                 f"/api/intake/{lead_id}/session1/close",
@@ -726,15 +713,9 @@ class TestCloseSession1Timer:
         accumulated_before = session_paused.timer_accumulated_seconds
         assert paused_at_before is not None
 
-        with (
-            patch(
-                "app.api.intake_routes.run_session1_synthesis",
-                new_callable=lambda: lambda *a, **kw: AsyncMock(),
-            ),
-            patch(
-                "app.services.deep.generator.generate_all_branches",
-                new=AsyncMock(),
-            ),
+        with patch(
+            "app.api.intake_routes.run_session1_synthesis",
+            new_callable=lambda: lambda *a, **kw: AsyncMock(),
         ):
             resp = await client.post(
                 f"/api/intake/{lead_id}/session1/close",
@@ -774,15 +755,9 @@ class TestCloseSession1Timer:
         session_before = await _get_session(test_db, session_id)
         assert session_before.timer_started_at is None
 
-        with (
-            patch(
-                "app.api.intake_routes.run_session1_synthesis",
-                new_callable=lambda: lambda *a, **kw: AsyncMock(),
-            ),
-            patch(
-                "app.services.deep.generator.generate_all_branches",
-                new=AsyncMock(),
-            ),
+        with patch(
+            "app.api.intake_routes.run_session1_synthesis",
+            new_callable=lambda: lambda *a, **kw: AsyncMock(),
         ):
             resp = await client.post(
                 f"/api/intake/{lead_id}/session1/close",

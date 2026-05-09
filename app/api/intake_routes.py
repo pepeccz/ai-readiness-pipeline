@@ -1421,10 +1421,6 @@ async def close_intake(
                 "next_endpoint": "session2/close",
             },
         )
-    elif current_state == "deep_received":
-        # Legacy path — kept for reference; unreachable after migration.
-        session.state = "closed"
-        await db.commit()
     else:
         can_force = False
         raise HTTPException(
@@ -1548,18 +1544,19 @@ async def close_session1(
     db: AsyncSession = Depends(get_db),
 ) -> SessionCloseResponse:
     """
-    Close session 1: run synthesis LLM + detect DEEP triggers + create DeepBranch rows.
+    Close session 1: run synthesis LLM → transition session state to session2_pending.
 
     Precondition: block-1-strategic must be submitted.
     Steps:
-      1. Mark session state = blocks_completed
-      2. BackgroundTask: generate session 1 synthesis via LLM
-      3. Detect deep branches from block payloads
-      4. Create DeepBranch rows with status=pending_generation
-      5. BackgroundTask: generate questions for each branch
-      6. Mark session state = deep_pending
+      1. Mark session state = session2_pending (REQ-09)
+      2. Write session1_completed_at
+      3. Auto-pause running timer
+      4. BackgroundTask: generate session 1 synthesis via LLM
+
+    PR5b: TriggerDetector and DeepBranch creation removed entirely (REQ-14).
+    deep_pending and deep_received are retired states — session goes directly
+    to session2_pending.
     """
-    from app.services.deep.trigger_detector import TriggerDetector  # noqa: PLC0415
     from app.services.sessions.session_closing import SessionClosingService  # noqa: PLC0415
 
     await _get_accepted_lead(db, lead_id)
@@ -1578,32 +1575,11 @@ async def close_session1(
             detail="block-1-strategic is required before closing session 1.",
         )
 
-    # Load block payloads for trigger detection
-    ba_stmt = select(BlockAnalysis).where(
-        BlockAnalysis.intake_session_id == session.id
-    )
-    ba_result = await db.execute(ba_stmt)
-    block_analyses = ba_result.scalars().all()
+    # PR5b: TriggerDetector removed. No DeepBranch rows are created.
+    # deep_branches table is soft-deprecated (REQ-14); kept for FK integrity only.
 
-    block_payloads = {ba.block_id: ba.payload for ba in block_analyses}
-    block_syntheses = {
-        ba.block_id: (ba.llm_output or {}).get("synthesis", "")
-        for ba in block_analyses
-        if ba.status == "ready" and ba.llm_output
-    }
-
-    # PR5a: deep_branches detection and creation is soft-deprecated.
-    # TriggerDetector.detect_from_all_blocks is still called to preserve backward
-    # compatibility for any existing deep_branch rows, but the state machine no
-    # longer routes through deep_pending / deep_received.
-    # PR5b will remove the TriggerDetector and DeepBranch creation entirely.
-    activated_branches = TriggerDetector.detect_from_all_blocks(block_payloads)
-    created_count = len(activated_branches)
-    # NOTE: DeepBranch rows are NOT created here (PR5a — soft deprecation).
-    # deep_branches table is kept but no new rows are written by this path.
-
-    # PR5a: Always transition to session2_pending regardless of branch count.
-    # deep_pending and deep_received are retired states (REQ-09).
+    # Always transition to session2_pending (REQ-09).
+    # deep_pending and deep_received are retired states.
     session.state = "session2_pending"
 
     # REQ-7: Write session1_completed_at (fix latent bug — was never set).
@@ -1625,17 +1601,11 @@ async def close_session1(
         "session1_closed",
         lead_id=lead_id,
         session_id=session.id,
-        deep_branches_created=created_count,
     )
 
     # BackgroundTask: synthesis LLM
     session_id = session.id
     background_tasks.add_task(run_session1_synthesis, lead_id, session_id)
-
-    # PR5a: _run_deep_generation background task REMOVED.
-    # deep_branches are no longer created from this path (REQ-14).
-    # The deep.generator module is still present but not invoked.
-    # PR5b will delete the dead code entirely.
 
     return SessionCloseResponse(
         lead_id=lead_id,
@@ -1689,16 +1659,9 @@ async def retry_session1_synthesis(
             detail="Session has not been closed yet. Cannot retry synthesis.",
         )
 
-    # Guard: if synthesis is currently in-flight (None = pending, not failed)
-    # Only allow retry if synthesis is None AND state isn't pending,
-    # or synthesis has 'error' key (failed), or synthesis is populated (allow re-run)
-    synthesis = session.session1_synthesis
-    synthesis_in_flight = synthesis is None and session.state == "deep_pending"
-    # We allow retry when synthesis failed (has 'error' key) OR when synthesis is populated
-    # We block retry only when synthesis is None AND it might still be running
-    # (i.e., session just closed and background task hasn't completed yet)
-    # The design leaves this as a soft guard — in practice, admin decides to retry.
-    # We do NOT block: allow retry always when session is closed.
+    # PR5b: deep_pending is a retired state. The synthesis retry is always allowed
+    # once the session is past the pre-close states. Allow retry regardless of
+    # whether synthesis is populated, None, or failed (has 'error' key).
 
     # Reset synthesis and schedule retry
     session.session1_synthesis = None
@@ -1761,21 +1724,18 @@ async def list_deep_branches(
     current_user: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ) -> DeepListResponse:
-    """Return all DeepBranch rows for this lead's intake session."""
-    await _get_accepted_lead(db, lead_id)
+    """
+    RETIRED: async deep review flow has been retired (PR5b).
 
-    session_stmt = select(IntakeSession).where(IntakeSession.lead_id == lead_id)
-    session_result = await db.execute(session_stmt)
-    session = session_result.scalar_one_or_none()
-    if session is None:
-        return DeepListResponse(lead_id=lead_id, branches=[])
-
-    from app.services.deep.consultant_review import list_branches  # noqa: PLC0415
-    branches = await list_branches(db, session.id)
-
-    return DeepListResponse(
-        lead_id=lead_id,
-        branches=[_branch_to_response(b) for b in branches],
+    Returns 410 Gone. The deep_branches table is preserved (soft-deprecated, REQ-14)
+    but the consultant review UI is removed. PR6a removes the frontend counterpart.
+    """
+    import json as _json
+    from fastapi.responses import Response as _Response
+    return _Response(
+        status_code=410,
+        content=_json.dumps({"detail": "Gone — async deep flow has been retired. Sesión 2 is now synchronous."}),
+        media_type="application/json",
     )
 
 
@@ -1791,16 +1751,18 @@ async def patch_deep_branch(
     current_user: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ) -> DeepBranchResponse:
-    """Edit questions on a DeepBranch (consultant review)."""
-    await _get_accepted_lead(db, lead_id)
+    """
+    RETIRED: async deep review flow has been retired (PR5b).
 
-    from app.services.deep.consultant_review import update_branch_questions  # noqa: PLC0415
-    try:
-        branch = await update_branch_questions(db, branch_id, body.questions)
-    except ValueError:
-        raise HTTPException(status_code=404, detail=f"DeepBranch {branch_id} not found.")
-
-    return _branch_to_response(branch)
+    Returns 410 Gone. PR6a removes the frontend counterpart.
+    """
+    import json as _json
+    from fastapi.responses import Response as _Response
+    return _Response(
+        status_code=410,
+        content=_json.dumps({"detail": "Gone — async deep flow has been retired. Sesión 2 is now synchronous."}),
+        media_type="application/json",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1814,16 +1776,18 @@ async def send_deep_branch(
     current_user: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ) -> DeepSendResponse:
-    """Approve + send a DeepBranch to the client via email with signed URL."""
-    await _get_accepted_lead(db, lead_id)
+    """
+    RETIRED: async deep review flow has been retired (PR5b).
 
-    from app.services.deep.consultant_review import send_branch_to_client  # noqa: PLC0415
-    try:
-        result = await send_branch_to_client(db, lead_id, branch_id)
-    except ValueError:
-        raise HTTPException(status_code=404, detail=f"DeepBranch {branch_id} not found.")
-
-    return DeepSendResponse(**result)
+    Returns 410 Gone. PR6a removes the frontend counterpart.
+    """
+    import json as _json
+    from fastapi.responses import Response as _Response
+    return _Response(
+        status_code=410,
+        content=_json.dumps({"detail": "Gone — async deep flow has been retired. Sesión 2 is now synchronous."}),
+        media_type="application/json",
+    )
 
 
 # ===========================================================================
@@ -1861,45 +1825,19 @@ def _verify_deep_token(token: str) -> dict:
 # ---------------------------------------------------------------------------
 
 @router.get("/client/deep/{signed_token}")
-async def client_deep_get(
-    signed_token: str,
-    db: AsyncSession = Depends(get_db),
-) -> ClientDeepGetResponse:
-    """Return DEEP branch questions for client (authenticated via signed URL)."""
-    payload = _verify_deep_token(signed_token)
-    lead_id = payload.get("lead_id")
-    branch_ids = payload.get("branch_ids", [])
+async def client_deep_get(signed_token: str):
+    """
+    RETIRED: async deep form flow has been retired (PR5b).
 
-    # Load branches
-    if branch_ids:
-        branches_stmt = select(DeepBranch).where(DeepBranch.id.in_(branch_ids))
-    else:
-        # Fallback: load all sent branches for this lead's session
-        session_stmt = select(IntakeSession).where(IntakeSession.lead_id == lead_id)
-        session_result = await db.execute(session_stmt)
-        session = session_result.scalar_one_or_none()
-        if session is None:
-            return ClientDeepGetResponse(lead_id=lead_id, status="no_session", deep_branches=[])
-        branches_stmt = select(DeepBranch).where(
-            DeepBranch.intake_session_id == session.id,
-            DeepBranch.status.in_(["sent_to_client", "received"]),
-        )
-
-    branches_result = await db.execute(branches_stmt)
-    branches = branches_result.scalars().all()
-
-    return ClientDeepGetResponse(
-        lead_id=lead_id,
-        status="active",
-        deep_branches=[
-            {
-                "id": b.id,
-                "branch_id": b.branch_id,
-                "generated_questions": b.generated_questions or [],
-                "status": b.status,
-            }
-            for b in branches
-        ],
+    Route kept registered so in-flight signed URLs receive 410 Gone
+    instead of 404 Not Found. Will be removed in a future cleanup PR.
+    """
+    import json as _json
+    from fastapi.responses import Response as _Response
+    return _Response(
+        status_code=410,
+        content=_json.dumps({"detail": "Gone — async deep flow has been retired. Sesión 2 is now synchronous."}),
+        media_type="application/json",
     )
 
 
@@ -1908,87 +1846,29 @@ async def client_deep_get(
 # ---------------------------------------------------------------------------
 
 @router.post("/client/deep/{signed_token}/submit")
-async def client_deep_submit(
-    signed_token: str,
-    body: ClientDeepSubmitRequest,
-    background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
-) -> ClientDeepSubmitResponse:
-    """Submit client responses for a DEEP branch."""
-    from datetime import datetime, timezone  # noqa: PLC0415
+async def client_deep_submit(signed_token: str):
+    """
+    RETIRED: async deep form flow has been retired (PR5b).
 
-    payload = _verify_deep_token(signed_token)
-    lead_id = payload.get("lead_id")
-
-    # Load the branch
-    branch_stmt = select(DeepBranch).where(DeepBranch.id == body.branch_id)
-    branch_result = await db.execute(branch_stmt)
-    branch = branch_result.scalar_one_or_none()
-    if branch is None:
-        raise HTTPException(status_code=404, detail="Branch not found.")
-
-    # Persist responses
-    branch.client_responses = body.responses
-    branch.status = "received"
-    branch.received_at = datetime.now(tz=timezone.utc)
-    await db.commit()
-
-    # Check if all branches for this session are received → transition state
-    all_branches_stmt = select(DeepBranch).where(
-        DeepBranch.intake_session_id == branch.intake_session_id
+    Route kept registered so in-flight signed URLs receive 410 Gone
+    instead of 404 Not Found. Will be removed in a future cleanup PR.
+    """
+    import json as _json
+    from fastapi.responses import Response as _Response
+    return _Response(
+        status_code=410,
+        content=_json.dumps({"detail": "Gone — async deep flow has been retired. Sesión 2 is now synchronous."}),
+        media_type="application/json",
     )
-    all_result = await db.execute(all_branches_stmt)
-    all_branches = all_result.scalars().all()
-
-    all_received = all(b.status == "received" for b in all_branches)
-
-    if all_received:
-        session_stmt = select(IntakeSession).where(
-            IntakeSession.id == branch.intake_session_id
-        )
-        session_result = await db.execute(session_stmt)
-        session = session_result.scalar_one_or_none()
-        if session:
-            session.state = "deep_received"
-            await db.commit()
-
-    # Send confirmation email to lead
-    lead_stmt = select(Lead).where(Lead.id == lead_id)
-    lead_result = await db.execute(lead_stmt)
-    lead = lead_result.scalar_one_or_none()
-
-    if lead:
-        async def _send_confirmation():
-            from app.email.sender import send_email  # noqa: PLC0415
-            subject = "Respuestas recibidas — Diagnóstico IA"
-            body_text = (
-                f"Hola {lead.full_name},\n\n"
-                f"Hemos recibido tus respuestas del cuestionario de profundización IA.\n"
-                f"Tu consultor las revisará y te contactará con los próximos pasos.\n\n"
-                f"Gracias,\nEquipo de Consultoría IA"
-            )
-            await send_email(to=lead.email, subject=subject, body=body_text)
-
-        background_tasks.add_task(_send_confirmation)
-
-    logger.info(
-        "client_deep_submitted",
-        lead_id=lead_id,
-        branch_id=body.branch_id,
-        all_received=all_received,
-    )
-
-    return ClientDeepSubmitResponse(received=True, branch_id=body.branch_id)
 
 
 # ---------------------------------------------------------------------------
 # PATCH /api/intake/{lead_id}/session1/synthesis — edit synthesis (admin)
 # ---------------------------------------------------------------------------
 
-# PR5a: deep_received replaced by session2_pending.
-# Keep deep_received in allowed states for one release cycle so in-flight sessions
-# with legacy state can still access synthesis edit/export.
-_SYNTHESIS_EDIT_ALLOWED_STATES = {"session2_pending", "deep_received", "closed"}
+# PR5b: deep_received removed from allowed states. All in-flight sessions were
+# migrated to session2_pending in PR5a (Alembic migration 5a6b7c8d9e0f).
+_SYNTHESIS_EDIT_ALLOWED_STATES = {"session2_pending", "closed"}
 
 
 @router.patch("/intake/{lead_id}/session1/synthesis")

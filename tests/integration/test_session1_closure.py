@@ -103,16 +103,12 @@ class TestZeroBranchShortCircuit:
         self, client: AsyncClient, test_db: AsyncSession, monkeypatch
     ):
         """
-        PR5a: session1/close always transitions to session2_pending regardless of branch count.
+        PR5b: session1/close always transitions to session2_pending.
+        TriggerDetector removed — no branches detected, no deep flow.
         deep_received is a retired state — no longer reachable.
         """
-        from app.services.deep import trigger_detector as td_module
         import app.db.session as db_session_module
         from contextlib import asynccontextmanager
-
-        monkeypatch.setattr(
-            td_module.TriggerDetector, "detect_from_all_blocks", staticmethod(lambda payloads: set())
-        )
 
         # Prevent BG task from using real DB — patch async_session_factory to return test_db
         @asynccontextmanager
@@ -142,18 +138,12 @@ class TestZeroBranchShortCircuit:
         self, client: AsyncClient, test_db: AsyncSession, monkeypatch
     ):
         """
-        PR5a: session1/close transitions to session2_pending even when branches were detected.
+        PR5b: session1/close transitions to session2_pending always.
+        TriggerDetector removed — branch detection no longer occurs.
         deep_pending is a retired state — no longer reachable from session1/close.
         """
-        from app.services.deep import trigger_detector as td_module
         import app.db.session as db_session_module
         from contextlib import asynccontextmanager
-
-        monkeypatch.setattr(
-            td_module.TriggerDetector,
-            "detect_from_all_blocks",
-            staticmethod(lambda payloads: {"governance_previo_ia"}),
-        )
 
         @asynccontextmanager
         async def _fake_session_factory():

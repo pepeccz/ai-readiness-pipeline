@@ -103,10 +103,10 @@ async def _set_session_state(db: AsyncSession, session_id: str, state: str) -> N
 # ─── Tests ───────────────────────────────────────────────────────────────────
 
 async def test_patch_synthesis_success(client, test_db):
-    """PATCH with valid body in deep_received state → 200; synthesis_edited_json updated."""
+    """PATCH with valid body in session2_pending state → 200; synthesis_edited_json updated. (PR5b: deep_received retired)"""
     user, sid = await _create_admin_session(test_db, "patch@t.com", "patch-sid-001")
     lead_id, session_id = await _create_accepted_lead(client, test_db, sid, user.id, "lead@corp1.com")
-    await _set_session_state(test_db, session_id, "deep_received")
+    await _set_session_state(test_db, session_id, "session2_pending")
 
     resp = await client.patch(
         f"/api/intake/{lead_id}/session1/synthesis",
@@ -138,7 +138,7 @@ async def test_patch_synthesis_requires_admin(client, test_db):
     """PATCH without auth → 401/403."""
     user, sid = await _create_admin_session(test_db, "patch3@t.com", "patch-sid-003")
     lead_id, session_id = await _create_accepted_lead(client, test_db, sid, user.id, "lead@corp3.com")
-    await _set_session_state(test_db, session_id, "deep_received")
+    await _set_session_state(test_db, session_id, "session2_pending")
 
     resp = await client.patch(
         f"/api/intake/{lead_id}/session1/synthesis",
@@ -166,7 +166,7 @@ async def test_patch_synthesis_writes_edited_at(client, test_db):
     """PATCH success sets synthesis_edited_at on the IntakeSession."""
     user, sid = await _create_admin_session(test_db, "patch5@t.com", "patch-sid-005")
     lead_id, session_id = await _create_accepted_lead(client, test_db, sid, user.id, "lead@corp5.com")
-    await _set_session_state(test_db, session_id, "deep_received")
+    await _set_session_state(test_db, session_id, "session2_pending")
 
     resp = await client.patch(
         f"/api/intake/{lead_id}/session1/synthesis",

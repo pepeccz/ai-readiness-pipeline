@@ -113,7 +113,7 @@ async def test_export_pdf_success(client, test_db):
     """
     user, sid = await _create_admin_session(test_db, "exp@t.com", "exp-sid-001")
     lead_id, session_id = await _create_accepted_lead(client, test_db, sid, user.id, "lead@exp1.com")
-    await _set_session_state_and_synthesis(test_db, session_id, "deep_received", _SAMPLE_SYNTHESIS)
+    await _set_session_state_and_synthesis(test_db, session_id, "session2_pending", _SAMPLE_SYNTHESIS)
 
     resp = await client.post(
         f"/api/intake/{lead_id}/session1/export-pdf",
@@ -142,7 +142,7 @@ async def test_export_pdf_null_synthesis_blocked(client, test_db):
     """POST export-pdf when synthesis is null → 409."""
     user, sid = await _create_admin_session(test_db, "exp3@t.com", "exp-sid-003")
     lead_id, session_id = await _create_accepted_lead(client, test_db, sid, user.id, "lead@exp3.com")
-    await _set_session_state_and_synthesis(test_db, session_id, "deep_received", synthesis=None)
+    await _set_session_state_and_synthesis(test_db, session_id, "session2_pending", synthesis=None)
 
     resp = await client.post(
         f"/api/intake/{lead_id}/session1/export-pdf",
@@ -160,7 +160,7 @@ async def test_export_pdf_uses_edited_synthesis(client, test_db):
     """
     user, sid = await _create_admin_session(test_db, "exp4@t.com", "exp-sid-004")
     lead_id, session_id = await _create_accepted_lead(client, test_db, sid, user.id, "lead@exp4.com")
-    await _set_session_state_and_synthesis(test_db, session_id, "deep_received", _SAMPLE_SYNTHESIS)
+    await _set_session_state_and_synthesis(test_db, session_id, "session2_pending", _SAMPLE_SYNTHESIS)
 
     # Set an edited synthesis
     result = await test_db.execute(select(IntakeSession).where(IntakeSession.id == session_id))
@@ -187,7 +187,7 @@ async def test_export_pdf_bumps_count_and_timestamp(client, test_db):
     """
     user, sid = await _create_admin_session(test_db, "exp5@t.com", "exp-sid-005")
     lead_id, session_id = await _create_accepted_lead(client, test_db, sid, user.id, "lead@exp5.com")
-    await _set_session_state_and_synthesis(test_db, session_id, "deep_received", _SAMPLE_SYNTHESIS)
+    await _set_session_state_and_synthesis(test_db, session_id, "session2_pending", _SAMPLE_SYNTHESIS)
 
     resp = await client.post(
         f"/api/intake/{lead_id}/session1/export-pdf",

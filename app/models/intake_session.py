@@ -3,8 +3,20 @@ app/models/intake_session — IntakeSession model.
 
 Represents a consultant-led intake session for an accepted Lead.
 
-State machine:
-  in_progress → blocks_completed → deep_pending → deep_received → closed
+State machine (new — PR5a):
+  in_progress → blocks_completed → session2_pending → closed
+
+State machine (legacy — retired by PR5a migration):
+  deep_pending, deep_received are no longer reachable from any code path.
+  Existing rows were migrated to session2_pending by migration 5a6b7c8d9e0f.
+  The string constants DEEP_PENDING / DEEP_RECEIVED are kept below as read-only
+  aliases for one release cycle so any in-flight code can still reference them
+  without crashing. Write paths only emit the new state names.
+
+State constant aliases (backwards-compat, read-only):
+  STATE_DEEP_PENDING = "deep_pending"    # → treat as session2_pending for reads
+  STATE_DEEP_RECEIVED = "deep_received"  # → treat as session2_pending for reads
+  STATE_SESSION2_PENDING = "session2_pending"
 """
 
 from __future__ import annotations
@@ -18,12 +30,33 @@ from sqlalchemy.types import JSON
 
 from app.db.base import Base
 
+# ---------------------------------------------------------------------------
+# State constants — backwards-compat aliases (PR5a)
+# ---------------------------------------------------------------------------
+# Write paths only emit new state names. Legacy constants are read-only aliases
+# that remain for one release cycle to avoid crashing any in-flight references.
+STATE_IN_PROGRESS = "in_progress"
+STATE_BLOCKS_COMPLETED = "blocks_completed"
+STATE_SESSION2_PENDING = "session2_pending"
+STATE_CLOSED = "closed"
+
+# Retired states — kept as read-only aliases. No code path may SET these.
+STATE_DEEP_PENDING = "deep_pending"    # retired → session2_pending
+STATE_DEEP_RECEIVED = "deep_received"  # retired → session2_pending
+
 
 class IntakeSession(Base):
     __tablename__ = "intake_sessions"
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+
+    # Rubric version used for scoring. Anchors which registry.yaml snapshot
+    # was used so old sessions can be re-scored reproducibly.
+    # server_default ensures all pre-existing rows receive "v1" on migration.
+    rubric_version: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="v1", server_default="v1"
     )
 
     lead_id: Mapped[str] = mapped_column(

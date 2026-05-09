@@ -253,3 +253,270 @@ class TestSession1SynthesizeEndpoint:
         session = result.scalar_one()
         # session1_synthesis should be None (reset) — background task not actually run
         assert session.session1_synthesis is None
+
+
+# ---------------------------------------------------------------------------
+# C.6 — REQ-13: session1/close MUST NOT generate a PDF
+# ---------------------------------------------------------------------------
+
+
+class TestSession1CloseNoPDFGeneration:
+    """
+    Regression-prevention tests: POST /intake/{lead_id}/session1/close
+    must NEVER generate a PDF.
+
+    REQ-13: PDF generation is deferred to session2/close.
+    This test documents the contract and prevents accidental regression.
+    """
+
+    async def test_session1_close_does_not_set_report_content(
+        self, client: AsyncClient, test_db: AsyncSession, monkeypatch
+    ):
+        """
+        After POST /intake/{lead_id}/session1/close completes,
+        IntakeSession.report_content must remain None.
+        """
+        from app.services.deep import trigger_detector as td_module
+        import app.db.session as db_session_module
+        from contextlib import asynccontextmanager
+
+        # Prevent background tasks from using real DB
+        monkeypatch.setattr(
+            td_module.TriggerDetector, "detect_from_all_blocks", staticmethod(lambda payloads: set())
+        )
+
+        @asynccontextmanager
+        async def _fake_session_factory():
+            yield test_db
+
+        monkeypatch.setattr(db_session_module, "async_session_factory", _fake_session_factory)
+
+        user, sid = await _create_admin_session(test_db, "nopdf1@t.com", "nopdf-sid-0000001")
+
+        # Create lead + accepted session
+        payload = {
+            "answers": {
+                "full_name": "No PDF Test",
+                "email": "nopdf.lead1@t.com",
+                "company_name": "NoPDF Corp",
+                "phone": None,
+                **_VALID_TRIAGE,
+            },
+            "consents": [{"type": "privacy", "accepted": True, "policy_version": "v1.0-2026-05"}],
+        }
+        r = await client.post("/api/public/triage/submit", json=payload)
+        assert r.status_code == 201, r.text
+        lead_id = r.json()["lead_id"]
+
+        r2 = await client.patch(
+            f"/api/admin/leads/{lead_id}",
+            json={"action": "accept", "consultant_id": str(user.id)},
+            cookies={"admin_sid": sid},
+        )
+        assert r2.status_code == 200, r2.text
+
+        # Submit block-1-strategic (needed for session to be closeable)
+        await client.post(
+            f"/api/intake/{lead_id}/area-selection",
+            json={"primary_area": "operations"},
+            cookies={"admin_sid": sid},
+        )
+        await client.post(
+            f"/api/intake/{lead_id}/blocks/block-1-strategic/submit",
+            json={"payload": {"q1_1_previous_ai": "no_intentos"}},
+            cookies={"admin_sid": sid},
+        )
+
+        # Call session1/close
+        resp = await client.post(
+            f"/api/intake/{lead_id}/session1/close",
+            cookies={"admin_sid": sid},
+        )
+        assert resp.status_code == 202, f"Expected 202, got {resp.status_code}: {resp.text}"
+
+        # Check that no PDF was generated
+        test_db.expire_all()
+        stmt = select(IntakeSession).where(IntakeSession.lead_id == lead_id)
+        result = await test_db.execute(stmt)
+        session = result.scalar_one_or_none()
+        assert session is not None
+
+        assert session.report_content is None, (
+            "REQ-13 violation: session1/close must NOT generate a PDF. "
+            f"report_content is not None: {type(session.report_content)}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# E.7 — REQ-09: session1/close MUST set state to session2_pending (PR5a)
+# ---------------------------------------------------------------------------
+
+
+class TestSession1CloseTransitionsToSession2Pending:
+    """
+    E.7 TDD RED: POST /intake/{lead_id}/session1/close must transition state to
+    session2_pending, NOT deep_pending or deep_received.
+
+    REQ-09: The states deep_pending and deep_received must NOT be reachable from
+    session1/close after the PR5a migration.
+    """
+
+    async def test_session1_close_sets_state_to_session2_pending(
+        self, client: AsyncClient, test_db: AsyncSession, monkeypatch
+    ):
+        """
+        After POST /intake/{lead_id}/session1/close, state must be session2_pending.
+        """
+        from app.services.deep import trigger_detector as td_module
+        import app.db.session as db_session_module
+        from contextlib import asynccontextmanager
+
+        # Prevent background tasks from touching real DB
+        monkeypatch.setattr(
+            td_module.TriggerDetector,
+            "detect_from_all_blocks",
+            staticmethod(lambda payloads: set()),
+        )
+
+        @asynccontextmanager
+        async def _fake_session_factory():
+            yield test_db
+
+        monkeypatch.setattr(db_session_module, "async_session_factory", _fake_session_factory)
+
+        user, sid = await _create_admin_session(
+            test_db, "s2p.close1@t.com", "s2p-sid-0000001"
+        )
+
+        # Create lead + accept
+        payload = {
+            "answers": {
+                "full_name": "S2P Close Test",
+                "email": "s2p.close.lead1@t.com",
+                "company_name": "S2P Corp",
+                "phone": None,
+                **_VALID_TRIAGE,
+            },
+            "consents": [{"type": "privacy", "accepted": True, "policy_version": "v1.0-2026-05"}],
+        }
+        r = await client.post("/api/public/triage/submit", json=payload)
+        assert r.status_code == 201, r.text
+        lead_id = r.json()["lead_id"]
+
+        r2 = await client.patch(
+            f"/api/admin/leads/{lead_id}",
+            json={"action": "accept", "consultant_id": str(user.id)},
+            cookies={"admin_sid": sid},
+        )
+        assert r2.status_code == 200, r2.text
+
+        # Submit block-1-strategic (precondition for close)
+        await client.post(
+            f"/api/intake/{lead_id}/area-selection",
+            json={"primary_area": "operations"},
+            cookies={"admin_sid": sid},
+        )
+        await client.post(
+            f"/api/intake/{lead_id}/blocks/block-1-strategic/submit",
+            json={"payload": {"q1_1_previous_ai": "no_intentos"}},
+            cookies={"admin_sid": sid},
+        )
+
+        # Call session1/close
+        resp = await client.post(
+            f"/api/intake/{lead_id}/session1/close",
+            cookies={"admin_sid": sid},
+        )
+        assert resp.status_code == 202, f"Expected 202, got {resp.status_code}: {resp.text}"
+
+        # Verify state is session2_pending (NOT deep_pending or deep_received)
+        test_db.expire_all()
+        stmt = select(IntakeSession).where(IntakeSession.lead_id == lead_id)
+        result = await test_db.execute(stmt)
+        session = result.scalar_one_or_none()
+        assert session is not None
+
+        assert session.state == "session2_pending", (
+            f"REQ-09 violation: session1/close must set state to 'session2_pending', "
+            f"got {session.state!r}. deep_pending/deep_received are retired states."
+        )
+
+    async def test_session1_close_never_sets_deep_states(
+        self, client: AsyncClient, test_db: AsyncSession, monkeypatch
+    ):
+        """
+        E.7 triangulation: After session1/close, state must NOT be deep_pending
+        or deep_received under any condition (even if branches would have been created).
+        """
+        from app.services.deep import trigger_detector as td_module
+        import app.db.session as db_session_module
+        from contextlib import asynccontextmanager
+
+        # Simulate trigger detector returning branches (old code path set deep_pending)
+        monkeypatch.setattr(
+            td_module.TriggerDetector,
+            "detect_from_all_blocks",
+            staticmethod(lambda payloads: {"governance"}),
+        )
+
+        @asynccontextmanager
+        async def _fake_session_factory():
+            yield test_db
+
+        monkeypatch.setattr(db_session_module, "async_session_factory", _fake_session_factory)
+
+        user, sid = await _create_admin_session(
+            test_db, "s2p.nobranch@t.com", "s2p-sid-0000002"
+        )
+
+        payload = {
+            "answers": {
+                "full_name": "S2P NoBranch Test",
+                "email": "s2p.nobranch.lead@t.com",
+                "company_name": "NoBranch Corp",
+                "phone": None,
+                **_VALID_TRIAGE,
+            },
+            "consents": [{"type": "privacy", "accepted": True, "policy_version": "v1.0-2026-05"}],
+        }
+        r = await client.post("/api/public/triage/submit", json=payload)
+        assert r.status_code == 201, r.text
+        lead_id = r.json()["lead_id"]
+
+        r2 = await client.patch(
+            f"/api/admin/leads/{lead_id}",
+            json={"action": "accept", "consultant_id": str(user.id)},
+            cookies={"admin_sid": sid},
+        )
+        assert r2.status_code == 200, r2.text
+
+        await client.post(
+            f"/api/intake/{lead_id}/area-selection",
+            json={"primary_area": "operations"},
+            cookies={"admin_sid": sid},
+        )
+        await client.post(
+            f"/api/intake/{lead_id}/blocks/block-1-strategic/submit",
+            json={"payload": {"q1_1_previous_ai": "no_intentos"}},
+            cookies={"admin_sid": sid},
+        )
+
+        resp = await client.post(
+            f"/api/intake/{lead_id}/session1/close",
+            cookies={"admin_sid": sid},
+        )
+        assert resp.status_code == 202, f"Expected 202, got {resp.status_code}: {resp.text}"
+
+        test_db.expire_all()
+        stmt = select(IntakeSession).where(IntakeSession.lead_id == lead_id)
+        result = await test_db.execute(stmt)
+        session = result.scalar_one_or_none()
+        assert session is not None
+
+        assert session.state not in ("deep_pending", "deep_received"), (
+            f"REQ-09 violation: state must never be deep_pending/deep_received after PR5a. "
+            f"Got {session.state!r}."
+        )
+        assert session.state == "session2_pending", (
+            f"Expected 'session2_pending', got {session.state!r}."
+        )

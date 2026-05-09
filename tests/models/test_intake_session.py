@@ -106,6 +106,71 @@ async def test_session1_synthesis_persists_dict(test_db: AsyncSession):
 
 
 # ---------------------------------------------------------------------------
+# E.5 — REQ-09: session2_pending state transitions (PR5a TDD)
+# ---------------------------------------------------------------------------
+
+
+async def test_session_can_write_session2_pending_state(test_db: AsyncSession):
+    """
+    E.5a: IntakeSession can persist state='session2_pending'.
+    This is the new terminal state after session1/close (replaces deep_pending).
+    """
+    from app.models.lead import Lead
+
+    lead = Lead(
+        full_name="S2P User",
+        email="s2p@example.com",
+        company_name="S2PCo",
+        sector="tecnologia",
+        company_size="1_10",
+        respondent_role="ceo_fundador",
+        ai_maturity="exploracion",
+        ai_goals=["automatizar_procesos"],
+        urgency="media",
+        commitment="agendar",
+        triage_payload={},
+        triage_score=60,
+        triage_bucket="auto_accept",
+        status="accepted",
+    )
+    test_db.add(lead)
+    await test_db.flush()
+
+    session = IntakeSession(
+        lead_id=lead.id,
+        primary_area="operaciones",
+        state="session2_pending",
+    )
+    test_db.add(session)
+    await test_db.commit()
+    await test_db.refresh(session)
+
+    assert session.state == "session2_pending", (
+        f"Expected state 'session2_pending', got {session.state!r}."
+    )
+
+
+async def test_session_state_constant_session2_pending_is_defined():
+    """
+    E.5b: STATE_SESSION2_PENDING constant is exported from the model module.
+    """
+    from app.models.intake_session import STATE_SESSION2_PENDING
+
+    assert STATE_SESSION2_PENDING == "session2_pending"
+
+
+async def test_session_legacy_state_constants_available():
+    """
+    E.5c: Backwards-compat state aliases are still importable (one-release retention).
+    Deep_pending / deep_received aliases must remain but code must NOT set them.
+    """
+    from app.models.intake_session import STATE_DEEP_PENDING, STATE_DEEP_RECEIVED
+
+    assert STATE_DEEP_PENDING == "deep_pending"
+    assert STATE_DEEP_RECEIVED == "deep_received"
+
+
+# ---------------------------------------------------------------------------
 # TA.3 — REQ-5: primary_area must have DB-level server_default='not_set'
 # ---------------------------------------------------------------------------
 

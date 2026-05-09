@@ -99,11 +99,12 @@ async def _submit_block1(client: AsyncClient, lead_id: str, sid: str) -> None:
 
 
 class TestZeroBranchShortCircuit:
-    async def test_zero_branches_transitions_to_deep_received(
+    async def test_zero_branches_transitions_to_session2_pending(
         self, client: AsyncClient, test_db: AsyncSession, monkeypatch
     ):
         """
-        When TriggerDetector returns empty set, state goes to deep_received not deep_pending.
+        PR5a: session1/close always transitions to session2_pending regardless of branch count.
+        deep_received is a retired state — no longer reachable.
         """
         from app.services.deep import trigger_detector as td_module
         import app.db.session as db_session_module
@@ -130,14 +131,20 @@ class TestZeroBranchShortCircuit:
         )
         assert resp.status_code == 202, resp.text
         data = resp.json()
-        # With zero branches, state must be deep_received, not deep_pending
-        assert data["state"] == "deep_received", f"Expected deep_received, got {data['state']}"
+        # PR5a: state is always session2_pending (deep_received is retired)
+        assert data["state"] == "session2_pending", (
+            f"Expected session2_pending (PR5a), got {data['state']!r}. "
+            "deep_received is a retired state."
+        )
         assert data["deep_branches_created"] == 0
 
-    async def test_nonzero_branches_stays_deep_pending(
+    async def test_nonzero_branches_still_transitions_to_session2_pending(
         self, client: AsyncClient, test_db: AsyncSession, monkeypatch
     ):
-        """When TriggerDetector returns at least 1 branch, state stays deep_pending."""
+        """
+        PR5a: session1/close transitions to session2_pending even when branches were detected.
+        deep_pending is a retired state — no longer reachable from session1/close.
+        """
         from app.services.deep import trigger_detector as td_module
         import app.db.session as db_session_module
         from contextlib import asynccontextmanager
@@ -164,7 +171,11 @@ class TestZeroBranchShortCircuit:
         )
         assert resp.status_code == 202, resp.text
         data = resp.json()
-        assert data["state"] == "deep_pending"
+        # PR5a: state is session2_pending regardless of branch count
+        assert data["state"] == "session2_pending", (
+            f"Expected session2_pending (PR5a), got {data['state']!r}. "
+            "deep_pending is a retired state."
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -279,14 +290,17 @@ class TestGetStateSynthesisExtension:
 
 
 class TestFinalCloseNormalPath:
-    async def test_close_deep_received_transitions_to_closed(
+    async def test_close_deep_received_returns_422_with_redirect(
         self, client: AsyncClient, test_db: AsyncSession
     ):
-        """state=deep_received → POST /close → state=closed, 200."""
+        """
+        PR5a: state=deep_received is a legacy/retired state.
+        POST /close on deep_received → 422 with next_endpoint='session2/close'.
+        """
         user, sid = await _create_admin_session(test_db, "fc.t1@t.com", "fc-sid-00000001")
         lead_id = await _accepted_lead_id(client, sid, user.id, "fc.lead1@t.com")
 
-        # Set session to deep_received
+        # Set session to legacy deep_received (defensive: should not exist after migration)
         stmt = select(IntakeSession).where(IntakeSession.lead_id == lead_id)
         result = await test_db.execute(stmt)
         session = result.scalar_one_or_none()
@@ -302,9 +316,14 @@ class TestFinalCloseNormalPath:
             json={},
             cookies={"admin_sid": sid},
         )
-        assert resp.status_code == 200, resp.text
-        data = resp.json()
-        assert data["state"] == "closed"
+        # PR5a: deep_received is a retired legacy state → 422 redirect
+        assert resp.status_code == 422, (
+            f"Expected 422 for legacy deep_received state (PR5a), got {resp.status_code}: {resp.text}"
+        )
+        body = resp.json()
+        assert "session2/close" in str(body.get("detail", "")), (
+            f"Expected next_endpoint reference in response, got: {body!r}"
+        )
 
     async def test_close_without_auth_returns_401_or_403(
         self, client: AsyncClient, test_db: AsyncSession
@@ -352,10 +371,14 @@ class TestFinalCloseNormalPath:
 
 
 class TestFinalCloseForceAndRejection:
-    async def test_force_true_closes_from_deep_pending_with_zero_branches(
+    async def test_deep_pending_with_force_true_now_returns_422(
         self, client: AsyncClient, test_db: AsyncSession
     ):
-        """state=deep_pending, 0 branches, force=true → 200, state=closed."""
+        """
+        PR5a: state=deep_pending is a retired legacy state.
+        POST /close with force=true on deep_pending → 422 with next_endpoint='session2/close'.
+        The force-close path is no longer supported; use session2/close instead.
+        """
         user, sid = await _create_admin_session(test_db, "ff.t1@t.com", "ff-sid-00000001")
         lead_id = await _accepted_lead_id(client, sid, user.id, "ff.lead1@t.com")
 
@@ -374,8 +397,14 @@ class TestFinalCloseForceAndRejection:
             json={"force": True},
             cookies={"admin_sid": sid},
         )
-        assert resp.status_code == 200, resp.text
-        assert resp.json()["state"] == "closed"
+        # PR5a: deep_pending is a retired state → 422 redirect to session2/close
+        assert resp.status_code == 422, (
+            f"Expected 422 for legacy deep_pending state (PR5a), got {resp.status_code}: {resp.text}"
+        )
+        body = resp.json()
+        assert "session2/close" in str(body.get("detail", "")), (
+            f"Expected next_endpoint reference in response, got: {body!r}"
+        )
 
     async def test_force_false_with_non_deep_received_returns_422(
         self, client: AsyncClient, test_db: AsyncSession

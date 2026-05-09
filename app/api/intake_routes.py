@@ -1389,16 +1389,44 @@ async def close_intake(
     current_state = session.state
 
     if current_state == "closed":
-        # Idempotent
+        # Idempotent — already closed, return success with no state change
         pass
+    elif current_state == "session2_pending":
+        # PR5a: session2_pending replaces deep_received/deep_pending.
+        # Caller should use POST /intake/{lead_id}/session2/close instead.
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "wrong_endpoint",
+                "current_state": current_state,
+                "reason": (
+                    "This session is in session2_pending state. "
+                    "Use POST /intake/{lead_id}/session2/close instead."
+                ),
+                "next_endpoint": "session2/close",
+            },
+        )
+    elif current_state in ("deep_pending", "deep_received"):
+        # PR5a: legacy states — should not exist after migration but be defensive.
+        # These states are retired; direct caller to the new endpoint.
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "wrong_endpoint",
+                "current_state": current_state,
+                "reason": (
+                    f"Session state '{current_state}' is a legacy state. "
+                    "Use POST /intake/{lead_id}/session2/close instead."
+                ),
+                "next_endpoint": "session2/close",
+            },
+        )
     elif current_state == "deep_received":
-        session.state = "closed"
-        await db.commit()
-    elif current_state == "deep_pending" and deep_branches_count == 0 and body.force:
+        # Legacy path — kept for reference; unreachable after migration.
         session.state = "closed"
         await db.commit()
     else:
-        can_force = current_state == "deep_pending" and deep_branches_count == 0
+        can_force = False
         raise HTTPException(
             status_code=422,
             detail={
@@ -1406,7 +1434,7 @@ async def close_intake(
                 "current_state": current_state,
                 "reason": (
                     f"Cannot close from state '{current_state}'. "
-                    "Requires state=deep_received, or state=deep_pending with 0 branches and force=true."
+                    "Session must be in 'session2_pending' state; use POST /intake/{lead_id}/session2/close."
                 ),
                 "can_force": can_force,
             },
@@ -1564,28 +1592,19 @@ async def close_session1(
         if ba.status == "ready" and ba.llm_output
     }
 
-    # Detect deep branches
+    # PR5a: deep_branches detection and creation is soft-deprecated.
+    # TriggerDetector.detect_from_all_blocks is still called to preserve backward
+    # compatibility for any existing deep_branch rows, but the state machine no
+    # longer routes through deep_pending / deep_received.
+    # PR5b will remove the TriggerDetector and DeepBranch creation entirely.
     activated_branches = TriggerDetector.detect_from_all_blocks(block_payloads)
+    created_count = len(activated_branches)
+    # NOTE: DeepBranch rows are NOT created here (PR5a — soft deprecation).
+    # deep_branches table is kept but no new rows are written by this path.
 
-    # Create DeepBranch rows
-    created_count = 0
-    for branch_name in activated_branches:
-        branch = DeepBranch(
-            intake_session_id=session.id,
-            branch_id=branch_name,
-            generated_questions=[],
-            status="pending_generation",
-        )
-        db.add(branch)
-        created_count += 1
-
-    # D4: if no branches detected, short-circuit to deep_received (vacuous all-received).
-    # The all_received predicate in client_routes.py only fires on branch submission,
-    # so without this a zero-branch session would be stuck in deep_pending forever.
-    if created_count == 0:
-        session.state = "deep_received"
-    else:
-        session.state = "deep_pending"
+    # PR5a: Always transition to session2_pending regardless of branch count.
+    # deep_pending and deep_received are retired states (REQ-09).
+    session.state = "session2_pending"
 
     # REQ-7: Write session1_completed_at (fix latent bug — was never set).
     session.session1_completed_at = datetime.utcnow()
@@ -1613,19 +1632,15 @@ async def close_session1(
     session_id = session.id
     background_tasks.add_task(run_session1_synthesis, lead_id, session_id)
 
-    # BackgroundTask: generate DEEP questions per branch
-    async def _run_deep_generation():
-        from app.db.session import async_session_factory  # noqa: PLC0415
-        from app.services.deep.generator import generate_all_branches  # noqa: PLC0415
-        async with async_session_factory() as gen_db:
-            await generate_all_branches(gen_db, session_id)
-
-    background_tasks.add_task(_run_deep_generation)
+    # PR5a: _run_deep_generation background task REMOVED.
+    # deep_branches are no longer created from this path (REQ-14).
+    # The deep.generator module is still present but not invoked.
+    # PR5b will delete the dead code entirely.
 
     return SessionCloseResponse(
         lead_id=lead_id,
         state=session.state,
-        deep_branches_created=created_count,
+        deep_branches_created=0,
         synthesis_job_started=True,
     )
 
@@ -1970,7 +1985,10 @@ async def client_deep_submit(
 # PATCH /api/intake/{lead_id}/session1/synthesis — edit synthesis (admin)
 # ---------------------------------------------------------------------------
 
-_SYNTHESIS_EDIT_ALLOWED_STATES = {"deep_received", "closed"}
+# PR5a: deep_received replaced by session2_pending.
+# Keep deep_received in allowed states for one release cycle so in-flight sessions
+# with legacy state can still access synthesis edit/export.
+_SYNTHESIS_EDIT_ALLOWED_STATES = {"session2_pending", "deep_received", "closed"}
 
 
 @router.patch("/intake/{lead_id}/session1/synthesis")

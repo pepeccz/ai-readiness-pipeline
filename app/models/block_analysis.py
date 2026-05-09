@@ -51,6 +51,13 @@ class BlockAnalysis(Base):
 
     error_message: Mapped[str | None] = mapped_column(String(1000), nullable=True)
 
+    # dismissed_findings — stores consultant-dismissed contradictions / follow_ups.
+    # Shape: {"contradictions": ["sha1...", ...], "follow_ups": ["sha1..."]}
+    # JSON column added in migration 5a6b7c8d9e0f (PR5a).
+    dismissed_findings: Mapped[dict] = mapped_column(
+        JSON, nullable=False, default=dict, server_default="{}"
+    )
+
     generated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

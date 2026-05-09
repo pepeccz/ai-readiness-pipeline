@@ -80,10 +80,19 @@ async def _make_lead_and_session(db) -> tuple[Lead, IntakeSession, BlockAnalysis
     db.add(session)
     await db.flush()
 
+    # Payload must satisfy block-1-strategic critical fields to pass the
+    # empty-input guard (REQ-06) and reach the LLM call path.
     block_analysis = BlockAnalysis(
         intake_session_id=session.id,
         block_id="block-1-strategic",
-        payload={"q1": "Mejorar eficiencia operativa", "q2": "Director TI"},
+        payload={
+            "q1_1_objective": {
+                "q1_1_outcome": "Reducir tiempo de respuesta al cliente un 40%",
+                "q1_1_metric": "Tiempo medio de respuesta en horas",
+                "q1_1_timeframe": "6m",
+            },
+            "q1_2_sponsor": "ceo_total",
+        },
         status="pending_analysis",
     )
     db.add(block_analysis)

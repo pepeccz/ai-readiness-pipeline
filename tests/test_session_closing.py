@@ -28,6 +28,11 @@ def test_system_prompt_contains_catalog():
     # related_service selection rule
     assert "related_service" in prompt
 
+    # REQ-17: Sales-bias preference rule must be absent
+    assert "Prefiere formacion_personalizada" not in prompt, (
+        "Sales-bias preference rule must be removed from system prompt (REQ-17)."
+    )
+
 
 def test_max_tokens_is_3000():
     """LLM call must use max_tokens=3000."""

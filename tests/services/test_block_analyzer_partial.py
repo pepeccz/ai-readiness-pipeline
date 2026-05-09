@@ -39,6 +39,34 @@ def _reset_counters() -> None:
         obs._counters.clear()
 
 
+def _payload_for_block(block_id: str) -> dict:
+    """
+    Return a payload that satisfies the empty-input guard (REQ-06) for the given block.
+    Tests that want to reach the LLM path must use a payload with critical fields populated.
+    """
+    if block_id == "block-1-strategic":
+        return {
+            "q1_1_objective": {
+                "q1_1_outcome": "Reducir tiempo de respuesta al cliente un 40%",
+                "q1_1_metric": "Tiempo medio de respuesta en horas",
+                "q1_1_timeframe": "6m",
+            },
+            "q1_2_sponsor": "ceo_total",
+        }
+    if block_id == "block-3-data":
+        return {
+            "q3_1_sources": ["crm"],
+            "q3_2_quality": {"q3_2_level": "buena"},
+        }
+    if block_id == "block-7-governance":
+        return {
+            "q7_2_genai_policy": {"q7_2_policy_status": "firmada"},
+            "q7_3_transparency": "si_todos",
+        }
+    # Generic fallback — may still trigger guard; use block-specific payload for guard-critical tests
+    return {"q1": "Tenemos datos en silos"}
+
+
 async def _make_lead_session_ba(db, block_id: str = "block-3-data") -> BlockAnalysis:
     lead = Lead(
         full_name="Partial Test",
@@ -71,7 +99,7 @@ async def _make_lead_session_ba(db, block_id: str = "block-3-data") -> BlockAnal
     ba = BlockAnalysis(
         intake_session_id=session.id,
         block_id=block_id,
-        payload={"q1": "Tenemos datos en silos"},
+        payload=_payload_for_block(block_id),
         status="pending_analysis",
     )
     db.add(ba)

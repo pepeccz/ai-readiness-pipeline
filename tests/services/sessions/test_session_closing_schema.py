@@ -88,3 +88,55 @@ def test_schema_allows_partial_output():
     assert data.key_insights is None or isinstance(data.key_insights, list)
     assert data.recommendations is None or isinstance(data.recommendations, list)
     assert data.hypothesis is None or isinstance(data.hypothesis, str)
+
+
+# ---------------------------------------------------------------------------
+# C.3 — Sales-bias removal + scoring-anchored language (REQ-17)
+# ---------------------------------------------------------------------------
+
+
+def test_system_prompt_does_not_contain_sales_bias_preference():
+    """
+    REQ-17: The string 'formacion_personalizada' MUST NOT appear as a
+    preference/priority rule in the system prompt.
+
+    The catalog key 'formacion_personalizada' is a valid service key
+    (it appears as an option). What must be removed is the explicit
+    PREFERENCE instruction: 'Prefiere formacion_personalizada cuando aplique'.
+    """
+    from app.services.sessions import session_closing
+
+    prompt = session_closing._SYSTEM_PROMPT
+
+    # The preference bias line must be gone
+    assert "Prefiere formacion_personalizada" not in prompt, (
+        "Sales-bias preference rule found in system prompt. Remove it per REQ-17."
+    )
+
+
+def test_system_prompt_contains_scoring_anchored_language():
+    """
+    REQ-17 (design): System prompt must instruct the LLM to align recommendations
+    with the LOWEST-scoring dimensions (scoring-anchored language).
+    """
+    from app.services.sessions import session_closing
+
+    prompt = session_closing._SYSTEM_PROMPT
+
+    # Scoring-anchored language must appear — either in Spanish with CMMI/scoring
+    # reference or equivalent anchoring instruction
+    scoring_anchor_indicators = [
+        "menor nivel",   # "dimensiones con menor nivel CMMI"
+        "CMMI",
+        "scoring",
+        "priorizar las dimensiones",
+        "menor puntuaci",
+        "gaps",
+        "brechas",
+        "peor puntuaci",
+    ]
+    has_anchor = any(indicator.lower() in prompt.lower() for indicator in scoring_anchor_indicators)
+    assert has_anchor, (
+        "System prompt must contain scoring-anchored language (e.g., reference to CMMI levels "
+        "or instruction to prioritize lowest-scoring dimensions). Got no such anchor in prompt."
+    )

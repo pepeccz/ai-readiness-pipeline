@@ -55,7 +55,9 @@ def _build_system_prompt() -> str:
         related_service. Valores válidos: diagnostico_profundo, desarrollo_acompanamiento,
         formacion_personalizada, otro. Usa null cuando la recomendación no requiera acción
         externa identificable.
-        Prefiere formacion_personalizada cuando aplique (mejor relación coste/impacto).
+        Las recomendaciones deben priorizar las dimensiones con menor nivel CMMI identificadas
+        en el scoring. Ordena las recomendaciones por brecha: la dimensión con el CMMI más bajo
+        primero.
 
         Usa "otro" cuando la recomendación implique una acción que NO encaja en los servicios
         Zanovix (derivación a un proveedor externo especializado, acción interna del cliente

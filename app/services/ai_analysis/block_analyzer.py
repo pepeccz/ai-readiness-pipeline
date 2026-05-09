@@ -20,9 +20,11 @@ from __future__ import annotations
 
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 
 import anthropic
 import structlog
+import yaml
 from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,6 +36,7 @@ from app.services.ai_analysis.json_extractor import JsonExtractionError, extract
 from app.services.ai_analysis.llm_filters import apply_all_filters
 from app.services.ai_analysis.output_schemas import BlockAnalysisOutput, get_output_schema
 from app.services.ai_analysis.prompt_builder import PromptBuilder
+from app.services.scoring.guards import is_block_synthesizable, list_missing_critical_fields
 from config import settings
 
 logger = structlog.get_logger(__name__)
@@ -62,19 +65,22 @@ LLM_TIMEOUT = 15.0  # seconds
 _BASE_FIELD_NAMES = frozenset(BlockAnalysisOutput.model_fields.keys())
 
 
+# Mapping from canonical block_id to actual YAML filename (without .yaml extension).
+# Only entries that differ from the canonical id are needed.
+_BLOCK_ID_TO_YAML_NAME: dict[str, str] = {
+    "block-2-process-critical": "block-2-process-critical-full",
+}
+
+_SCHEMA_BASE = Path(__file__).parent.parent.parent.parent / "schemas" / "questionnaire-v2" / "core"
+
+
 def _get_block_schema_for_id(block_id: str) -> dict:
     """Load block schema from YAML or return minimal dict."""
+    yaml_name = _BLOCK_ID_TO_YAML_NAME.get(block_id, block_id)
+    yaml_path = _SCHEMA_BASE / f"{yaml_name}.yaml"
     try:
-        from app.services.questionnaire import schema_loader
-        try:
-            schema_loader.get_schema_version()
-        except RuntimeError:
-            schema_loader.load_all()
-        root = schema_loader.get_root_schema()
-        blocks = root.get("blocks", []) or []
-        for block in blocks:
-            if isinstance(block, dict) and block.get("id") == block_id:
-                return block
+        with open(yaml_path, encoding="utf-8") as f:
+            return yaml.safe_load(f) or {}
     except Exception:
         pass
     # Fallback minimal schema
@@ -136,8 +142,26 @@ class BlockAnalyzer:
             return
 
         try:
-            # Build prompt
+            # ----------------------------------------------------------------
+            # Empty-input guard (REQ-06): check before any LLM call
+            # ----------------------------------------------------------------
             block_schema = _get_block_schema_for_id(block_id)
+            synthesizable, _missing = is_block_synthesizable(block_schema, ba.payload or {})
+            if not synthesizable:
+                missing_fields = list_missing_critical_fields(block_schema, ba.payload or {})
+                ba.status = "insufficient_data"
+                ba.llm_output = {"missing_fields": missing_fields}
+                ba.generated_at = datetime.now(tz=timezone.utc)
+                await self.db.commit()
+                logger.info(
+                    "block_analysis_insufficient_data",
+                    block_analysis_id=block_analysis_id,
+                    block_id=block_id,
+                    missing_fields=missing_fields,
+                )
+                return
+
+            # Build prompt
             messages = self.prompt_builder.build(
                 block_schema=block_schema,
                 payload=ba.payload or {},

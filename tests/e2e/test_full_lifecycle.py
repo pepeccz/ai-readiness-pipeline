@@ -84,6 +84,7 @@ _ALL_BLOCKS = [
 ]
 
 _BLOCK_PAYLOAD = {
+    # Legacy fields preserved for backward compat
     "initiative_description": "Automated invoice processing",
     "initiative_status": "in_production",
     "success_metric": "time_saved",
@@ -94,6 +95,30 @@ _BLOCK_PAYLOAD = {
     "team_size": 5,
     "technical_complexity": "medium",
     "data_readiness": "partial",
+    # block-1-strategic critical fields (REQ-06 guard)
+    "q1_1_objective": {
+        "q1_1_outcome": "Reducir el tiempo de respuesta al cliente un 40%",
+        "q1_1_metric": "Tiempo medio de respuesta en horas",
+        "q1_1_timeframe": "6m",
+    },
+    "q1_2_sponsor": "ceo_total",
+    # block-2-process-critical-full critical fields
+    "q2_1_process": {"q2_1_name": "Procesamiento de facturas"},
+    "q2_4_failure_cost": {"q2_4_level": "alto"},
+    # block-3-data critical fields
+    "q3_1_sources": ["crm", "bbdd_propia"],
+    "q3_2_quality": {"q3_2_level": "buena"},
+    # block-4-talent critical fields
+    "q4_1_team": {"q4_1_profiles": ["data_scientist"]},
+    "q4_2_level": "establecido",
+    # block-5-infrastructure critical fields
+    "q5_1_infra": {"q5_1_model": "cloud_hibrido"},
+    # block-6-compliance critical fields
+    "q6_1_dpia": {"q6_1_dpia_status": "en_proceso"},
+    "q6_3_ai_act_category": {"q6_3_category": "riesgo_limitado"},
+    # block-7-governance critical fields
+    "q7_2_genai_policy": {"q7_2_policy_status": "firmada"},
+    "q7_3_transparency": "si_todos",
 }
 
 _BASE_LLM_OUTPUT = {
